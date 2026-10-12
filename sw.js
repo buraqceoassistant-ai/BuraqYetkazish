@@ -74,7 +74,7 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  // learn/ — переадресация на учебную платформу (отдельный сайт Buraq-learning): идёт мимо этого кэша (иначе на этот адрес открывалась бы
+  // learn/ — переадресация на учебную платформу (отдельный сайт Buraqlearning): идёт мимо этого кэша (иначе на этот адрес открывалась бы
   // страница сайта отгрузок — навигация по «…/» и «index.html» отдаёт index.html сайта)
   if (url.pathname.startsWith(new URL('learn/', self.registration.scope).pathname)) return;
 
