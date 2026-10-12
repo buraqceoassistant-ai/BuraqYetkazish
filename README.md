@@ -41,7 +41,7 @@
 | `css/mobile.css` | Адаптация под планшет и телефон |
 | `css/glass.css` | Стекло (glassmorphism): светлый фон, матовые панели, тёмно-синяя стеклянная шапка |
 | `sw.js`, `manifest.webmanifest`, `icons/` | PWA: офлайн-режим и установка |
-| `learn/` | Переадресация на учебную платформу: она переехала в репозиторий [Buraq-learning](https://github.com/buraqceoassistant-ai/Buraq-learning) |
+| `learn/` | Переадресация на учебную платформу: она переехала в репозиторий [Buraqlearning](https://github.com/buraqlogisticsuz/Buraqlearning) |
 
 Без сборки: все файлы отдаются как есть. React, Leaflet, three.js и PDF.js лежат в `js/vendor/`,
 внешние CDN не нужны (кроме плиток карты).
@@ -1003,8 +1003,8 @@ node tools/vault.mjs init Mijozlar_omborlari_ro_yxati.xlsx buraq
 ## Учебная платформа
 
 Учебная платформа для сотрудников (курс по стандартам, тесты, план адаптации, уровни) — отдельный сайт
-**https://buraqceoassistant-ai.github.io/Buraq-learning/**, репозиторий
-[buraqceoassistant-ai/Buraq-learning](https://github.com/buraqceoassistant-ai/Buraq-learning). Старый адрес `learn/`
+**https://buraqlogisticsuz.github.io/Buraqlearning/**, репозиторий
+[buraqlogisticsuz/Buraqlearning](https://github.com/buraqlogisticsuz/Buraqlearning). Старый адрес `learn/`
 этого сайта перекидывает туда (с `?demo=1` и прочими параметрами); service worker сайта отгрузок `learn/` не перехватывает.
 
 ## Установка на телефон
