@@ -41,8 +41,7 @@
 | `css/mobile.css` | Адаптация под планшет и телефон |
 | `css/glass.css` | Стекло (glassmorphism): светлый фон, матовые панели, тёмно-синяя стеклянная шапка |
 | `sw.js`, `manifest.webmanifest`, `icons/` | PWA: офлайн-режим и установка |
-| `learn/` | Учебная платформа для сотрудников — отдельное приложение, см. [`learn/README.md`](learn/README.md) |
-| `tools/lms-gs/` | Сервер учебной платформы (Google Apps Script): `Server.gs`, одним файлом — `Code.gs` и `learn/lms-gs-script.js` (`node tools/build-lms-gs.mjs`) |
+| `learn/` | Переадресация на учебную платформу: она переехала в репозиторий [Buraq-learning](https://github.com/buraqceoassistant-ai/Buraq-learning) |
 
 Без сборки: все файлы отдаются как есть. React, Leaflet, three.js и PDF.js лежат в `js/vendor/`,
 внешние CDN не нужны (кроме плиток карты).
@@ -1003,11 +1002,10 @@ node tools/vault.mjs init Mijozlar_omborlari_ro_yxati.xlsx buraq
 
 ## Учебная платформа
 
-`learn/` — обучение сотрудников: курс по стандартам, тесты и устный экзамен у методиста, план адаптации, уровни и
-рейтинг. Отдельное приложение со своим сервером на Google Apps Script (не скрипт таблицы отгрузок): вход по логину
-и паролю, общие данные, файлы на Google Диске. Адрес сервера — `learn/config.js`; пока он пустой, платформа работает
-как демо (данные в браузере). Service worker сайта отгрузок адреса `learn/` не перехватывает.
-Устройство, настройка сервера по шагам и локальный запуск — [`learn/README.md`](learn/README.md).
+Учебная платформа для сотрудников (курс по стандартам, тесты, план адаптации, уровни) — отдельный сайт
+**https://buraqceoassistant-ai.github.io/Buraq-learning/**, репозиторий
+[buraqceoassistant-ai/Buraq-learning](https://github.com/buraqceoassistant-ai/Buraq-learning). Старый адрес `learn/`
+этого сайта перекидывает туда (с `?demo=1` и прочими параметрами); service worker сайта отгрузок `learn/` не перехватывает.
 
 ## Установка на телефон
 
