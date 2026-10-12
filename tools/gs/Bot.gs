@@ -209,7 +209,7 @@ function tgClientTels_(c) {
   return out;
 }
 // ── фото только с камеры: мини-приложение сайта (driver.html) открывает камеру, ставит штамп и шлёт снимок в скрипт ──
-// TG_SITE — адрес сайта (…/xeeds/), TG_URL — ссылка веб-приложения скрипта; TG_CAMERA = 0 — принимать фото из чата
+// TG_SITE — адрес сайта (…/buraqyetkazuv/), TG_URL — ссылка веб-приложения скрипта; TG_CAMERA = 0 — принимать фото из чата
 function tgCamera_() { return prop_('TG_CAMERA') !== '0' && /^https:\/\//.test(prop_('TG_SITE')) && !!prop_('TG_URL'); }
 function tgCamUrl_(d, w) {
   return prop_('TG_SITE') + 'driver.html?s=' + encodeURIComponent(prop_('TG_URL')) + '&k=' + encodeURIComponent(w.cur.key) + '&bl=' + encodeURIComponent(w.cur.bl) + '&l=' + d.lang + '&m=' + (w.result === 'ok' ? 'ok' : 'fail');
