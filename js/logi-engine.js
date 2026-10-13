@@ -220,18 +220,23 @@
   const EPS = 1e-6, UNPRICED = 1e8, KM_COST = 1000, MAX_SPREAD = 120;
   const known = s => (s.cbm || 0) > 0 || (s.kg || 0) > 0;
   const small = v => v.kind === 'labo' || v.kind === 'changan';   // груз без объёма и веса на маленькую машину не ставим
+  // полезный объём кузова (S.fillPct, %): между коробками воздух — машина берёт меньше, чем объём кузова. 100 — весь объём
+  const fillOf = S => { const f = +S.fillPct; return f > 0 && f <= 100 ? f / 100 : 1; };
+  const useful = (m3, S) => Math.round(m3 * fillOf(S) * 100) / 100;
   function fleetOf(S, kinds, opt = {}) {
-    const all = {
+    const fill = fillOf(S), all = {
       labo: { kind: 'labo', label: 'Labo', m3: +S.laboM3, kg: +S.laboKg },
       gazel: { kind: 'gazel', label: 'Gazel', m3: +S.gazelM3, kg: +S.gazelKg },
       changan: { kind: 'changan', label: 'Changan', m3: +S.changanM3, kg: +S.changanKg },
       kamaz: { kind: 'kamaz', label: 'Kamaz', m3: +S.cM3, kg: +S.cKg }
     };
     const onlyIfNeeded = opt.onlyIfNeeded || [], tol = opt.tol || {}, caps = opt.caps || {}, avail = opt.avail || {};
-    Object.keys(caps).forEach(k => { if (all[k] && caps[k]) Object.assign(all[k], { m3: +caps[k][0], kg: +caps[k][1] }); });
+    // caps (из автопарка) — уже полезный объём [useM3, kg, nomM3]; без них — объём вида × полезный процент
+    Object.keys(all).forEach(k => { all[k].nom = all[k].m3; all[k].m3 = useful(all[k].m3, S); });
+    Object.keys(caps).forEach(k => { if (all[k] && caps[k]) Object.assign(all[k], { m3: +caps[k][0], kg: +caps[k][1], nom: caps[k][2] != null ? +caps[k][2] : +caps[k][0] }); });
     return kinds.map(k => all[k]).filter(v => v.m3 > 0 && v.kg > 0 && avail[v.kind] !== 0).map(v => {
       const tM3 = Math.max(0, +(tol[v.kind] || {}).m3 || 0), tKg = Math.max(0, +(tol[v.kind] || {}).kg || 0);
-      return { ...v, nomM3: v.m3, nomKg: v.kg, tolM3: tM3, tolKg: tKg, m3: v.m3 + tM3, kg: v.kg + tKg, places: +S.maxPlaces || 0,
+      return { ...v, nomM3: v.nom, nomKg: v.kg, useM3: v.m3, fill, tolM3: tM3, tolKg: tKg, m3: v.m3 + tM3, kg: v.kg + tKg, places: +S.maxPlaces || 0,
         priced: priceTrip([{ bl: '-', zone: 'in', cbm: 0, kg: 0 }], v.kind, S).total != null, onlyIfNeeded: onlyIfNeeded.includes(v.kind) };
     });
   }
@@ -642,13 +647,14 @@
       const named = (S.vehicles || []).filter(v => v.kind === k), active = named.filter(v => !v.repair);
       if (!(COUNT[k] > 0) && !named.length) return;   // число машин не задано — без ограничения
       const n = Math.max(0, (COUNT[k] | 0 || named.length) - (named.length - active.length)), used = new Set(named.map(v => v.name));
-      const cars = active.slice(0, n).map(v => ({ name: v.name, m3: +v.m3 || DEF[k][0], kg: +v.kg || DEF[k][1], dims: v.l > 0 && v.w > 0 && v.h > 0 ? { l: +v.l, w: +v.w, h: +v.h } : null }));
-      for (let i = 1; cars.length < n; i++) if (!used.has(LABEL[k] + '-' + i)) cars.push({ name: LABEL[k] + '-' + i, m3: DEF[k][0], kg: DEF[k][1], unnamed: true });
+      // m3 — полезный объём (кузов × полезный процент), nom — объём кузова
+      const cars = active.slice(0, n).map(v => ({ name: v.name, nom: +v.m3 || DEF[k][0], m3: useful(+v.m3 || DEF[k][0], S), kg: +v.kg || DEF[k][1], dims: v.l > 0 && v.w > 0 && v.h > 0 ? { l: +v.l, w: +v.w, h: +v.h } : null }));
+      for (let i = 1; cars.length < n; i++) if (!used.has(LABEL[k] + '-' + i)) cars.push({ name: LABEL[k] + '-' + i, nom: DEF[k][0], m3: useful(DEF[k][0], S), kg: DEF[k][1], unnamed: true });
       CARS[k] = cars.map((c, i) => ({ ...c, no: i + 1 }));
     });
     const CAPS = {}, MINCAP = {}, AVAIL = {};
     Object.keys(CARS).forEach(k => { const c = CARS[k]; AVAIL[k] = c.length;
-      if (c.length) { CAPS[k] = [Math.max(...c.map(x => x.m3)), Math.max(...c.map(x => x.kg))]; MINCAP[k] = [Math.min(...c.map(x => x.m3)), Math.min(...c.map(x => x.kg))]; } });
+      if (c.length) { CAPS[k] = [Math.max(...c.map(x => x.m3)), Math.max(...c.map(x => x.kg)), Math.max(...c.map(x => x.nom))]; MINCAP[k] = [Math.min(...c.map(x => x.m3)), Math.min(...c.map(x => x.kg)), Math.min(...c.map(x => x.nom))]; } });
     const back = t => t.finish + t.back / S.speed * 60 * S.roadK;
     const RANK = { labo: 0, changan: 1, gazel: 2, kamaz: 3 };
     const finish = raw => {
@@ -657,7 +663,7 @@
       const leave = (t, at) => Object.assign(t, tripMetrics(depot, t.stops, S, at), { start: at });   // the trip starts later: arrivals move
       // рейс на конкретной машине: её имя и вместимость (у плана B — плюс допуск Gazel), кузов из карточки (скрипт 31)
       const onCar = (t, c, round, name) => Object.assign(t, { name, car: c.no, round, carName: c.name,
-        vehicle: { ...t.vehicle, m3: c.m3 + (t.vehicle.tolM3 || 0), kg: c.kg + (t.vehicle.tolKg || 0), nomM3: c.m3, nomKg: c.kg, dims: c.dims || null } });
+        vehicle: { ...t.vehicle, m3: c.m3 + (t.vehicle.tolM3 || 0), kg: c.kg + (t.vehicle.tolKg || 0), nomM3: c.nom, useM3: c.m3, nomKg: c.kg, dims: c.dims || null } });
       const fits = (t, c) => t.over || (t.cbm <= c.m3 + (t.vehicle.tolM3 || 0) + EPS && t.kg <= c.kg + (t.vehicle.tolKg || 0) + EPS);
       const blocked = [];
       // runs given by the plan: each next run of a truck leaves when the previous one is back

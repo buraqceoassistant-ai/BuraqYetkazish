@@ -79,7 +79,7 @@
   const isoToSerial = d => { const [y, m, dd] = d.split('-').map(Number); return Date.UTC(y, m - 1, dd) / 864e5 + 25569; };
 
   const SET_ROWS = { isuzuM3: 5, isuzuKg: 6, depotName: 7, depotLat: 8, depotLon: 9, unloadMin: 10, dayStart: 11, speed: 12, aMaxStops: 13, maxPlaces: 14, bSmallM3: 15, bcMaxStops: 16, cM3: 17, cKg: 18, cTrucks: 19, roadK: 20, gazelBase: 43, gazelHeavy: 44, gazelHeavyKg: 45, gazelPtIn: 46, gazelPtOut: 47, laboBase: 48, laboPt: 49, laboM3: 50, laboKg: 51, baseIncludesPts: 52, kamazBase: 53, kamazPt: 54, laboBaseIncludesPts: 55, kamazBaseIncludesPts: 56, gazelM3: 57, gazelKg: 58, bTolM3: 59, bTolKg: 60,
-    changanM3: 61, changanKg: 62, changanBase: 63, changanPt: 64, changanBaseIncludesPts: 65, gazelCount: 66, laboCount: 67, changanCount: 68, tripsPerVehicle: 69, freeOutM3: 70, densityMin: 71, densityMax: 72 };
+    changanM3: 61, changanKg: 62, changanBase: 63, changanPt: 64, changanBaseIncludesPts: 65, gazelCount: 66, laboCount: 67, changanCount: 68, tripsPerVehicle: 69, freeOutM3: 70, densityMin: 71, densityMax: 72, fillPct: 73 };
   const SH = { ship: 'Yuborishlar', cli: 'Mijozlar', wh: 'Qoshimcha omborlar', set: 'Sozlamalar', ring: 'Halqa zonasi', notes: 'O‘zgarishlar' };
 
   function hyperlinksOf(z, path, xml) {
@@ -140,7 +140,7 @@
     // manifest import warns about cargo lighter than 40 or heavier than 800 kg/m³ (rows 71–72).
     // `defaults` lists what was filled in, so it can be written back.
     const DEF = { laboBaseIncludesPts: 0, kamazBaseIncludesPts: 0, gazelM3: 19, gazelKg: 4000, bTolM3: 5, bTolKg: 500,
-      changanM3: 9, changanKg: 2000, changanBaseIncludesPts: 0, gazelCount: 9, laboCount: 1, changanCount: 1, tripsPerVehicle: 2, freeOutM3: 1, densityMin: 40, densityMax: 800 };
+      changanM3: 9, changanKg: 2000, changanBaseIncludesPts: 0, gazelCount: 9, laboCount: 1, changanCount: 1, tripsPerVehicle: 2, freeOutM3: 1, densityMin: 40, densityMax: 800, fillPct: 88 };
     const defaults = Object.keys(DEF).filter(k => settings[k] == null);
     defaults.forEach(k => { settings[k] = DEF[k]; });
     const col = (c, a, b) => { const o = []; for (let r = a; r <= b; r++) if (Ss[r] && str(Ss[r][c])) o.push(str(Ss[r][c])); return o; };

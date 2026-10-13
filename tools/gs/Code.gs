@@ -75,15 +75,16 @@
  * Версия 31: регистрация водителя — своя машина: телефон, вид, госномер, марка и модель, кузов (длина × ширина × высота)
  *   и грузоподъёмность (Haydovchilar L:P). После «Разрешить» (сайт или группа) машина — в автопарк: строка Sozlamalar
  *   C24:C39 (та же по госномеру, свободная того же вида или новая «Вид-N»), госномер, марка, объём, вес и кузов (K:M).
+ * Версия 32: настройка «Полезный объём кузова, %» (Sozlamalar B73) — планы считают машину по кузову × процент.
  */
 var TOKEN = '';
-var VERSION = 31; // сайт сверяет версию и просит обновить код, если он старый
+var VERSION = 32; // сайт сверяет версию и просит обновить код, если он старый
 
 var SH = { ship: 'Yuborishlar', cli: 'Mijozlar', wh: 'Qoshimcha omborlar', set: 'Sozlamalar', ring: 'Halqa zonasi', notes: 'O‘zgarishlar' };
 var LOC_COL = 22;   // Yuborishlar V — куда везти (версия 25)
 var COLS = { ship: 16, cli: 25, wh: 8, set: 13, ring: 3, notes: 3 };   // Mijozlar Y (25) — маркировки клиента для импорта; Sozlamalar D — госномера, E:J — карточка машины
 var SET_ROWS = { isuzuM3: 5, isuzuKg: 6, depotName: 7, depotLat: 8, depotLon: 9, unloadMin: 10, dayStart: 11, speed: 12, aMaxStops: 13, maxPlaces: 14, bSmallM3: 15, bcMaxStops: 16, cM3: 17, cKg: 18, cTrucks: 19, roadK: 20, gazelBase: 43, gazelHeavy: 44, gazelHeavyKg: 45, gazelPtIn: 46, gazelPtOut: 47, laboBase: 48, laboPt: 49, laboM3: 50, laboKg: 51, baseIncludesPts: 52, kamazBase: 53, kamazPt: 54, laboBaseIncludesPts: 55, kamazBaseIncludesPts: 56, gazelM3: 57, gazelKg: 58, bTolM3: 59, bTolKg: 60,
-  changanM3: 61, changanKg: 62, changanBase: 63, changanPt: 64, changanBaseIncludesPts: 65, gazelCount: 66, laboCount: 67, changanCount: 68, tripsPerVehicle: 69, freeOutM3: 70, densityMin: 71, densityMax: 72 };
+  changanM3: 61, changanKg: 62, changanBase: 63, changanPt: 64, changanBaseIncludesPts: 65, gazelCount: 66, laboCount: 67, changanCount: 68, tripsPerVehicle: 69, freeOutM3: 70, densityMin: 71, densityMax: 72, fillPct: 73 };
 // подписи новых строк «Sozlamalar»: пишутся, только если в столбце A пусто
 var SET_LABELS = {
   baseIncludesPts: ['Gazel — bazaviy narxga kirgan tochkalar', '0 = har bir tochka alohida to‘lanadi: 450 + 3×100. 1 = birinchi tochka bazaviy narx ichida: 450 + 2×100.'],
@@ -104,7 +105,8 @@ var SET_LABELS = {
   tripsPerVehicle: ['Bir mashina kuniga necha reys', 'Mashinalar yetmasa — ikkinchi reys; undan ham ko‘p bo‘lsa — ogohlantirish.'],
   freeOutM3: ['Mayda yuk chegarasi, m³', 'Nuqtaning yuki shundan kichik bo‘lsa, yetkazib berish uchun biz to‘lamaymiz. Halqadan tashqaridagi nuqtalar uchun ham to‘lamaymiz (har qanday hajmda). Rejada bu xarajatlar alohida ko‘rsatiladi. 0 = faqat halqadan tashqaridagilar uchun to‘lamaymiz.'],
   densityMin: ['Import — zichlik, pastki chegara (kg/m³)', 'Manifestdagi yuk bundan yengil bo‘lsa — ogohlantirish (xato bo‘lishi mumkin).'],
-  densityMax: ['Import — zichlik, yuqori chegara (kg/m³)', 'Manifestdagi yuk bundan og‘ir bo‘lsa — ogohlantirish (og‘ir yuk yoki xato).']
+  densityMax: ['Import — zichlik, yuqori chegara (kg/m³)', 'Manifestdagi yuk bundan og‘ir bo‘lsa — ogohlantirish (og‘ir yuk yoki xato).'],
+  fillPct: ['Kuzovning foydali hajmi, %', 'Qutilar orasida havo qoladi: reja mashinani kuzov hajmi × shu foizdan hisoblaydi (Gazel 19 m³ × 88% = 16,7 m³). 100 — butun hajm.']
 };
 // ro‘yxat «Yuborishlar» M ustunidagi mashinalar: Sozlamalar C24:C39
 var TRUCKS_ROW = 24, TRUCKS_N = 16;
