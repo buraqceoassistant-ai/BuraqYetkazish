@@ -44,6 +44,28 @@
   const NO_PRICE = ['Bekor qilindi', 'Mijoz ozi oldi', 'Qolib ketgan'];
   const NO_PLAN = ['Bekor qilindi', 'Mijoz ozi oldi'];
 
+  // Коробки отгрузки (пакинг-лист) — текст «60×40×50×12; 80×60×40×3»: длина × ширина × высота, см, × штук. Группы —
+  // через «;» или с новой строки; размеры — через × x * (и русскую х); «×12» можно опустить — одна коробка; число штук
+  // можно писать и впереди («12 шт 60×40×50»). Результат: { list: [{ l, w, h, n }], n, m3 } или { error }.
+  const BOX_DIM = /(\d+(?:[.,]\d+)?)\s*[×xX*хХ]\s*(\d+(?:[.,]\d+)?)\s*[×xX*хХ]\s*(\d+(?:[.,]\d+)?)/;
+  function parseBoxes(text) {
+    const src = String(text || '').trim(), list = [];
+    if (!src) return { list, n: 0, m3: 0 };
+    for (const g0 of src.split(/[;\n]+/)) {
+      const g = g0.trim(); if (!g) continue;
+      const m = g.match(BOX_DIM);
+      if (!m) return { error: 'Не понял «' + g.slice(0, 30) + '»: нужно длина×ширина×высота в см, например 60×40×50×12' };
+      const dims = [m[1], m[2], m[3]].map(x => +String(x).replace(',', '.'));
+      const rest = (g.slice(0, m.index) + ' ' + g.slice(m.index + m[0].length)).replace(/(см|cm|sm|шт|кор|pcs|dona|ta|мест)\.?/gi, ' '), nm = rest.match(/\d+/);
+      const n = nm ? +nm[0] : 1;
+      if (dims.some(x => !(x >= 1 && x <= 500))) return { error: 'Размеры коробки — от 1 до 500 см: «' + g.slice(0, 30) + '»' };
+      if (!(n >= 1 && n <= 5000) || !Number.isInteger(n)) return { error: 'Число коробок — от 1 до 5 000: «' + g.slice(0, 30) + '»' };
+      const same = list.find(x => x.l === dims[0] && x.w === dims[1] && x.h === dims[2]);
+      if (same) same.n += n; else list.push({ l: dims[0], w: dims[1], h: dims[2], n });
+    }
+    return { list, n: list.reduce((a, x) => a + x.n, 0), m3: Math.round(list.reduce((a, x) => a + x.l * x.w * x.h * x.n, 0) / 1e6 * 1000) / 1000 };
+  }
+  const boxesText = list => (list || []).map(x => [x.l, x.w, x.h].map(v => String(v).replace('.', ',')).join('×') + '×' + x.n).join('; ');
   function vehicleKind(truck) {
     if (/^gazel/i.test(truck)) return 'gazel';
     if (/^labo/i.test(truck)) return 'labo';
@@ -861,5 +883,5 @@
     return best ? { district: best[0], km: pts[0][1] } : null;
   }
 
-  window.LogiEngine = { guessDistrict, km, bearing, inside, distToRing, zoneOf, nnOrder, tripMetrics, priceTrip, pointTariff, PLACE_KM, costSplit, coordsFromLink, vehicleKind, buildPlans, stopKey, yRoute, yPoint, xlsx, NO_PRICE, NO_PLAN, withKeles, ringLength, KELES, TKAD_V2 };
+  window.LogiEngine = { parseBoxes, boxesText, guessDistrict, km, bearing, inside, distToRing, zoneOf, nnOrder, tripMetrics, priceTrip, pointTariff, PLACE_KM, costSplit, coordsFromLink, vehicleKind, buildPlans, stopKey, yRoute, yPoint, xlsx, NO_PRICE, NO_PLAN, withKeles, ringLength, KELES, TKAD_V2 };
 })();

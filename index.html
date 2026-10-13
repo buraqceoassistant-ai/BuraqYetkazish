@@ -32,6 +32,7 @@
 <script defer src="js/logi-engine.js"></script>
 <script defer src="js/logi-viz.js"></script>
 <script defer src="js/xlsx-io.js"></script>
+<script defer src="js/packing.js"></script>
 <script defer src="js/import-core.js"></script>
 <script defer src="js/import-checks.js"></script>
 <script defer src="js/import-local.js"></script>
@@ -135,6 +136,8 @@
           </sc-raw-select>
           <input class="input" style="width:240px" placeholder="Поиск: BL, клиент, телефон…" value="{{ jSearch }}" sc-camel-on-change="{{ onJSearch }}">
           <button data-edit class="btn btn-secondary" style="white-space:nowrap" sc-camel-on-click="{{ goImport }}">⇧ Импорт манифеста</button>
+          <button data-edit class="btn btn-secondary pack-btn" style="white-space:nowrap" sc-camel-on-click="{{ packPick }}" title="Коробки отгрузок из пакинг-листов (Excel): размеры и число коробок — для проверки рейсов и 3D">📦 Пакинг-листы</button>
+          <input type="file" accept=".xlsx,.xls" multiple="{{ true }}" ref="{{ packFileRef }}" sc-camel-on-change="{{ onPackFiles }}" style="display:none">
           <button data-edit class="btn btn-primary blueprint" style="white-space:nowrap" sc-camel-on-click="{{ newShipment }}"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>+ Добавить отгрузку</button>
         </div>
       </div>
@@ -1255,6 +1258,7 @@
               <span class="tag tag-outline">{{ t.tariff }}</span>
               <sc-if value="{{ t.canKind }}"><sc-raw-select data-edit class="input plan-kind" value="{{ t.kind }}" sc-camel-on-change="{{ t.onKind }}" title="Сменить машину рейса" aria-label="Машина рейса"><sc-for list="{{ t.kindOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select></sc-if>
               <sc-if value="{{ t.dists }}"><span class="tag tag-accent-2">{{ t.dists }}</span></sc-if>
+              <sc-if value="{{ t.boxNote }}"><span class="tag {{ t.boxCls }}" title="Укладка коробок по пакинг-листу в кузов этой машины: стенками от кабины к дверям">📦 {{ t.boxNote }}</span></sc-if>
               <div style="display:flex;gap:18px;font-size:13px;flex-wrap:wrap">
                 <span>{{ t.stopsN }} точ.</span>
                 <span style="display:flex;align-items:center;gap:6px">{{ t.cbm }} м³<span style="display:inline-block;width:60px;height:5px;background:var(--color-neutral-300)"><span class="bar" style="display:block;height:5px;width:{{ t.cbmPct }};background:{{ t.cbmBar }}"></span></span></span>
@@ -1548,6 +1552,8 @@
             <div style="grid-column:1/-1;font-size:12px;color:{{ locInfoColor }};text-wrap:pretty">{{ locInfo }}</div>
           </div></sc-if>
           <div class="field" style="grid-column:1/-1"><label>Примечание</label><textarea class="input" name="note" value="{{ draft.note }}" sc-camel-on-change="{{ onDraft }}" style="min-height:64px"></textarea></div>
+          <div class="field ship-boxes" style="grid-column:1/-1"><label>Коробки по пакинг-листу: длина × ширина × высота, см × штук</label><textarea class="input" name="boxes" value="{{ draft.boxes }}" sc-camel-on-change="{{ onDraft }}" placeholder="60×40×50×12; 80×60×40×3" style="min-height:48px"></textarea>
+            <div style="font-size:12px;color:{{ boxHintColor }};text-wrap:pretty">{{ boxHint }}</div></div>
         </div>
         <div style="font-size:13px;color:var(--color-accent-700)">{{ dialogError }}</div>
         <div class="dialog-actions">
@@ -1682,6 +1688,32 @@
           <sc-if value="{{ canDelete }}"><button data-edit class="btn btn-ghost" style="margin-right:auto" sc-camel-on-click="{{ deleteItem }}">Удалить</button></sc-if>
           <button class="btn btn-secondary" sc-camel-on-click="{{ closeDialog }}">Отмена</button>
           <button data-edit class="btn btn-primary" sc-camel-on-click="{{ saveVeh }}">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPackDialog }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:3000" sc-camel-on-click="{{ closeDialogBg }}">
+      <div class="dialog blueprint pack-dialog" style="width:min(780px,100%);background:var(--color-bg)">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <div class="dialog-title">{{ dialogTitle }}</div>
+        <div class="field" style="max-width:280px"><label>Партия</label><sc-raw-select class="input pack-date" value="{{ packDate }}" sc-camel-on-change="{{ onPackDate }}" aria-label="Партия"><sc-for list="{{ packDateOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select></div>
+        <div class="pack-rows" style="display:flex;flex-direction:column">
+          <sc-for list="{{ packRows }}" as="r">
+            <div class="pack-row" style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:6px 12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-divider)">
+              <div style="min-width:0"><div style="font-weight:500;overflow-wrap:anywhere">{{ r.file }}</div><div style="font-size:12px;color:{{ r.color }};text-wrap:pretty">{{ r.info }}</div></div>
+              <sc-if value="{{ r.ok }}"><sc-raw-select class="input pack-bl" value="{{ r.sel }}" sc-camel-on-change="{{ r.onSel }}" aria-label="BL"><option value="">— выберите BL</option><sc-for list="{{ packBlOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select></sc-if>
+              <sc-if value="{{ r.ok }}"><div style="font-size:12px;color:var(--color-neutral-700);text-wrap:pretty">{{ r.journal }}</div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:12px;color:var(--color-neutral-700);text-wrap:pretty">{{ packNote }}</div>
+        <div style="font-size:13px;color:var(--color-accent-900);text-wrap:pretty">{{ dialogError }}</div>
+        <div class="dialog-actions">
+          <button class="btn btn-ghost" style="margin-right:auto" sc-camel-on-click="{{ packMore }}">+ Ещё файлы</button>
+          <button class="btn btn-secondary" sc-camel-on-click="{{ closeDialog }}">Отмена</button>
+          <button data-edit class="btn btn-primary" sc-camel-on-click="{{ packApply }}">Применить</button>
         </div>
       </div>
     </div>
@@ -1863,6 +1895,10 @@ const PLAN_INFO = {
   X: { title: 'X — по районам', desc: () => 'Пробный. Каждый район целиком везёт одна машина; районы с малым грузом — вместе, сначала соседние. Район больше машины — остаток едет с машиной соседнего района. Загрузка как в плане A.' }
 };
 const VEH = { labo: 'Labo', changan: 'Changan', gazel: 'Gazel', kamaz: 'Kamaz' };
+// коробки отгрузки по пакинг-листу (текст «60×40×50×12; …») → список для укладки; разбор по тексту кэшируется
+const BOX_CACHE = new Map();
+const boxesOf = s => { const t = String((s && s.boxes) || '').trim(); if (!t) return []; let v = BOX_CACHE.get(t); if (!v) { v = window.LogiEngine.parseBoxes(t).list || []; BOX_CACHE.set(t, v); } return v; };
+const boxN = s => boxesOf(s).reduce((a, x) => a + x.n, 0);
 // рейсы плана на картах («Карта», «Планы»): свой оттенок синего и штрих, номер рейса — как в списке
 const PLAN_SHADES = ['--color-accent-500', '--color-accent-800', '--color-accent-600', '--color-accent-900', '--color-accent-400', '--color-accent-700'];
 const PLAN_DASHES = [null, '8 5', null, '2 5', '10 4 2 4', null];
@@ -1957,6 +1993,7 @@ class Component extends DCLogic {
   planMapRef = React.createRef();
   impPdfRef = React.createRef();
   impFileRef = React.createRef();
+  packFileRef = React.createRef();
   vizRef = React.createRef();
 
   loadLeaflet() {
@@ -2199,9 +2236,16 @@ class Component extends DCLogic {
     // и просим обновить код скрипта.
     const since = { laboBaseIncludesPts: 2, kamazBaseIncludesPts: 2, gazelM3: 3, gazelKg: 3, bTolM3: 4, bTolKg: 4,   // с какой версии скрипт хранит настройку
       changanM3: 5, changanKg: 5, changanBase: 5, changanPt: 5, changanBaseIncludesPts: 5, gazelCount: 5, laboCount: 5, changanCount: 5, tripsPerVehicle: 5, freeOutM3: 6, densityMin: 8, densityMax: 8, fillPct: 32 };
-    this.gsScriptOld = !(j.v >= 32); this.gsVersion = +j.v || 0; this.gsImports = (j.data && j.data.imports) || []; this.gsTg = (j.data && j.data.tg) || null;
+    this.gsScriptOld = !(j.v >= 33); this.gsVersion = +j.v || 0; this.gsImports = (j.data && j.data.imports) || []; this.gsTg = (j.data && j.data.tg) || null;
     const cur0 = this.state.data, unset = data.defaults || [];
     delete data.defaults;
+    // скрипт ниже 33 не хранит коробки по пакинг-листу (W): до обновления кода держим их на устройстве —
+    // у той же строки (та же дата и BL), у новой строки — по дате и BL, если такая одна
+    if (!(j.v >= 33) && cur0) {
+      const mine = cur0.shipments.filter(s => s.boxes), byId = new Map(mine.map(s => [s.id + '|' + s.date + '|' + s.bl, s.boxes]));
+      const one = k => { const m = mine.filter(s => s.date + '|' + s.bl === k); return m.length === 1 && data.shipments.filter(s => s.date + '|' + s.bl === k).length === 1 ? m[0].boxes : ''; };
+      data.shipments.forEach(s => { if (!s.boxes) s.boxes = byId.get(s.id + '|' + s.date + '|' + s.bl) || one(s.date + '|' + s.bl) || ''; });
+    }
     // пустая строка в таблице: берём значение сайта и, если скрипт умеет, записываем его в таблицу
     if (cur0) Object.keys(since).forEach(k => { if ((!(j.v >= since[k]) || unset.includes(k)) && cur0.settings[k] != null) data.settings[k] = cur0.settings[k]; });
     const mig = this.gsMigrations(data), fill = unset.filter(k => j.v >= (since[k] || 0));
@@ -2298,7 +2342,7 @@ class Component extends DCLogic {
     const ops = [], dels = [];
     const rowOf = (id, p) => { const m = String(id || '').match(new RegExp('^' + p + '(\\d{1,5})$')); return m ? +m[1] : null; };
     const pick = (o, keys) => keys.reduce((a, k) => (a[k] = o[k] ?? '', a), {});
-    const SK = ['date', 'bl', 'cbm', 'kg', 'places', 'truck', 'route', 'status', 'note', 'loc'], CK = ['bl', 'brand', 'name', 'tel1', 'tel2', 'receiver', 'receiverTel', 'district', 'address', 'lat', 'lon', 'note', 'manualZone', 'link', 'marks', 'locs'], WK = ['bl', 'brand', 'name', 'lat', 'lon'];
+    const SK = ['date', 'bl', 'cbm', 'kg', 'places', 'truck', 'route', 'status', 'note', 'loc', 'boxes'], CK = ['bl', 'brand', 'name', 'tel1', 'tel2', 'receiver', 'receiverTel', 'district', 'address', 'lat', 'lon', 'note', 'manualZone', 'link', 'marks', 'locs'], WK = ['bl', 'brand', 'name', 'lat', 'lon'];
     const same = (a, b, K) => JSON.stringify(pick(a, K)) === JSON.stringify(pick(b, K));
     const byId = a => Object.fromEntries((a || []).map(x => [x.id, x]));
     const ps = byId(prev.shipments), ns = byId(next.shipments);
@@ -2565,7 +2609,7 @@ class Component extends DCLogic {
     Object.entries(trips).forEach(([k, t]) => {
       // точки — в порядке объезда, как в планах (ближайшая от склада, потом ближайшая к ней): первая входит в базовую цену
       t.items = E.nnOrder(depot, t.items.filter(at).map(s => ({ s, lat: ptOf(s).lat, lon: ptOf(s).lon }))).map(x => x.s).concat(t.items.filter(s => !at(s)));
-      const stops = t.items.map(s => { const q = ptOf(s); return { bl: s.bl, cbm: s.cbm, kg: s.kg, zone: q.z.zone, lat: q.lat, lon: q.lon }; });   // координаты — одно место = одна точка
+      const stops = t.items.map(s => { const q = ptOf(s); return { bl: s.bl, cbm: s.cbm, kg: s.kg, boxList: boxesOf(s), zone: q.z.zone, lat: q.lat, lon: q.lon }; });   // координаты — одно место = одна точка
       const p = E.priceTrip(stops, t.kind, S);
       t.price = p; t.cost = E.costSplit(stops, p, S);   // компания платит / с клиента: меньше порога или за кольцом
       t.items.forEach((s, i) => { share[s.id] = t.cost ? t.cost.share[i] : p.perStop[i]; tripOf[s.id] = k; if (t.cost && t.cost.why[i]) { free[s.id] = t.cost.why[i]; charge[s.id] = t.cost.charge[i]; } });
@@ -2582,7 +2626,7 @@ class Component extends DCLogic {
     const vehicles = this.fleetVehicles(data);
     const stops = data.shipments.filter(s => ds.includes(s.date) && !E.NO_PLAN.includes(s.status) && s.truck !== PICK).map(s => {
       const c = D.cmap[s.bl] || {}, p = D.ptOf(s);   // своя локация отгрузки — вместо адреса клиента
-      return { id: s.id, bl: s.bl, date: s.date, cbm: +s.cbm || 0, kg: +s.kg || 0, places: +s.places || 0, lat: p.lat, lon: p.lon, zone: p.z.zone, client: c, loc: p.own ? p.name : '' };
+      return { id: s.id, bl: s.bl, date: s.date, cbm: +s.cbm || 0, kg: +s.kg || 0, places: +s.places || 0, boxList: boxesOf(s), lat: p.lat, lon: p.lon, zone: p.z.zone, client: c, loc: p.own ? p.name : '' };
     });
     // кэш по партии: ключ — её точки (с клиентами), настройки и машины. Правка другой партии или обновление из таблицы,
     // где эта партия не менялась, её планы не пересчитывают (оптимизатор тяжёлый: «Расходы» строят планы всех партий периода)
@@ -2656,7 +2700,7 @@ class Component extends DCLogic {
     if (this._rep.byDate.has(date)) return this._rep.byDate.get(date);
     const ret = t => t.finish + t.back / S.speed * 60 * S.roadK;
     const caps = { labo: [S.laboM3, S.laboKg], changan: [S.changanM3, S.changanKg], gazel: [S.gazelM3, S.gazelKg], kamaz: [S.cM3, S.cKg] };
-    const stopOf = s => { const c = D.cmap[s.bl] || {}, p = D.ptOf(s); return { id: s.id, bl: s.bl, cbm: +s.cbm || 0, kg: +s.kg || 0, places: +s.places || 0, lat: p.lat, lon: p.lon, zone: p.z.zone, client: c, loc: p.own ? p.name : '' }; };
+    const stopOf = s => { const c = D.cmap[s.bl] || {}, p = D.ptOf(s); return { id: s.id, bl: s.bl, cbm: +s.cbm || 0, kg: +s.kg || 0, places: +s.places || 0, boxList: boxesOf(s), lat: p.lat, lon: p.lon, zone: p.z.zone, client: c, loc: p.own ? p.name : '' }; };
     const ds = String(date).split('+'), pair = ds.length > 1;   // «A+B» — две партии вместе: рейсы обеих
     const ships = data.shipments.filter(s => ds.includes(s.date)), keys = Object.keys(D.trips).filter(k => ds.includes(k.slice(0, 10)));
     let src, trips, left;
@@ -2808,7 +2852,7 @@ class Component extends DCLogic {
     // предварительные планы A/B/C — тем же buildPlans, что во вкладке «Планы»
     const ships = L.shipmentsOf(d, ''), pk = JSON.stringify([ships, S, data.clients.length, st.ver]);
     if (!c.plans || c.plansKey !== pk) {
-      const stops = ships.map((x, i) => { const cl = cmap[x.bl] || {}; return { id: 'p' + i, bl: x.bl, cbm: x.cbm, kg: x.kg, places: x.places, lat: cl.lat ?? null, lon: cl.lon ?? null, zone: (D.zones[x.bl] || {}).zone, client: cl }; });
+      const stops = ships.map((x, i) => { const cl = cmap[x.bl] || {}; return { id: 'p' + i, bl: x.bl, cbm: x.cbm, kg: x.kg, places: x.places, boxList: boxesOf(x), lat: cl.lat ?? null, lon: cl.lon ?? null, zone: (D.zones[x.bl] || {}).zone, client: cl }; });
       c.plans = E.buildPlans(stops, { ...S, vehicles: this.fleetVehicles(data) }); c.plansKey = pk;
     }
     const P = c.plans, kinds = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => VEH[k] + ' ' + s[k]).join(' · ');
@@ -2963,6 +3007,43 @@ class Component extends DCLogic {
   openDriver(d) {
     if (this.readOnly || !d) return;
     this.setState({ dialog: { type: 'drv', mode: 'edit', id: d.id, error: '', draft: { name: d.name || '', phone: d.phone || '' } } });
+  }
+  // ── пакинг-листы: файлы Excel → коробки отгрузок партии (js/packing.js) ──
+  packBls(data, date) { return [...new Set(data.shipments.filter(s => s.date === date).map(s => s.bl))]; }
+  packMatch(r, bls) { const P = window.LogiPacking; return (r.marks || []).map(m => P.matchBl(m, bls)).find(Boolean) || P.matchBl(r.file, bls) || ''; }
+  async packFiles(e) {
+    const files = [...(e.target.files || [])]; e.target.value = '';
+    if (!files.length || this.readOnly) return;
+    const st = this.state, data = st.data, dl0 = st.dialog && st.dialog.type === 'packs' ? st.dialog : null;
+    const date = dl0 ? dl0.date : okDate(st.jDate) ? st.jDate : data.shipments.map(s => s.date).sort().pop() || '';
+    const bls = this.packBls(data, date), rows = dl0 ? dl0.rows.slice() : [];
+    for (const f of files) {
+      const row = { file: f.name, ok: false, error: '', n: 0, m3: 0, text: '', unit: '', marks: [], notes: [], sel: '' };
+      try {
+        if (!/\.xlsx$/i.test(f.name)) throw new Error(/\.xls$/i.test(f.name) ? 'Старый формат .xls — откройте в Excel и сохраните как .xlsx' : 'Нужен файл Excel (.xlsx)');
+        const book = await window.XlsxIO.readGrid(await f.arrayBuffer());
+        const r = window.LogiPacking.parseBook(book, { fileName: f.name, bls });
+        if (!r.ok) throw new Error(r.error);
+        Object.assign(row, { ok: true, n: r.n, m3: r.m3, text: r.text, unit: r.unit, marks: r.marks, notes: r.notes, sel: r.bl });
+      } catch (err) { row.error = err.message || String(err); }
+      rows.push(row);
+    }
+    this.setState({ dialog: { type: 'packs', date, rows, error: '' } });
+  }
+  packApply(dl) {
+    if (this.readOnly) return;
+    const E = window.LogiEngine, data = this.state.data, date = dl.date, rows = dl.rows.filter(r => r.ok && r.sel);
+    if (!rows.length) return this.setState({ dialog: { ...dl, error: 'Нет ни одного файла с выбранным BL.' } });
+    const patch = {}, done = [];
+    rows.forEach(r => {   // BL с несколькими строками в партии — коробки в самую большую
+      const mine = data.shipments.filter(s => s.date === date && s.bl === r.sel);
+      if (!mine.length) return;
+      const t = mine.slice().sort((a, b) => (+b.cbm || 0) - (+a.cbm || 0))[0], pb = E.parseBoxes(r.text);
+      patch[t.id] = { boxes: E.boxesText(pb.list), places: +t.places || pb.n || 0, cbm: +t.cbm || pb.m3 || 0 };
+      if (!done.includes(r.sel)) done.push(r.sel);
+    });
+    this.commit({ ...data, shipments: data.shipments.map(s => patch[s.id] ? { ...s, ...patch[s.id] } : s) });
+    this.setState({ dialog: null, jMsg: { text: 'Коробки по пакинг-листам записаны: ' + done.join(', ') + '. Планы проверят укладку, 3D покажет коробки.' + (this.gsUrl && this.gsVersion < 33 ? ' В таблице коробки сохранятся с кодом скрипта версии 33.' : ''), color: 'var(--color-accent)' } });
   }
   // заявка водителя со своей машиной (скрипт 31): руководитель проверяет машину, может поправить и выбирает, куда в автопарке
   apCar(d) { return this.gsVersion >= 31 && d && d.status === 'kutilmoqda' && d.car && VEH[d.car.kind] ? d.car : null; }
@@ -3119,9 +3200,9 @@ class Component extends DCLogic {
       dvOpenGs: this.openGs, dvCanSetup: !ro
     });
     out.dvBanner = !this.gsUrl ? 'Водители работают через Google Таблицу и телеграм-бота. Подключите таблицу: «Настройки» → «Связь».' :
-      !v9 ? 'Скрипт таблицы версии ' + (this.gsVersion || '?') + ': для бота нужна версия 32. «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → новая версия развертывания.' :
+      !v9 ? 'Скрипт таблицы версии ' + (this.gsVersion || '?') + ': для бота нужна версия 33. «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → новая версия развертывания.' :
       !T ? 'Телеграм-бот не подключён: «Настройки» → «Связь» → «Телеграм-бот для водителей».' :
-      !v10 ? 'Скрипт таблицы версии 9. Чтобы отправлять партии водителям, писать им и хранить госномера машин, обновите код до последней версии (32): «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → новая версия.' :
+      !v10 ? 'Скрипт таблицы версии 9. Чтобы отправлять партии водителям, писать им и хранить госномера машин, обновите код до последней версии (33): «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → новая версия.' :
       !T.hooked ? 'Токен бота есть, но бот не подключён — нажмите «Подключить бота»: «Настройки» → «Связь».' :
       !T.grouped ? 'Группа отчётов не привязана: отчёты водителей и итог дня некуда присылать. Код для группы — «Настройки» → «Связь».' :
       T.tz && !UZ_TZ.includes(T.tz) ? 'Часовой пояс Google Таблицы — ' + T.tz + ', а не Ташкент: время водителей («на линии с …»), «сегодня» и итог дня в 20:00 сдвинуты. ' +
@@ -3130,10 +3211,11 @@ class Component extends DCLogic {
       this.gsVersion < 16 && T.scriptTz && !UZ_TZ.includes(T.scriptTz) ? 'Часовой пояс скрипта — ' + T.scriptTz + ', а не Ташкент: даты партий могут сдвигаться на день назад (04.05.2006 → 03.05.2006). ' +
         'Обновите код скрипта до 29 — с ним пояс скрипта не важен, а сдвинутые даты журнала исправятся сами: «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → новая версия. Или в Apps Script ⚙ Настройки проекта → Часовой пояс → «(GMT+05:00) Tashkent».' :
       // код ниже 22: скрипту ниже 19 — сначала свойства (без них код 19+ закроет сайт), потом что изменится — по предложению на каждое изменение
-      this.gsVersion < 32 ? 'Скрипт таблицы версии ' + this.gsVersion + '. Обновите код до 32. ' +
+      this.gsVersion < 33 ? 'Скрипт таблицы версии ' + this.gsVersion + '. Обновите код до 33. ' +
         (this.gsVersion < 19 ? 'Сначала задайте свойства скрипта TOKEN (пароль скрипта) и EDITOR_TOKEN (секрет редактора): Apps Script → ⚙ Настройки проекта → Свойства скрипта; что вписать — «Настройки» → «Связь». Без них новый код не пустит сайт. ' +
           'Потом «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → новая версия; затем «Переподключить бота».' : '«Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → новая версия.') +
-        ' Планы будут считать машины по полезному объёму кузова («Тарифы и планы» → «Полезный объём кузова, %»): между коробками воздух, Gazel на 19 м³ реально берёт около 17.' +
+        ' Коробки отгрузок по пакинг-листу будут храниться в таблице (Yuborishlar W): планы проверят, влезает ли рейс, а 3D покажет настоящие коробки.' +
+        (this.gsVersion < 32 ? ' Планы будут считать машины по полезному объёму кузова («Тарифы и планы» → «Полезный объём кузова, %»): между коробками воздух, Gazel на 19 м³ реально берёт около 17.' : '') +
         (this.gsVersion < 31 ? ' Новый водитель при регистрации в боте напишет свою машину: госномер, марку, кузов и грузоподъёмность; после «Разрешить» машина сама попадёт в автопарк.' : '') +
         (this.gsVersion < 30 ? ' Имя и телефон водителя можно будет поправить на сайте (✎ в списке водителей), а водителя — удалить.' : '') +
         (this.gsVersion < 29 ? ' Кнопкой «📤 В группу» в журнале можно будет отправить партию в группу отчётов: каждого клиента отдельным сообщением, как водителю, — куда, получатель, груз и маршрут.' : '') +
@@ -4059,7 +4141,7 @@ class Component extends DCLogic {
     ];
   }
 
-  openShipment(s, locSel) { this.setState({ dialog: { type: 'ship', mode: s ? 'edit' : 'new', id: s && s.id, ...(locSel ? { locSel } : {}), draft: s ? { ...s, route: s.route ?? '' } : { date: okDate(this.state.jDate) ? this.state.jDate : isoDay(), bl: '', cbm: '', kg: '', places: '', truck: 'Belgilanmagan', route: '', status: 'Rejada', note: '' }, error: '' } }); }
+  openShipment(s, locSel) { this.setState({ dialog: { type: 'ship', mode: s ? 'edit' : 'new', id: s && s.id, ...(locSel ? { locSel } : {}), draft: s ? { ...s, route: s.route ?? '', boxes: s.boxes || '' } : { date: okDate(this.state.jDate) ? this.state.jDate : isoDay(), bl: '', cbm: '', kg: '', places: '', boxes: '', truck: 'Belgilanmagan', route: '', status: 'Rejada', note: '' }, error: '' } }); }
   openWh(w) { this.setState({ dialog: { type: 'wh', mode: w ? 'edit' : 'new', id: w && w.id, draft: w ? { ...w, lat: w.lat ?? '', lon: w.lon ?? '' } : { bl: '', brand: '', name: '', lat: '', lon: '' }, error: '' } }); }
   openClient(c) { this.setState({ dialog: { type: 'client', mode: c ? 'edit' : 'new', id: c && c.bl, draft: c ? { ...c, lat: c.lat ?? '', lon: c.lon ?? '', marks: c.marks || '', locs: c.locs || '' } : { bl: '', brand: '', name: '', tel1: '', tel2: '', receiver: '', receiverTel: '', district: '__auto', address: '', lat: '', lon: '', note: '', manualZone: '', marks: '', locs: '' }, error: '' } }); }
   runAutoDistrict() {
@@ -4624,7 +4706,7 @@ class Component extends DCLogic {
     const curSub = top === 'reports' ? (st.tab === 'dash' ? 'dash' : st.repKind || 'batch') : st.tab;
     const subtabs = (SUB[top] || []).filter(([k]) => !(k === 'link' && this.readOnly)).map(([k, l]) => ({ l, cls: k === curSub ? 'subtab on' : 'subtab',
       go: () => top === 'reports' ? this.setState(k === 'dash' ? { tab: 'dash' } : { tab: 'reports', repKind: k }) : this.goSettings(k) }));
-    const base = { tabs, subtabs, hasSubtabs: subtabs.length > 0, loading: !st.ready, isJournal: false, isClients: false, isMap: false, isDash: false, isPlans: false, isDrivers: false, isViz: false, isTariffs: false, isReports: false, isImport: false, isShipDialog: false, isClientDialog: false, isLocAskDialog: false, isWhDialog: false, isVehDialog: false, isDrvDialog: false, isApDialog: false, isGsDialog: false, isCheck: false, isFleetSet: false, depotName: '', savedNote: '', exportXlsx: this.exportXlsx, mapRef: this.mapRef, planMapRef: this.planMapRef, vizRef: this.vizRef,
+    const base = { tabs, subtabs, hasSubtabs: subtabs.length > 0, loading: !st.ready, isJournal: false, isClients: false, isMap: false, isDash: false, isPlans: false, isDrivers: false, isViz: false, isTariffs: false, isReports: false, isImport: false, isShipDialog: false, isClientDialog: false, isLocAskDialog: false, isWhDialog: false, isVehDialog: false, isDrvDialog: false, isApDialog: false, isPackDialog: false, isGsDialog: false, isCheck: false, isFleetSet: false, depotName: '', savedNote: '', exportXlsx: this.exportXlsx, mapRef: this.mapRef, planMapRef: this.planMapRef, vizRef: this.vizRef,
       fileInputRef: this.fileInputRef, onFilePicked: this.onFilePicked, connectFile: this.connectFile, disconnectFile: this.disconnectFile, saveNow: () => this.saveToFile(), reloadFromFile: () => this.readFromHandle(),
       account: () => window.LogiAuth && window.LogiAuth.openAccount(), readOnly: this.readOnly };
     const fs = st.fileStatus, fat = st.fileAt ? hhmm(st.fileAt.getHours() * 60 + st.fileAt.getMinutes()) : '';
@@ -4674,7 +4756,7 @@ class Component extends DCLogic {
     if (st.tab === 'journal') {
       // импорт манифестов — отсюда: кнопка «Импорт манифеста» и плашка о черновиках, которые ждут проверки
       const drafts = this.readOnly ? [] : (this.impList || []).filter(d => d.status === 'draft');
-      Object.assign(out, { goImport: () => this.setState({ tab: 'import', impId: null }), jHasDrafts: drafts.length > 0,
+      Object.assign(out, { goImport: () => this.setState({ tab: 'import', impId: null }), packFileRef: this.packFileRef, packPick: () => this.packFileRef.current && this.packFileRef.current.click(), onPackFiles: e => this.packFiles(e), jHasDrafts: drafts.length > 0,
         jDraftsNote: 'Черновиков импорта ждут проверки: ' + drafts.length + ' (' + drafts.slice(0, 3).map(d => (d.file && d.file.name) || d.id).join(', ') + (drafts.length > 3 ? '…' : '') + '). Партии появятся в журнале после подтверждения.' });
       const q = st.jSearch.trim().toLowerCase();
       // партия, две партии («+ вторая партия» — одним списком, у строки дата) или все
@@ -4725,7 +4807,7 @@ class Component extends DCLogic {
         const c = D.cmap[s.bl] || {}, t = D.trips[D.tripOf[s.id]], sh = D.share[s.id], p = D.ptOf(s), z = p.z || {}, editing = st.editRow === s.id;
         const pick = s.truck === PICK || s.status === 'Mijoz ozi oldi', noPt = !pick && p.lat == null && s.status !== 'Bekor qilindi';
         return { date: dShort(s.date), bl: s.bl, brand: c.brand || '—', name: c.name || (D.cmap[s.bl] ? '' : 'нет в справочнике'), district: distName(c.district), receiver: c.receiver || '', tel: c.receiverTel || c.tel1 || '', telHref: telHref(c.receiverTel || c.tel1),
-          cbm: (s.cbm ? f1(s.cbm, 3) : '—') + ' м³', kgPl: (s.kg ? f0(s.kg) : '—') + ' кг · ' + (s.places || '—') + ' мест', truck: s.truck, route: s.route ?? '', status: s.status, zIn: z.zone === 'in', zOut: z.zone === 'out', zNone: !z.zone, border: !!z.border, editing: st.editRow === s.id, notEditing: st.editRow !== s.id, truckLabel: TR[s.truck] || s.truck, routeLabel: s.route ?? '—', statusLabel: ST[s.status] || s.status, onStartEdit: () => this.setState({ editRow: s.id }), onDone: () => this.setState({ editRow: null }),
+          cbm: (s.cbm ? f1(s.cbm, 3) : '—') + ' м³', kgPl: (s.kg ? f0(s.kg) : '—') + ' кг · ' + (s.places || '—') + ' мест' + (s.boxes ? ' · 📦 ' + boxN(s) + ' кор.' : ''), truck: s.truck, route: s.route ?? '', status: s.status, zIn: z.zone === 'in', zOut: z.zone === 'out', zNone: !z.zone, border: !!z.border, editing: st.editRow === s.id, notEditing: st.editRow !== s.id, truckLabel: TR[s.truck] || s.truck, routeLabel: s.route ?? '—', statusLabel: ST[s.status] || s.status, onStartEdit: () => this.setState({ editRow: s.id }), onDone: () => this.setState({ editRow: null }),
           share: sh != null ? f0(sh) : '—', free: !!D.free[s.id], freeTag: this.chargeTag(D.free[s.id], D.charge[s.id], S), tripInfo: t ? (t.price.total != null ? 'рейс ' + f0(t.price.total) : t.price.label + ': нет тарифа') : '',
           hasPoint: p.lat != null && !pick, pointHref: p.lat != null ? E.yPoint(p.lat, p.lon) : '',
           // самовывоз — синяя строка; без координат (кроме отменённых) — красная и «📍 Указать точку» (анкета клиента)
@@ -4996,7 +5078,11 @@ class Component extends DCLogic {
         let prev = depot;
         const nM3 = v.nomM3 ?? v.m3, nKg = v.nomKg ?? v.kg, upM3 = t.cbm > nM3 + 1e-6, upKg = t.kg > nKg + 1e-6;   // сверх кузова — за счёт допуска Gazel в плане B
         const tc = E.costSplit(t.stops, t.price, S);
-        return { dists: planKey === 'X' ? 'Районы: ' + [...new Set(t.stops.map(x => dnX(x.client.district)))].join(', ') : '', costNote: this.costNote(tc), name: t.name, tariff: t.price.label + (t.over || t.overload ? ' · ПЕРЕГРУЗ' : (upM3 || upKg) ? ' · с допуском' : '') + (t.noVehicle ? ' · НЕТ МАШИНЫ' : ''),
+        const lay = window.LogiViz && t.stops.some(s => s.boxList && s.boxList.length) ? window.LogiViz.layout(t) : null;   // коробки по пакинг-листу — влезает ли рейс
+        return { boxNote: !lay ? '' : lay.pack.bigN ? 'не проходит в кузов: ' + lay.pack.bigN + ' кор.' : lay.pack.overN ? 'не помещается: ' + lay.pack.overN + ' кор.'
+            : 'по коробкам: ' + f1(lay.usedLen, 1) + ' из ' + f1(lay.body.l, 1) + ' м' + (lay.pack.approxN ? ' · без списка: ' + lay.pack.approxN + ' точ.' : ''),
+          boxCls: lay && (lay.pack.bigN || lay.pack.overN) ? 'tag-red' : 'tag-neutral',
+          dists: planKey === 'X' ? 'Районы: ' + [...new Set(t.stops.map(x => dnX(x.client.district)))].join(', ') : '', costNote: this.costNote(tc), name: t.name, tariff: t.price.label + (t.over || t.overload ? ' · ПЕРЕГРУЗ' : (upM3 || upKg) ? ' · с допуском' : '') + (t.noVehicle ? ' · НЕТ МАШИНЫ' : ''),
           no: ti + 1, col: 'var(' + PLAN_SHADES[ti % PLAN_SHADES.length] + ')', hiCls: hi === ti ? 'trip-hi' : '', focus: () => this.planFocus(hi === ti ? null : ti),
           canKind: canEdit && kinds.length > 1, kind: t.kind, kindOpts: kinds.map(k => ({ v: k, l: VEH[k] })), onKind: e => this.planKindSet(pd, planKey, plan, ti, e.target.value), stopsN: new Set(t.stops.map(s => s.bl)).size,
           cbm: f1(t.cbm, 2) + ' из ' + f1(nM3, 1) + (v.tolM3 ? ' (+' + f1(v.tolM3, 1) + ')' : ''), kg: f0(t.kg) + ' из ' + f0(nKg) + (v.tolKg ? ' (+' + f0(v.tolKg) + ')' : ''),
@@ -5051,7 +5137,7 @@ class Component extends DCLogic {
           out.vizAllRows = lays.map((l, i) => { const kgF = l.maxKg ? l.kg / l.maxKg : 0;
             return { name: l.name + ' · ' + l.label, pts: l.points.length + ' точ.', cbm: f1(l.cbm, 1) + ' / ' + f1(l.body.v, 0) + ' м³', kg: f0(l.kg) + ' / ' + f0(l.maxKg) + ' кг',
               cbmPct: Math.min(100, l.fill * 100).toFixed(0) + '%', kgPct: Math.min(100, kgF * 100).toFixed(0) + '%', cbmBar: barCol(l.fill), kgBar: barCol(kgF),
-              hasOver: l.overM3 > 0, over: 'Сверх кузова ' + f1(l.overM3, 1) + ' м³', go: () => this.setState({ vizTrip: i, vizStep: 0, vizSel: null }) }; });
+              hasOver: l.overM3 > 0, over: l.byBoxes ? 'Не помещается ' + l.pack.overN + ' кор.' : 'Сверх кузова ' + f1(l.overM3, 1) + ' м³', go: () => this.setState({ vizTrip: i, vizStep: 0, vizSel: null }) }; });
           out.vizNote = 'Машины стоят рядом, кабиной влево. Кузов — по размерам из карточки машины, без них — по объёму из «Тарифов». Кубики условные: размеров мест нет, груз каждой точки показан по его объёму.';
         } else {
           const l = lays[one], t = M.plan.trips[one], n = l.points.length, step = Math.min(st.vizStep, n), kgF = l.maxKg ? l.kg / l.maxKg : 0;
@@ -5060,13 +5146,13 @@ class Component extends DCLogic {
           out.vizIsOne = true;
           out.vizTitle = l.name;
           out.vizPrice = t.price.total != null ? money(t.price.total) : 'нет тарифа';
-          out.vizSummary = vPre + l.label + ' · ' + dims(l.body) + ' · ' + n + ' точ.';
+          out.vizSummary = vPre + l.label + ' · ' + dims(l.body) + ' · ' + n + ' точ.' + (l.byBoxes ? ' · по пакинг-листу: ' + l.pack.n + ' кор., занято ' + f1(l.usedLen, 1) + ' из ' + f1(l.body.l, 1) + ' м' : '');
           const dateOf = {}; if (vPair) t.stops.forEach(x => { if (x.date) dateOf[x.bl] = dShort(x.date); });   // у точки — дата её партии
           out.vizBars = [[' Объём', f1(l.cbm, 1) + ' из ' + f1(l.body.v, 1) + ' м³ · ' + pct(l.fill), l.fill], ['Вес', f0(l.kg) + ' из ' + f0(l.maxKg) + ' кг · ' + pct(kgF), kgF]]
             .map(([lb, v, x]) => ({ l: lb.trim(), v, pct: Math.min(100, x * 100).toFixed(0) + '%', bar: barCol(x), color: over(x) ? 'var(--color-danger)' : 'inherit' }));
           out.vizCg = l.cg != null && n ? 'Центр тяжести груза: ' + f1(l.cg, 1) + ' м от кабины (' + pct(l.cg / l.body.l) + ' длины кузова)' : '';
           out.vizHasOver = l.overM3 > 0;
-          out.vizOver = 'Сверх кузова ' + f1(l.overM3, 1) + ' м³ — показано ' + (l.body.flat ? 'за задним бортом' : 'за дверями') + ' полупрозрачным.' + (M.key === 'B' && l.kind === 'gazel' ? ' В плане B это допуск Gazel.' : '');
+          out.vizOver = (l.byBoxes ? 'Не помещается ' + l.pack.overN + ' кор. (' + f1(l.overM3, 1) + ' м³)' : 'Сверх кузова ' + f1(l.overM3, 1) + ' м³') + ' — показано ' + (l.body.flat ? 'за задним бортом' : 'за дверями') + ' полупрозрачным.' + (M.key === 'B' && l.kind === 'gazel' ? ' В плане B это допуск Gazel.' : '');
           out.vizStepMax = n; out.vizStep = step;
           out.onVizStep = e => this.setState({ vizStep: +e.target.value, vizSel: null });
           out.vizPrev = () => this.setState({ vizStep: Math.max(0, step - 1), vizSel: null });
@@ -5075,12 +5161,12 @@ class Component extends DCLogic {
             : 'Выгружено точек: ' + step + ' (последняя — ' + l.points[step - 1].bl + '). В кузове ' + f1(l.points.slice(step).reduce((a, p) => a + p.cbm, 0), 1) + ' м³, дальше точка ' + (step + 1) + '.';
           out.vizPoints = l.points.map(p => { const c = V.colorOf(p.n), sel = st.vizSel === p.n, done = p.n <= step, cl = p.client || {};
             return { n: p.n, color: c, fg: V.isLight(c) ? '#1d1f20' : '#ffffff', bl: p.bl + (dateOf[p.bl] ? ' · ' + dateOf[p.bl] : '') + (p.parts.length ? ' · часть ' + p.parts.join(', ') : ''), name: [cl.brand, cl.name].filter(Boolean).join(' '),
-              info: f1(p.cbm, 2) + ' м³ · ' + f0(p.kg) + ' кг' + (p.places ? ' · ' + p.places + ' мест' : '') + (done ? ' · выгружено' : ''),
+              info: f1(p.cbm, 2) + ' м³ · ' + f0(p.kg) + ' кг' + (p.places ? ' · ' + p.places + ' мест' : '') + (p.boxN ? ' · ' + p.boxN + ' кор.' : '') + (done ? ' · выгружено' : ''),
               bg: sel ? 'var(--color-accent-100)' : 'var(--color-bg)', border: sel ? 'var(--color-accent)' : 'var(--color-divider)', opacity: done ? '0.45' : '1',
               go: () => this.setState({ vizSel: sel ? null : p.n }) }; });
           out.vizNote = (l.body.own ? dims(l.body).replace('≈ ', '').replace(/^./, c => c.toUpperCase()) + ' — из карточки машины («Водители и автопарк»).'
             : l.body.flat ? l.label + ': ' + dims(l.body).replace(', груз до', ' — по данным производителя; груз до') + ' высотой — из объёма ' + f1(l.body.v, 1) + ' м³ во «Тарифах».'
-            : 'К' + dims(l.body).slice(1) + ': ширина и высота типичные для ' + l.label + ', длина — из объёма во «Тарифах».') + ' Кубики условные: размеров мест нет, груз каждой точки разложен по объёму. Последнюю точку грузят первой — к кабине.';
+            : 'К' + dims(l.body).slice(1) + ': ширина и высота типичные для ' + l.label + ', длина — из объёма во «Тарифах».') + (l.byBoxes ? ' Коробки — по пакинг-листу, своих размеров; точка без списка — полупрозрачный блок по её объёму.' : ' Кубики условные: размеров мест нет, груз каждой точки разложен по объёму.') + ' Последнюю точку грузят первой — к кабине.';
         }
       }
     }
@@ -5123,6 +5209,12 @@ class Component extends DCLogic {
       out.linkInfo = dl.linkInfo || ''; out.linkInfoColor = dl.linkBad ? 'var(--color-danger-ink)' : 'var(--color-accent-800)';
       if (dl.type === 'ship') {
         out.isShipDialog = true;
+        { const pb = E.parseBoxes(dr.boxes), old = !!this.gsUrl && this.gsVersion < 33;   // коробки по пакинг-листу: счёт и объём против журнала
+          out.boxHint = pb.error ? pb.error : pb.n ? 'Коробок: ' + pb.n + ' · ' + f1(pb.m3, 2) + ' м³' + (dr.places !== '' && dr.places != null && +dr.places !== pb.n ? ' — мест в журнале: ' + dr.places : '') +
+              (+dr.cbm > 0 && Math.abs(+dr.cbm - pb.m3) > Math.max(0.05, +dr.cbm * 0.1) ? ' — CBM в журнале: ' + f1(+dr.cbm, 2) : '') + '. Планы проверят, влезает ли рейс, 3D покажет коробки в кузове.'
+            : 'Пусто — в 3D груз показан кубиками по объёму. Список можно загрузить из файла: «📦 Пакинг-листы» в журнале.';
+          if (old) out.boxHint += ' В таблице коробки сохраняются с кодом скрипта версии 33. До обновления — только на этом устройстве.';
+          out.boxHintColor = pb.error ? 'var(--color-danger-ink)' : 'var(--color-neutral-700)'; }
         out.dialogTitle = dl.mode === 'new' ? 'Новая отгрузка' : 'Отгрузка ' + dr.bl;
         out.blOpts = data.clients.map(c => ({ v: c.bl, l: (c.brand || '') + ' ' + (c.name || '') }));
         const c = D.cmap[(dr.bl || '').trim()];
@@ -5157,7 +5249,9 @@ class Component extends DCLogic {
           if (!dr.date || !String(dr.bl).trim()) return this.setState({ dialog: { ...dl, error: 'Укажите дату и BL код' } });
           // неполный год («0001», «0026») таблица запишет как 1900 год, и строка пропадёт с сайта
           if (!okDate(dr.date)) return this.setState({ dialog: { ...dl, error: 'Проверьте дату партии: год ' + String(dr.date).slice(0, 4) + '. Выберите дату в календаре (значок в поле) или впишите её полностью: ДД.ММ.ГГГГ.' } });
-          const rec = { ...dr, bl: String(dr.bl).trim(), cbm: +dr.cbm || 0, kg: +dr.kg || 0, places: +dr.places || 0, route: dr.route === '' || dr.route == null ? null : +dr.route };
+          const pb = window.LogiEngine.parseBoxes(dr.boxes);   // коробки по пакинг-листу: пустые мест и CBM — из них
+          if (pb.error) return this.setState({ dialog: { ...dl, error: 'Коробки: ' + pb.error } });
+          const rec = { ...dr, bl: String(dr.bl).trim(), cbm: +dr.cbm || pb.m3 || 0, kg: +dr.kg || 0, places: +dr.places || pb.n || 0, boxes: window.LogiEngine.boxesText(pb.list), route: dr.route === '' || dr.route == null ? null : +dr.route };
           // куда везти: новая точка — в анкету клиента (та же точка уже есть — берём её); точка — всем строкам BL в партии
           let base = data;
           if (this.canLoc) {
@@ -5277,7 +5371,7 @@ class Component extends DCLogic {
             try { const j = await this.tgPost(body); setTg({ busy: false, res: done ? done(j) : '', color: 'var(--color-accent-700)' }); }
             catch (e) { setTg({ busy: false, res: e.message || String(e), color: 'var(--color-accent-900)' }); }
           };
-          out.tgInfo = !v9 ? 'Для бота нужен код скрипта таблицы версии 32 (не ниже 9).' :
+          out.tgInfo = !v9 ? 'Для бота нужен код скрипта таблицы версии 33 (не ниже 9).' :
             !T ? 'В свойствах скрипта нет токена бота.' :
             !T.hooked ? 'Токен бота есть. Нажмите «Подключить бота».' :
             !T.grouped ? 'Бот @' + T.bot + ' подключён ✅ Осталось привязать группу отчётов: добавьте бота в группу и отправьте там команду ниже.' :
@@ -5389,6 +5483,22 @@ class Component extends DCLogic {
             this.setState({ dialog: null });
             this.dvRun('Удаляю водителя…', { action: 'drvdel', id: d.id }, () => d.name + ': удалён из списка водителей.');
           } });
+      } else if (dl.type === 'packs') {
+        // пакинг-листы: файл → BL партии → коробок и м³ против журнала
+        const dates = [...new Set(data.shipments.map(s => s.date))].filter(Boolean).sort().reverse(), bls = this.packBls(data, dl.date);
+        const jOf = bl => { const m = data.shipments.filter(s => s.date === dl.date && s.bl === bl); return { places: m.reduce((a, s) => a + (+s.places || 0), 0), cbm: m.reduce((a, s) => a + (+s.cbm || 0), 0), boxes: m.some(s => s.boxes) }; };
+        Object.assign(out, { isPackDialog: true, dialogTitle: 'Пакинг-листы', packDate: dl.date,
+          packDateOpts: dates.map(d => ({ v: d, l: dLong(d) })),
+          onPackDate: e => { const date = e.target.value, nb = this.packBls(data, date); this.setState(s0 => ({ dialog: { ...s0.dialog, date, error: '', rows: s0.dialog.rows.map(r => ({ ...r, sel: r.ok ? this.packMatch(r, nb) : '' })) } })); },
+          packBlOpts: bls.map(bl => { const j = jOf(bl), c = (data.clients.find(x => x.bl === bl) || {}); return { v: bl, l: bl + (c.brand ? ' · ' + c.brand : '') + ' — мест ' + f0(j.places) + ' · ' + f1(j.cbm, 2) + ' м³' + (j.boxes ? ' · 📦 есть' : '') }; }),
+          packRows: dl.rows.map((r, i) => { const j = r.sel ? jOf(r.sel) : null;
+            return { file: r.file, ok: r.ok, sel: r.sel,
+              info: r.ok ? ['Коробок: ' + f0(r.n), f1(r.m3, 2) + ' м³', r.unit === 'm' ? 'размеры в файле в метрах' : r.unit === 'mm' ? 'размеры в файле в мм' : ''].concat(r.notes, !r.sel ? ['BL не найден — выберите'] : []).filter(Boolean).join(' · ') : r.error,
+              color: r.ok ? (r.sel ? 'var(--color-neutral-700)' : 'var(--color-danger-ink)') : 'var(--color-danger-ink)',
+              journal: !j ? '' : 'В журнале: мест ' + f0(j.places) + ' · ' + f1(j.cbm, 2) + ' м³' + (j.places && j.places !== r.n ? ' — не сходится с числом коробок' : '') + (j.boxes ? ' · коробки уже есть — заменятся' : ''),
+              onSel: e => { const v = e.target.value; this.setState(s0 => ({ dialog: { ...s0.dialog, error: '', rows: s0.dialog.rows.map((x, k) => k === i ? { ...x, sel: v } : x) } })); } }; }),
+          packNote: 'Коробки записываются отгрузкам выбранной партии (у BL с несколькими строками — в самую большую), пустые «мест» и CBM заполняются из списка. Старый формат .xls — пересохраните как .xlsx.',
+          packMore: () => this.packFileRef.current && this.packFileRef.current.click(), packApply: () => this.packApply(dl) });
       } else if (dl.type === 'drvok') {
         // заявка водителя со своей машиной (скрипт 31): проверить, поправить, выбрать машину автопарка или новую
         const all = (this.gsTg && this.gsTg.drivers) || [], d = all.find(x => x.id === dl.id) || { id: dl.id, name: '' }, L = data.lists, plates = L.plates || {}, fleet = L.fleet || {};

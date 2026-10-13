@@ -128,7 +128,7 @@
     const skipped = shipRows.filter(r => !dateOf(Ys[r].A)).map(r => ({ row: r, bl: str(Ys[r].C), value: str(Ys[r].A) }));
     const textDates = shipRows.filter(r => !serialOk(Ys[r].A) && dateOf(Ys[r].A)).map(r => ({ row: r, bl: str(Ys[r].C), value: str(Ys[r].A), date: dateOf(Ys[r].A) }));
     const shipments = shipRows.filter(r => dateOf(Ys[r].A)).map(r => { const c = Ys[r]; return {
-      id: 's' + r, date: dateOf(c.A), bl: str(c.C), cbm: num(c.J) || 0, kg: num(c.K) || 0, places: num(c.L) || 0, truck: str(c.M) || 'Belgilanmagan', route: num(c.N), status: str(c.O) || 'Rejada', note: str(c.P), loc: str(c.V) }; });
+      id: 's' + r, date: dateOf(c.A), bl: str(c.C), cbm: num(c.J) || 0, kg: num(c.K) || 0, places: num(c.L) || 0, truck: str(c.M) || 'Belgilanmagan', route: num(c.N), status: str(c.O) || 'Rejada', note: str(c.P), loc: str(c.V), boxes: str(c.W) }; });   // W — коробки по пакинг-листу (версия 33)
     const warehouses = Object.keys(Ws).map(Number).filter(r => r >= 5 && str(Ws[r].A)).sort((a, b) => a - b).map(r => { const c = Ws[r]; return { id: 'w' + r, bl: str(c.A), brand: str(c.B), name: str(c.C), lat: num(c.D), lon: num(c.E) }; });
     const ring = Object.keys(Hs).map(Number).filter(r => r >= 11).sort((a, b) => a - b).map(r => [num(Hs[r].B), num(Hs[r].C)]).filter(p => p[0] && p[1]);
     const settings = {};
@@ -241,10 +241,11 @@
       t.items.forEach((s, i) => { share[s.id] = { label: p.label, pts: p.points, total: p.total, part: c ? c.share[i] : p.perStop[i] }; }); });
 
     const ship = patchTable(txt(z, P[SH.ship]), { firstRow: 5, tplRow: 6, keyCol: 'C', items: data.shipments,
-      inputs: { A: s => isoToSerial(s.date), C: s => s.bl, J: s => +s.cbm || null, K: s => +s.kg || null, L: s => +s.places || null, M: s => s.truck, N: s => s.route ?? null, O: s => s.status, P: s => s.note, V: s => s.loc || null },
+      inputs: { A: s => isoToSerial(s.date), C: s => s.bl, J: s => +s.cbm || null, K: s => +s.kg || null, L: s => +s.places || null, M: s => s.truck, N: s => s.route ?? null, O: s => s.status, P: s => s.note, V: s => s.loc || null, W: s => s.boxes || null },
       formulas: { B: s => s.date.slice(8, 10) + '.' + s.date.slice(5, 7), D: s => C(s.bl).brand || '', E: s => C(s.bl).name || '', F: s => C(s.bl).district || '', G: s => C(s.bl).receiver || '', H: s => C(s.bl).receiverTel || '', I: s => coord(C(s.bl).lat, C(s.bl).lon), Q: s => zt((zones[s.bl] || {}).zone),
         R: s => share[s.id] ? share[s.id].label : '', S: s => share[s.id] ? share[s.id].pts : '', T: s => share[s.id] ? (share[s.id].total ?? 'narx yo‘q') : '', U: s => share[s.id] && share[s.id].part != null ? Math.round(share[s.id].part) : '' } });
-    put(z, P[SH.ship], data.shipments.some(s => s.loc) ? setCells(ship.xml, { V4: 'Yetkazish joyi' }) : ship.xml);   // куда везти — подпись столбца V
+    const shipHead = { ...(data.shipments.some(s => s.loc) ? { V4: 'Yetkazish joyi' } : {}), ...(data.shipments.some(s => s.boxes) ? { W4: 'Qutilar, sm' } : {}) };   // подписи столбцов V (куда везти) и W (коробки)
+    put(z, P[SH.ship], Object.keys(shipHead).length ? setCells(ship.xml, shipHead) : ship.xml);
 
     const cli = patchTable(txt(z, P[SH.cli]), { firstRow: 5, tplRow: 5, keyCol: 'A', items: data.clients,
       inputs: { A: c => c.bl, B: c => c.brand, C: c => c.name, D: c => c.tel1, E: c => c.tel2, F: c => c.receiver, G: c => c.receiverTel, H: c => c.district, I: c => c.address, J: c => c.link ? 'Xaritada ochish' : '', K: c => c.lat, L: c => c.lon, O: c => c.note, X: c => c.manualZone, Y: c => c.marks, Z: c => c.locs || null },

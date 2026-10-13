@@ -2237,11 +2237,11 @@ X — по районам	X — tumanlar bo‘yicha
 например, GAZelle Next	masalan, GAZelle Next
 
 # ── версия 22: откуда и куда (бот) ──
-Для бота нужен код скрипта таблицы версии 32 (не ниже 9).	Bot uchun jadval skripti kodining 32-versiyasi kerak (9 dan past emas).
+Для бота нужен код скрипта таблицы версии 33 (не ниже 9).	Bot uchun jadval skripti kodining 33-versiyasi kerak (9 dan past emas).
 Обновите код скрипта до 29 — с ним пояс скрипта не важен, а сдвинутые даты журнала исправятся сами: «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → новая версия.	Skript kodini 29 gacha yangilang — unda skript mintaqasi muhim emas, jurnaldagi siljigan sanalar esa o‘zi tuzaladi: «Sozlamalar» → «Ulanish» → «Kodni nusxalash» → Apps Script’ga qo‘yish → Deploy → yangi versiya.
-Скрипт таблицы версии {n}: для бота нужна версия 32. «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → новая версия развертывания.	Jadval skripti versiyasi {n}: bot uchun 32-versiya kerak. «Sozlamalar» → «Ulanish» → «Kodni nusxalash» → Apps Script’ga qo‘yish → yangi joylashtirish versiyasi.
-Скрипт таблицы версии ?: для бота нужна версия 32. «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → новая версия развертывания.	Jadval skripti versiyasi ?: bot uchun 32-versiya kerak. «Sozlamalar» → «Ulanish» → «Kodni nusxalash» → Apps Script’ga qo‘yish → yangi joylashtirish versiyasi.
-Скрипт таблицы версии 9. Чтобы отправлять партии водителям, писать им и хранить госномера машин, обновите код до последней версии (32): «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → новая версия.	Jadval skripti versiyasi 9. Haydovchilarga partiya yuborish, ularga yozish va mashinalar davlat raqamlarini saqlash uchun kodni oxirgi versiyagacha (32) yangilang: «Sozlamalar» → «Ulanish» → «Kodni nusxalash» → Apps Script’ga qo‘yish → Deploy → yangi versiya.
+Скрипт таблицы версии {n}: для бота нужна версия 33. «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → новая версия развертывания.	Jadval skripti versiyasi {n}: bot uchun 33-versiya kerak. «Sozlamalar» → «Ulanish» → «Kodni nusxalash» → Apps Script’ga qo‘yish → yangi joylashtirish versiyasi.
+Скрипт таблицы версии ?: для бота нужна версия 33. «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → новая версия развертывания.	Jadval skripti versiyasi ?: bot uchun 33-versiya kerak. «Sozlamalar» → «Ulanish» → «Kodni nusxalash» → Apps Script’ga qo‘yish → yangi joylashtirish versiyasi.
+Скрипт таблицы версии 9. Чтобы отправлять партии водителям, писать им и хранить госномера машин, обновите код до последней версии (33): «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → новая версия.	Jadval skripti versiyasi 9. Haydovchilarga partiya yuborish, ularga yozish va mashinalar davlat raqamlarini saqlash uchun kodni oxirgi versiyagacha (33) yangilang: «Sozlamalar» → «Ulanish» → «Kodni nusxalash» → Apps Script’ga qo‘yish → Deploy → yangi versiya.
 Обновите код до 29.	Kodni 29-versiyaga yangilang.
 Водитель увидит, откуда забирать груз и куда везти: склад отправки с адресом и адрес клиента — в задании и в карточке точки.	Haydovchi yukni qayerdan olish va qayerga olib borishni ko‘radi: jo‘natish ombori manzili bilan va mijoz manzili — topshiriqda va manzil kartasida.
 
@@ -2518,7 +2518,7 @@ https://yandex.uz/maps/… или 41.311, 69.279	https://yandex.uz/maps/… yoki
 Удалить водителя {s}?	{s} haydovchi o‘chirilsinmi?
 Он сейчас на линии — бот перестанет вести его по точкам.	U hozir yo‘lda — bot uni nuqtalar bo‘yicha boshqarishni to‘xtatadi.
 Водитель пропадёт из списка, бот закроет ему доступ. Напишет боту снова — придёт новая заявка.	Haydovchi ro‘yxatdan yo‘qoladi, bot unga ruxsatni yopadi. Botga qayta yozsa — yangi ariza keladi.
-Обновите код до 32.	Kodni 32-versiyaga yangilang.
+Обновите код до 33.	Kodni 33-versiyaga yangilang.
 Имя и телефон водителя можно будет поправить на сайте (✎ в списке водителей), а водителя — удалить.	Haydovchi ismi va telefonini saytda tuzatish (haydovchilar ro‘yxatidagi ✎), haydovchini esa o‘chirish mumkin bo‘ladi.
 
 # ── план: цена адреса (как в счёте перевозчика) ──
@@ -2585,3 +2585,69 @@ https://yandex.uz/maps/… или 41.311, 69.279	https://yandex.uz/maps/… yoki
 {n} × {w} {n2} из {n3} м³ / {n4} кг + допуск {n5} м³ / {n6} кг (нет тарифа)	{n} × {w} {n2} / {n3} m³ / {n4} kg + ruxsat {n5} m³ / {n6} kg (tarif yo‘q)
 {w} {n} из {n2} м³ / {n3} кг	{w} {n} / {n2} m³ / {n3} kg
 {w} {n} из {n2} м³ / {n3} кг (нет тарифа)	{w} {n} / {n2} m³ / {n3} kg (tarif yo‘q)
+
+# ── версия 33: коробки по пакинг-листу ──
+Коробки по пакинг-листу: длина × ширина × высота, см × штук	Packing list bo‘yicha qutilar: uzunlik × kenglik × balandlik, sm × dona
+Коробок: {n} · {n2} м³	Qutilar: {n} · {n2} m³
+Коробок: {n}	Qutilar: {n}
+Коробок	Qutilar
+размеры в файле в метрах	fayldagi o‘lchamlar metrda
+размеры в файле в мм	fayldagi o‘lchamlar mm da
+Коробок: {n} · {n2} м³.	Qutilar: {n} · {n2} m³.
+Коробок: {n} · {n2} м³ — мест в журнале: {n3}.	Qutilar: {n} · {n2} m³ — jurnalda joylar: {n3}.
+Коробок: {n} · {n2} м³ — CBM в журнале: {n3}.	Qutilar: {n} · {n2} m³ — jurnaldagi CBM: {n3}.
+Коробок: {n} · {n2} м³ — мест в журнале: {n3} — CBM в журнале: {n4}.	Qutilar: {n} · {n2} m³ — jurnalda joylar: {n3} — jurnaldagi CBM: {n4}.
+Коробок: {n} · {n2} м³ — мест в журнале: {n3}	Qutilar: {n} · {n2} m³ — jurnalda joylar: {n3}
+Коробок: {n} · {n2} м³ — CBM в журнале: {n3}	Qutilar: {n} · {n2} m³ — jurnaldagi CBM: {n3}
+Коробок: {n} · {n2} м³ — мест в журнале: {n3} — CBM в журнале: {n4}	Qutilar: {n} · {n2} m³ — jurnalda joylar: {n3} — jurnaldagi CBM: {n4}
+Планы проверят, влезает ли рейс, 3D покажет коробки в кузове.	Rejalar reys sig‘ishini tekshiradi, 3D qutilarni kuzovda ko‘rsatadi.
+Пусто — в 3D груз показан кубиками по объёму.	Bo‘sh — 3D da yuk hajmi bo‘yicha kubiklar bilan ko‘rsatiladi.
+Список можно загрузить из файла: «📦 Пакинг-листы» в журнале.	Ro‘yxatni fayldan yuklash mumkin: jurnaldagi «📦 Packing listlar».
+В таблице коробки сохраняются с кодом скрипта версии 33.	Jadvalda qutilar skriptning 33-versiyasi bilan saqlanadi.
+До обновления — только на этом устройстве.	Yangilangunga qadar — faqat shu qurilmada.
+В журнале	Jurnalda
+Коробки: {s}	Qutilar: {s}
+Не понял «{s}»: нужно длина×ширина×высота в см, например 60×40×50×12	«{s}» tushunarsiz: uzunlik×kenglik×balandlik sm da kerak, masalan 60×40×50×12
+Размеры коробки — от 1 до 500 см: «{s}»	Quti o‘lchamlari — 1 dan 500 sm gacha: «{s}»
+Число коробок — от 1 до 5 000: «{s}»	Qutilar soni — 1 dan 5 000 gacha: «{s}»
+📦 {n} кор.	📦 {n} quti
+{n} кор.	{n} quti
+не проходит в кузов: {n} кор.	kuzovga o‘tmaydi: {n} quti
+не помещается: {n} кор.	sig‘maydi: {n} quti
+по коробкам: {n} из {n2} м	qutilar bo‘yicha: {n} / {n2} m
+без списка: {n} точ.	ro‘yxatsiz: {n} manzil
+Укладка коробок по пакинг-листу в кузов этой машины: стенками от кабины к дверям	Packing list qutilarini shu mashina kuzoviga joylash: kabinadan eshiklarga qarab devor-devor
+Не помещается {n} кор.	Sig‘maydi {n} quti
+Не помещается {n} кор. ({n2} м³)	Sig‘maydi {n} quti ({n2} m³)
+Не помещается {n} кор. ({n2} м³) — показано [за дверями|за задним бортом] полупрозрачным.	Sig‘maydi {n} quti ({n2} m³) — [eshiklar ortida|orqa bort ortida] yarim shaffof ko‘rsatilgan.
+по пакинг-листу: {n} кор., занято {n2} из {n3} м	packing list bo‘yicha: {n} quti, band {n2} / {n3} m
+Коробки — по пакинг-листу, своих размеров; точка без списка — полупрозрачный блок по её объёму.	Qutilar — packing list bo‘yicha, o‘z o‘lchamida; ro‘yxatsiz manzil — hajmi bo‘yicha yarim shaffof blok.
+не помещается {n} кор. · {n2} м³	sig‘maydi {n} quti · {n2} m³
+Коробки отгрузок по пакинг-листу будут храниться в таблице (Yuborishlar W): планы проверят, влезает ли рейс, а 3D покажет настоящие коробки.	Jo‘natmalar qutilari packing list bo‘yicha jadvalda saqlanadi (Yuborishlar W): rejalar reys sig‘ishini tekshiradi, 3D esa haqiqiy qutilarni ko‘rsatadi.
+📦 Пакинг-листы	📦 Packing listlar
+Коробки отгрузок из пакинг-листов (Excel): размеры и число коробок — для проверки рейсов и 3D	Jo‘natmalar qutilari packing listlardan (Excel): o‘lchamlar va qutilar soni — reyslarni tekshirish va 3D uchun
+Пакинг-листы	Packing listlar
+— выберите BL	— BL ni tanlang
++ Ещё файлы	+ Yana fayllar
+Применить	Qo‘llash
+Старый формат .xls — откройте в Excel и сохраните как .xlsx	Eski .xls format — Excel da ochib, .xlsx qilib saqlang
+Нужен файл Excel (.xlsx)	Excel fayli kerak (.xlsx)
+Нет ни одного файла с выбранным BL.	BL tanlangan birorta fayl yo‘q.
+Коробки по пакинг-листам записаны: {s}.	Packing listlar bo‘yicha qutilar yozildi: {s}.
+Планы проверят укладку, 3D покажет коробки.	Rejalar joylashni tekshiradi, 3D qutilarni ko‘rsatadi.
+В таблице коробки сохранятся с кодом скрипта версии 33.	Jadvalda qutilar skriptning 33-versiyasi bilan saqlanadi.
+(размеры в файле в метрах)	(fayldagi o‘lchamlar metrda)
+(размеры в файле в мм)	(fayldagi o‘lchamlar mm da)
+BL не найден — выберите	BL topilmadi — tanlang
+мест {n}	{n} joy
+📦 есть	📦 bor
+В журнале: мест {n} · {n2} м³	Jurnalda: {n} joy · {n2} m³
+не сходится с числом коробок	qutilar soniga to‘g‘ri kelmaydi
+коробки уже есть — заменятся	qutilar allaqachon bor — almashtiriladi
+Коробки записываются отгрузкам выбранной партии (у BL с несколькими строками — в самую большую), пустые «мест» и CBM заполняются из списка.	Qutilar tanlangan partiya jo‘natmalariga yoziladi (bir necha qatorli BL da — eng kattasiga), bo‘sh «joy» va CBM ro‘yxatdan to‘ldiriladi.
+Старый формат .xls — пересохраните как .xlsx.	Eski .xls format — .xlsx qilib qayta saqlang.
+Нашёл размеры коробок (строка {n}), но не столбец с числом коробок (件数 / CTN / коробок)	Qutilar o‘lchamini topdim ({n}-qator), lekin qutilar soni ustunini emas (件数 / CTN / qutilar)
+Под заголовком (строка {n}) нет строк с размерами и числом коробок	Sarlavha ostida ({n}-qator) o‘lcham va qutilar soni bor qatorlar yo‘q
+Не нашёл строку заголовка с длиной, шириной и высотой коробки (长/宽/高, L/W/H, Д/Ш/В)	Quti uzunligi, kengligi va balandligi bor sarlavha qatorini topmadim (长/宽/高, L/W/H, D/Sh/B)
+строка {n} («{s}»): нет размеров коробки — пропущена	{n}-qator («{s}»): quti o‘lchamlari yo‘q — o‘tkazib yuborildi
+размеры вне 1–500 см: строки {s} — проверьте единицы	o‘lchamlar 1–500 sm dan tashqarida: {s}-qatorlar — birliklarni tekshiring

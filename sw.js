@@ -22,6 +22,7 @@ const SHELL = [
   'js/logi-viz.js',
   'js/vendor/three/three-viz.min.js',
   'js/xlsx-io.js',
+  'js/packing.js',
   'js/import-core.js',
   'js/import-checks.js',
   'js/import-local.js',

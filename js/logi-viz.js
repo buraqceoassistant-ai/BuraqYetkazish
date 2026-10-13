@@ -41,39 +41,99 @@
     const pts = [], by = {};
     trip.stops.forEach(s => {
       let p = by[s.bl];
-      if (!p) { p = by[s.bl] = { n: pts.length + 1, bl: s.bl, client: s.client || {}, cbm: 0, kg: 0, places: 0, parts: [] }; pts.push(p); }
+      if (!p) { p = by[s.bl] = { n: pts.length + 1, bl: s.bl, client: s.client || {}, cbm: 0, kg: 0, places: 0, parts: [], boxes: [] }; pts.push(p); }
       p.cbm += s.cbm || 0; p.kg += s.kg || 0; p.places += s.places || 0;
       if (s.parts) p.parts.push(s.part + '/' + s.parts);
+      if (s.boxList && s.boxList.length) p.boxes = p.boxes.concat(s.boxList);   // коробки по пакинг-листу (см)
     });
     return pts;
+  }
+
+  // ---------- укладка коробок по пакинг-листу ----------
+  // groups: [{ p, l, w, h, n, approx }] (м) в порядке укладки — первая группа глубже всех (к кабине). Коробки одного
+  // размера ставятся столбиками в «стенку» поперёк кузова, стенка за стенкой к дверям; коробку можно повернуть любой
+  // стороной (стоя — предпочтительнее); на столбик ставится коробка не шире его. body: { l, w, h } — кузов внутри, м.
+  // Возвращает коробки с координатами (x от кабины, y от пола, z от левого борта), занятую длину, число не поместившихся
+  // (over — за дверями, big — не проходят в сечение кузова).
+  function packBoxes(groups, body) {
+    const L = body.l, W = body.w, H = body.h, EPS = 1e-6, boxes = [], slices = [];
+    let big = 0;
+    const orient = g => {   // [поперёк a, ввысь b, вдоль c]: группе — меньше длины кузова; при равенстве — плотнее, потом стоя
+      let best = null;
+      [[g.w, g.h, g.l], [g.l, g.h, g.w], [g.w, g.l, g.h], [g.h, g.l, g.w], [g.l, g.w, g.h], [g.h, g.w, g.l]].forEach(([a, b, c], i) => {
+        if (a > W + EPS || b > H + EPS) return;
+        const per = Math.floor(W / a + EPS) * Math.floor(H / b + EPS), len = Math.ceil(g.n / per - EPS) * c, dens = per / c, up = i < 2 ? 1 : 0;
+        if (!best || len < best.len - EPS || (Math.abs(len - best.len) <= EPS && (dens > best.dens + EPS || (Math.abs(dens - best.dens) <= EPS && up > best.up)))) best = { a, b, c, len, dens, up };
+      });
+      return best;
+    };
+    const last = () => slices[slices.length - 1];
+    const newSlice = () => { const sl = { x0: slices.length ? last().x0 + last().d : 0, d: 0, cols: [], free: W }; slices.push(sl); return sl; };
+    const placeOne = (g, o) => {
+      const a = o.a, b = o.b, c = o.c;
+      let sl = last(), col = sl ? sl.cols.find(k => k.a + EPS >= a && k.top + b <= H + EPS) || null : null;   // столбик последней стенки
+      if (!col && sl && sl.free + EPS >= a) { col = { z0: W - sl.free, a, top: 0, ix: slices.length - 1, iz: sl.cols.length }; sl.cols.push(col); sl.free -= a; }
+      if (!col) { sl = newSlice(); col = { z0: 0, a, top: 0, ix: slices.length - 1, iz: 0 }; sl.cols.push(col); sl.free -= a; }
+      boxes.push({ p: g.p, approx: !!g.approx, ix: col.ix, iy: Math.round(col.top / b), iz: col.iz, x: sl.x0, y: col.top, z: col.z0, dx: c, dy: b, dz: a });
+      col.top += b; sl.d = Math.max(sl.d, c);
+    };
+    groups.forEach(g => { const o = orient(g); if (!o) { big += g.n; return; } for (let i = 0; i < g.n; i++) placeOne(g, o); });
+    let usedLen = 0, over = 0;
+    boxes.forEach(q => { q.over = q.x + q.dx > L + EPS; usedLen = Math.max(usedLen, q.x + q.dx); if (q.over) over++; });
+    return { boxes, usedLen, slices: slices.length, overN: over, bigN: big };
   }
 
   function layout(trip) {
     const veh = trip.vehicle || {}, kind = trip.kind || veh.kind || 'gazel';
     const B = bodyOf(kind, veh.nomM3 != null ? veh.nomM3 : veh.m3, veh.dims);
-    const c = Math.cbrt(B.v / (kind === 'labo' ? 250 : kind === 'changan' ? 450 : 700));   // ~700 ячеек в кузове: видно груз и быстро рисуется
-    const n = { x: Math.max(1, Math.round(B.l / c)), y: Math.max(1, Math.round(B.h / c)), z: Math.max(1, Math.round(B.w / c)) };
-    const cell = { x: B.l / n.x, y: B.h / n.y, z: B.w / n.z }, cellV = cell.x * cell.y * cell.z, wall = n.y * n.z, cap = n.x * wall;
-    const points = pointsOf(trip), cells = [];
-    let cum = 0, k = 0;
-    points.slice().reverse().forEach(p => {
-      cum += p.cbm;
-      const end = Math.max(k + 1, Math.round(cum / cellV));
-      p.from = k; p.cells = end - k;
-      for (; k < end; k++) cells.push({ p: p.n, ix: Math.floor(k / wall), iy: Math.floor((k % wall) / n.z), iz: k % n.z });
-    });
+    const points = pointsOf(trip), byBoxes = points.some(p => p.boxes.length);
     const cbm = points.reduce((a, p) => a + p.cbm, 0), kg = points.reduce((a, p) => a + p.kg, 0);
+    let n = null, cell = null, cellV = 0, cap = 0, k = 0, cells = [], boxes = [], pack = null, overM3 = Math.max(0, cbm - B.v);
+    if (byBoxes) {
+      // коробки точек в порядке разгрузки наоборот (последняя точка — к кабине); точка без списка — условный блок на весь
+      // поперечник длиной по её объёму с воздухом (полезный процент машины)
+      const fill = veh.fill > 0 && veh.fill <= 1 ? veh.fill : 0.88, groups = [];
+      points.slice().reverse().forEach(p => {
+        if (p.boxes.length) p.boxes.slice().sort((a, b) => b.l * b.w * b.h - a.l * a.w * a.h).forEach(g => groups.push({ p: p.n, l: g.l / 100, w: g.w / 100, h: g.h / 100, n: g.n }));
+        else if (p.cbm > 0) groups.push({ p: p.n, l: Math.max(0.05, p.cbm / fill / (B.w * B.h)), w: B.w, h: B.h, n: 1, approx: true });
+      });
+      pack = packBoxes(groups, B);
+      boxes = pack.boxes.map(q => ({ p: q.p, approx: q.approx, over: q.over, ix: q.ix, iy: q.iy, iz: q.iz, cx: q.x + q.dx / 2, cy: q.y + q.dy / 2, cz: -B.w / 2 + q.z + q.dz / 2, sx: q.dx, sy: q.dy, sz: q.dz }));
+      overM3 = boxes.filter(q => q.over).reduce((a, q) => a + q.sx * q.sy * q.sz * (q.approx ? fill : 1), 0);
+      points.forEach(p => {
+        const own = boxes.filter(q => q.p === p.n);
+        p.x = own.length ? own.reduce((a, q) => a + q.cx, 0) / own.length : 0;
+        p.top = own.length ? Math.max(...own.map(q => q.cy + q.sy / 2)) : 0;
+        p.over = own.some(q => q.over); p.boxN = own.filter(q => !q.approx).length;
+      });
+      pack = { usedLen: pack.usedLen, slices: pack.slices, overN: pack.overN, bigN: pack.bigN, n: boxes.filter(q => !q.approx).length, approxN: points.filter(p => !p.boxes.length && p.cbm > 0).length };
+    } else {
+      // размеров коробок нет: кузов делится на ячейки, груз точки — кубики по её объёму
+      const c = Math.cbrt(B.v / (kind === 'labo' ? 250 : kind === 'changan' ? 450 : 700));   // ~700 ячеек в кузове: видно груз и быстро рисуется
+      n = { x: Math.max(1, Math.round(B.l / c)), y: Math.max(1, Math.round(B.h / c)), z: Math.max(1, Math.round(B.w / c)) };
+      cell = { x: B.l / n.x, y: B.h / n.y, z: B.w / n.z }; cellV = cell.x * cell.y * cell.z;
+      const wall = n.y * n.z; cap = n.x * wall;
+      let cum = 0;
+      points.slice().reverse().forEach(p => {
+        cum += p.cbm;
+        const end = Math.max(k + 1, Math.round(cum / cellV));
+        p.from = k; p.cells = end - k;
+        for (; k < end; k++) cells.push({ p: p.n, ix: Math.floor(k / wall), iy: Math.floor((k % wall) / n.z), iz: k % n.z });
+      });
+      points.forEach(p => {
+        const own = cells.slice(p.from, p.from + p.cells);
+        p.x = own.reduce((a, q) => a + (q.ix + 0.5) * cell.x, 0) / own.length;   // середина груза точки от кабины, м
+        p.top = (Math.max(...own.map(q => q.iy)) + 1) * cell.y;
+        p.over = own.some(q => q.ix >= n.x);
+      });
+      boxes = cells.map(q => ({ p: q.p, approx: false, over: q.ix >= n.x, ix: q.ix, iy: q.iy, iz: q.iz, cx: (q.ix + 0.5) * cell.x, cy: (q.iy + 0.5) * cell.y, cz: -B.w / 2 + (q.iz + 0.5) * cell.z, sx: cell.x, sy: cell.y, sz: cell.z }));
+    }
     let moment = 0;
-    points.forEach(p => {
-      const own = cells.slice(p.from, p.from + p.cells);
-      p.x = own.reduce((a, q) => a + (q.ix + 0.5) * cell.x, 0) / own.length;   // середина груза точки от кабины, м
-      p.top = (Math.max(...own.map(q => q.iy)) + 1) * cell.y;
-      p.over = own.some(q => q.ix >= n.x);
-      moment += p.x * p.kg;
-    });
+    points.forEach(p => { moment += p.x * p.kg; });
     return {
-      name: trip.name, kind, label: veh.label || kind, body: B, n, cell, cellV, cap, points, cells, cbm, kg,
-      maxKg: veh.nomKg != null ? veh.nomKg : veh.kg, fill: cbm / B.v, overM3: Math.max(0, cbm - B.v), overCells: Math.max(0, k - cap),
+      name: trip.name, kind, label: veh.label || kind, body: B, n, cell, cellV, cap, points, cells, boxes, byBoxes, pack, cbm, kg,
+      usedLen: byBoxes ? pack.usedLen : Math.min(B.l, Math.ceil(k / Math.max(1, cap / n.x)) * cell.x),
+      maxKg: veh.nomKg != null ? veh.nomKg : veh.kg, fill: cbm / B.v, overM3, overCells: byBoxes ? pack.overN : Math.max(0, k - cap),
       cg: kg ? moment / kg : null
     };
   }
@@ -200,6 +260,7 @@
       tail: std({ color: C.red, emissive: C.red, emissiveIntensity: 0.5, roughness: 0.3 }),
       cargo: lam({ color: '#ffffff' }),
       cargoOut: lam({ color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false }),
+      cargoApprox: lam({ color: '#ffffff', transparent: true, opacity: 0.32, depthWrite: false }),   // точка без списка коробок — условный блок
       ground: lam({ color: C.bg }),
       logo: logoMat('buraq-logo.svg'),            // на белой кабине — основной
       logoWhite: logoMat('buraq-logo-white.svg')  // на синей — белый
@@ -440,35 +501,34 @@
         for (let i = 1; i < ribs; i++) [-1, 1].forEach(sd => box(0.03, H, 0.012, L * i / ribs, H / 2, sd * W / 2, M.frame, false));
         box(0.03, H, 0.03, L + 0.01, H / 2, 0, M.frame, false);
       }
-      // груз
+      // груз: коробки по пакинг-листу — своих размеров (точка без списка — полупрозрачный блок); без списка — кубики по объёму
       const hidden = p => o.step && p <= o.step;   // уже выгруженные точки
-      const inC = lay.cells.filter(q => q.ix < lay.n.x), outC = lay.cells.filter(q => q.ix >= lay.n.x);
-      const cell = lay.cell, geo = o.labels ? new T.RoundedBoxGeometry(cell.x * 0.94, cell.y * 0.94, cell.z * 0.94, 1, Math.min(cell.x, cell.y, cell.z) * 0.12)
-        : new T.BoxGeometry(cell.x * 0.94, cell.y * 0.94, cell.z * 0.94);   // в обзоре коробки мелкие — скругления не видны
-      const cargo = [];
-      const inst = (list, mat, over) => {
-        if (!list.length) return;
-        const im = new T.InstancedMesh(geo, mat, list.length);
+      const cargo = [], byGeo = new Map();
+      lay.boxes.forEach(q => { const key = (q.over ? 'o' : 'i') + (q.approx ? 'a' : '') + '|' + q.sx.toFixed(3) + '|' + q.sy.toFixed(3) + '|' + q.sz.toFixed(3); if (!byGeo.has(key)) byGeo.set(key, []); byGeo.get(key).push(q); });
+      byGeo.forEach(list => {
+        const q0 = list[0], sz = lay.byBoxes ? [q0.sx, q0.sy, q0.sz].map(v => Math.max(0.02, v - 0.012)) : [q0.sx * 0.94, q0.sy * 0.94, q0.sz * 0.94];
+        const geo = o.labels ? new T.RoundedBoxGeometry(sz[0], sz[1], sz[2], 1, Math.min(sz[0], sz[1], sz[2]) * (lay.byBoxes ? 0.06 : 0.12))
+          : new T.BoxGeometry(sz[0], sz[1], sz[2]);   // в обзоре коробки мелкие — скругления не видны
+        const im = new T.InstancedMesh(geo, q0.over ? M.cargoOut : q0.approx ? M.cargoApprox : M.cargo, list.length);
         im.frustumCulled = false;
         im.userData = { cells: list, pres: new Float32Array(list.length), drop: Math.min(1.2, Math.max(0.5, H * 0.6)), slide: Math.max(1.2, L * 0.35),
-          base: list.map(q => new T.Vector3((q.ix + 0.5) * cell.x, (q.iy + 0.5) * cell.y, -W / 2 + (q.iz + 0.5) * cell.z)) };
+          base: list.map(q => new T.Vector3(q.cx, q.cy, q.cz)) };
         list.forEach((q, i) => { place(im, i, hidden(q.p) ? 0 : 1); im.setColorAt(i, tint(q, o.sel)); });
         im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
         g.add(im); cargo.push(im);
-      };
-      inst(inC, M.cargo);
-      inst(outC, M.cargoOut, true);
-      const loadedX = inC.length ? Math.min(L, (Math.max(...inC.map(q => q.ix)) + 1) * cell.x) : 0, px = B.flat ? loadedX : L;
+      });
+      const inC = lay.boxes.filter(q => !q.over), outC = lay.boxes.filter(q => q.over);
+      const loadedX = inC.length ? Math.min(L, Math.max(...inC.map(q => q.cx + q.sx / 2))) : 0, px = B.flat ? loadedX : L;
       if (px > 0) { const sh = new T.Mesh(new T.BoxGeometry(px, H, W), shadowOnly); sh.position.set(px / 2, H / 2, 0); add(sh); }
       if (outC.length) {
-        const x0 = lay.n.x * cell.x, x1 = (Math.max(...outC.map(q => q.ix)) + 1) * cell.x;
+        const x0 = lay.byBoxes ? L : lay.n.x * lay.cell.x, x1 = Math.max(x0 + 0.05, ...outC.map(q => q.cx + q.sx / 2));
         const ob = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(x1 - x0, H, W)), new T.LineBasicMaterial({ color: C.danger }));
         ob.position.set((x0 + x1) / 2, H / 2, 0); g.add(ob);
-        if (o.labels) { const s = sprite('сверх кузова ' + (Math.round(lay.overM3 * 10) / 10).toString().replace('.', ',') + ' м³', { bg: C.danger, fg: '#ffffff', size: 0.34 * k }); s.position.set((x0 + x1) / 2 + 0.4, -0.45, 0); g.add(s); }   // под грузом за дверями — не закрывает номера точек
+        if (o.labels) { const s = sprite((lay.byBoxes ? 'не помещается ' + outC.filter(q => !q.approx).length + ' кор. · ' : 'сверх кузова ') + (Math.round(lay.overM3 * 10) / 10).toString().replace('.', ',') + ' м³', { bg: C.danger, fg: '#ffffff', size: 0.34 * k }); s.position.set((x0 + x1) / 2 + 0.4, -0.45, 0); g.add(s); }
       }
       const labels = {};
       if (o.labels) {
-        const sz = Math.min(0.62, Math.max(0.34, cell.y * 1.5)) * Math.max(0.7, k);
+        const sz = Math.min(0.62, Math.max(0.34, (lay.cell ? lay.cell.y : 0.35) * 1.5)) * Math.max(0.7, k);
         lay.points.forEach(p => { const s = sprite(String(p.n), { round: true, bg: colorOf(p.n), fg: light(colorOf(p.n)) ? '#1d1f20' : '#ffffff', size: sz }); s.position.set(p.x, p.top + sz * 0.55, 0); s.visible = !hidden(p.n); g.add(s); labels[p.n] = s; });
         const d = sprite(B.flat ? 'задний борт' : 'двери', { bg: C.ink, fg: '#ffffff', size: 0.3 * k }); d.position.set(L + 0.15, H + 0.3 * k, 0); g.add(d);
       }
@@ -636,5 +696,5 @@
     };
   }
 
-  window.LogiViz = { layout, bodyOf, colorOf, isLight: light, PALETTE, load, ready: () => !!T, createView };
+  window.LogiViz = { layout, packBoxes, bodyOf, colorOf, isLight: light, PALETTE, load, ready: () => !!T, createView };
 })();

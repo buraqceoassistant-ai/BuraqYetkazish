@@ -144,6 +144,8 @@
   .tc td.c-end { text-align: right !important; }
   /* метки в узкой ячейке («Внутри», «с клиента 100 000 · < 1 м³») — в несколько строк, а не за край карточки */
   .tc td.c-end .tag { white-space: normal; max-width: 100%; vertical-align: top; }
+  /* окно «Пакинг-листы»: файл, BL и сверка с журналом — в столбик */
+  .pack-row { grid-template-columns: minmax(0, 1fr) !important; gap: 6px !important; }
   .tc td select.input, .tc td input.input { width: 100% !important; min-width: 0; min-height: 40px !important; }
 
   /* Проверка данных */
