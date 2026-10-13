@@ -196,10 +196,13 @@ test('версия 31: «Разрешить» с сайта — машина и�
   reg(501, 'Akmal Karimov', 'labo', '01b 555 kk'); reg(502, 'Bobur Aliev', 'gazel', '01 C 777 DD');
   const set = t.s.book.sheets.Sozlamalar, drv = id => t.s.get({}).data.tg.drivers.find(d => d.id === id);
   set.set(67, 2, 1);
-  // нет такой машины — статус прежний, в автопарке ничего не меняется
+  // нет такой машины или она в ремонте — статус прежний, в автопарке ничего не меняется
+  set.maxCols = Math.max(set.maxCols, 5); set.set(23, 5, 'Holati'); set.set(24, 5, 'ta’mirda');
   const before = JSON.stringify(set.rows);
   assert.match(t.s.post({ tg: { action: 'driver', id: '501', status: 'ruxsat', car: { to: 'Labo-9', kind: 'labo' } } }).error, /Нет машины «Labo-9»/);
-  assert.equal(drv('501').status, 'kutilmoqda'); assert.equal(JSON.stringify(set.rows), before);
+  assert.match(t.s.post({ tg: { action: 'driver', id: '502', status: 'ruxsat', car: { to: 'Gazel-1', kind: 'gazel' } } }).error, /Машина «Gazel-1» в ремонте/);
+  assert.equal(drv('501').status, 'kutilmoqda'); assert.equal(drv('502').status, 'kutilmoqda'); assert.equal(JSON.stringify(set.rows), before);
+  set.set(24, 5, '');
   // новая машина с правками руководителя; счётчик Labo в настройках — по автопарку
   const a = t.s.post({ tg: { action: 'driver', id: '501', status: 'ruxsat', car: { toNew: true, kind: 'labo', plate: '01b 555 kk', model: 'Damas Labo', l: 2.4, w: 1.4, h: 1.3, m3: 4.4, kg: 550 } } });
   assert.deepEqual([a.ok, a.truck, a.isNew, a.freed], [true, 'Labo-2', true, []], JSON.stringify(a));
@@ -217,6 +220,13 @@ test('версия 31: «Разрешить» с сайта — машина и�
   const k = JSON.stringify(set.rows);
   assert.equal(t.s.post({ tg: { action: 'driver', id: '502', status: 'ruxsat', car: { toNew: true, kind: 'gazel' } } }).ok, true);
   assert.equal(JSON.stringify(set.rows), k); assert.equal(drv('502').truck, 'Gazel-3');
+  // «Разрешить» в группе: машина с тем же госномером в ремонте — не берётся, водителю свободная Gazel без госномера
+  reg(503, 'Sanjar Toshev', 'gazel', '01 A 111 AA');
+  set.set(24, 4, '01 A 111 AA'); set.set(24, 5, 'ta’mirda');
+  t.cb(900, 'allow:503', t.group, { message_id: 56, text: 'x', chat: t.group });
+  assert.deepEqual([drv('503').truck, drv('503').status], ['Gazel-2', 'ruxsat']);
+  assert.match(t.last('editMessageText').text, /🚚 В автопарке: Gazel-2$/);
+  assert.deepEqual([set.rows[23][3], set.rows[24][3]], ['01 A 111 AA', '01 A 111 AA'], 'госномер записан в Gazel-2, у Gazel-1 прежний');
 });
 
 test('повтор того же update_id не обрабатывается дважды', () => {

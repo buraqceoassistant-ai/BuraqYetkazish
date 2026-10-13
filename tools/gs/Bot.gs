@@ -595,9 +595,13 @@ function tgCarApply_(d, car) {
   var rows = sh.getRange(TRUCKS_ROW, 3, TRUCKS_N, 3).getValues(), names = rows.map(function (r) { return String(r[0]).trim(); }), busy = {};
   tgDrivers_().forEach(function (x) { if (x.id !== d.id && x.truck && (x.status === 'ruxsat' || x.status === 'kutilmoqda')) busy[x.truck] = 1; });
   var i = -1, isNew = false, pk = tgPlateKey_(plate);
-  if (c.to) { i = names.indexOf(String(c.to).trim()); if (i < 0) return { error: 'Нет машины «' + c.to + '» в автопарке' }; }
+  if (c.to) {
+    i = names.indexOf(String(c.to).trim());
+    if (i < 0) return { error: 'Нет машины «' + c.to + '» в автопарке' };
+    if (String(rows[i][2]).trim() === FLEET_REPAIR) return { error: 'Машина «' + c.to + '» в ремонте — выберите другую' };
+  }
   else if (!c.toNew) {
-    rows.forEach(function (r, j) { if (i < 0 && pk && tgKind_(names[j]) === kind && tgPlateKey_(r[1]) === pk) i = j; });
+    rows.forEach(function (r, j) { if (i < 0 && pk && tgKind_(names[j]) === kind && tgPlateKey_(r[1]) === pk && String(r[2]).trim() !== FLEET_REPAIR) i = j; });
     rows.forEach(function (r, j) { if (i < 0 && tgKind_(names[j]) === kind && !String(r[1]).trim() && !busy[names[j]] && String(r[2]).trim() !== FLEET_REPAIR) i = j; });
   }
   if (i < 0) {
@@ -783,9 +787,8 @@ function tgGroupCallback_(q, data) {
   if (!d) return;
   var note = '';
   if (m[1] === 'allow' && d.kind && d.status === 'kutilmoqda') {   // своя машина (31) — в автопарк
-    var ca = tgCarApply_(d, null);
-    if (ca.error) note = '\n⚠️ Машина не записана: ' + ca.error;
-    else { tgSetTruck_(d, ca.name); note = '\n🚚 В автопарке: ' + ca.name + (ca.isNew ? ' (новая)' : ''); }
+    var ca = tgCarApply_(d, null), ts = ca.error ? ca : tgSetTruck_(d, ca.name);
+    note = ts.error ? '\n⚠️ Машина не записана: ' + ts.error : '\n🚚 В автопарке: ' + ca.name + (ca.isNew ? ' (новая)' : '');
   }
   tgSetStatus_(d, m[1] === 'allow' ? 'ruxsat' : 'rad', who);
   tg_('editMessageText', { chat_id: chat.id, message_id: q.message.message_id, text: q.message.text + '\n\n' + (m[1] === 'allow' ? '✅ Разрешено' : '❌ Отклонено') + ' — ' + who + ', ' + tgNow_('dd.MM HH:mm') + note });
@@ -1554,7 +1557,9 @@ function tgSite_(body) {
     if (a.status === 'ruxsat' && a.car && d.status !== 'ruxsat') {   // версия 31: своя машина водителя — в автопарк, потом доступ
       car = tgCarApply_(d, a.car);
       if (car.error) return { error: car.error, v: VERSION };
-      fr = tgSetTruck_(d, car.name).freed;
+      var ts = tgSetTruck_(d, car.name);
+      if (ts.error) return { error: ts.error, v: VERSION };
+      fr = ts.freed;
       tgSetStatus_(d, a.status, 'сайт');
       return { ok: true, v: VERSION, freed: fr, truck: car.name, isNew: car.isNew, tg: tgInfo_(body.tgdays) };
     }

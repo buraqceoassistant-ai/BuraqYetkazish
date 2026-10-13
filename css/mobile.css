@@ -142,6 +142,8 @@
   .tc td.c-strong { font-size: 16px; font-weight: 600 !important; }
   .tc td.c-title { font-size: 15px; }
   .tc td.c-end { text-align: right !important; }
+  /* метки в узкой ячейке («Внутри», «с клиента 100 000 · < 1 м³») — в несколько строк, а не за край карточки */
+  .tc td.c-end .tag { white-space: normal; max-width: 100%; vertical-align: top; }
   .tc td select.input, .tc td input.input { width: 100% !important; min-width: 0; min-height: 40px !important; }
 
   /* Проверка данных */

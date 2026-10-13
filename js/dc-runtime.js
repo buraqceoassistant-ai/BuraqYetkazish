@@ -369,7 +369,16 @@
       (_, sp, name, eq) => sp + CAMEL_ATTR + name.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase()) + eq
     );
   }
+  // value="{{ … }}" у <input type="number|date|…">: парсер шаблона применил бы к «{{ … }}» проверку формата и писал бы
+  // предупреждение в консоль — в шаблоне атрибут переименован, при сборке свойств он снова value
+  var TPL_VALUE_ATTR = "sc-tplvalue";
+  var TYPED_INPUT_RE = /<input\b[^>]*>/gi;
+  function hideTypedValues(html) {
+    return html.replace(TYPED_INPUT_RE, (tag) => /\btype\s*=\s*["']?(number|date|time|datetime-local|month|week|range|color|email|url)\b/i.test(tag)
+      ? tag.replace(/(\s)value(\s*=\s*["']\{\{)/i, "$1" + TPL_VALUE_ATTR + "$2") : tag);
+  }
   function encodeCase(html) {
+    html = hideTypedValues(html);
     html = html.replace(
       IMPORT_SELF_CLOSE_RE,
       (_, t, a) => "<" + t + a + "></" + t + ">"
@@ -435,6 +444,7 @@
       } else {
         if (key === "class") key = "className";
         else if (key === "for") key = "htmlFor";
+        else if (key === TPL_VALUE_ATTR) key = "value";
         else if (key.startsWith("on"))
           key = EVENT_MAP[key] || "on" + key[2].toUpperCase() + key.slice(3);
       }
