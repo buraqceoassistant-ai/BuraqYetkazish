@@ -814,8 +814,8 @@ Gazel (тяжёлый)	Gazel (og‘ir)
 Через ИИ	SI orqali
 Строки Excel — прямо из ячеек, PDF — из текста страниц. Скан без ИИ не прочитать. Незнакомые маркировки сопоставляете вы — один раз: сайт запомнит их у клиента.	Excel qatorlari — to‘g‘ridan-to‘g‘ri kataklardan, PDF — sahifalar matnidan. Skanni SI’siz o‘qib bo‘lmaydi. Notanish markirovkalarni siz moslaysiz — bir marta: sayt ularni mijozda eslab qoladi.
 Claude разбирает любой формат, в том числе сканы, и предлагает клиентов для незнакомых маркировок. Нужен ключ Claude API — платно, центы за манифест.	Claude har qanday formatni, jumladan skanlarni ham tahlil qiladi va notanish markirovkalar uchun mijozlarni taklif qiladi. Claude API kaliti kerak — pullik, manifest uchun sentlar.
-Excel (.xlsx) или PDF с текстом · до 10 МБ, PDF — до 30 страниц	Excel (.xlsx) yoki matnli PDF · 10 MB gacha, PDF — 30 sahifagacha
-Excel (.xlsx) или PDF, в том числе скан · до 10 МБ, PDF — до 30 страниц	Excel (.xlsx) yoki PDF, jumladan skan · 10 MB gacha, PDF — 30 sahifagacha
+Excel (.xlsx, .xls) или PDF с текстом · до 10 МБ, PDF — до 30 страниц	Excel (.xlsx, .xls) yoki matnli PDF · 10 MB gacha, PDF — 30 sahifagacha
+Excel (.xlsx, .xls) или PDF, в том числе скан · до 10 МБ, PDF — до 30 страниц	Excel (.xlsx, .xls) yoki PDF, jumladan skan · 10 MB gacha, PDF — 30 sahifagacha
 Подключите Google Таблицу («Настройки» → «Связь»): ИИ работает через её скрипт.	Google Jadvalni ulang («Sozlamalar» → «Ulanish»): SI uning skripti orqali ishlaydi.
 Обновите код скрипта таблицы до версии 8 и впишите ключ Claude API в свойства скрипта: «Настройки» → «Связь» → «ИИ-импорт манифестов».	Jadval skripti kodini 8-versiyagacha yangilang va Claude API kalitini skript xususiyatlariga yozing: «Sozlamalar» → «Ulanish» → «Manifestlarni SI orqali import».
 Секрет редактора закрыт на этом устройстве: «Настройки» → «Связь» → «ИИ-импорт манифестов» → пароль входа → «Открыть секрет».	Muharrir kaliti shu qurilmada yopiq: «Sozlamalar» → «Ulanish» → «Manifestlarni SI orqali import» → kirish paroli → «Kalitni ochish».
@@ -914,8 +914,7 @@ Excel (.xlsx) или PDF, в том числе скан · до 10 МБ, PDF —
 IndexedDB недоступна	IndexedDB mavjud emas
 Файл больше 10 МБ (	Fayl 10 MB dan katta (
 МБ). Уберите лишние листы или сожмите PDF.	MB). Ortiqcha varaqlarni olib tashlang yoki PDF’ni siqing.
-Старый формат .xls: откройте файл в Excel и сохраните как «Книга Excel (.xlsx)».	Eski .xls formati: faylni Excel’da oching va «Excel kitobi (.xlsx)» sifatida saqlang.
-Нужен манифест в Excel (.xlsx) или PDF.	Excel (.xlsx) yoki PDF formatidagi manifest kerak.
+Нужен манифест в Excel (.xlsx, .xls) или PDF.	Excel (.xlsx, .xls) yoki PDF formatidagi manifest kerak.
 Сначала подключите Google Таблицу — ИИ работает через её скрипт.	Avval Google Jadvalni ulang — SI uning skripti orqali ishlaydi.
 Обновите код скрипта таблицы до версии 8: «Настройки» → «Связь» → «Скопировать код».	Jadval skripti kodini 8-versiyagacha yangilang: «Sozlamalar» → «Ulanish» → «Kodni nusxalash».
 Читаю файл	Faylni o‘qiyapman
@@ -1022,7 +1021,11 @@ PDF защищён паролем — пришлите файл без паро�
 Это не файл .xlsx	Bu .xlsx fayl emas
 В файле нет листов «Yuborishlar» и «Mijozlar»	Faylda «Yuborishlar» va «Mijozlar» varaqlari yo‘q
 В таблице нет листов «Yuborishlar» и «Mijozlar»	Jadvalda «Yuborishlar» va «Mijozlar» varaqlari yo‘q
-Это не книга Excel (.xlsx)	Bu Excel kitobi (.xlsx) emas
+Это не книга Excel (.xlsx или .xls)	Bu Excel kitobi (.xlsx yoki .xls) emas
+Это не файл Excel 97–2003 (.xls)	Bu Excel 97–2003 (.xls) fayli emas
+Файл .xls повреждён	.xls fayli buzilgan
+В файле .xls нет книги Excel (потока Workbook)	.xls faylida Excel kitobi (Workbook oqimi) yo‘q
+В файле .xls нет листов	.xls faylida varaqlar yo‘q
 
 # ── водители ──
 Водители и автопарк	Haydovchilar va avtopark
@@ -2630,8 +2633,30 @@ https://yandex.uz/maps/… или 41.311, 69.279	https://yandex.uz/maps/… yoki
 — выберите BL	— BL ni tanlang
 + Ещё файлы	+ Yana fayllar
 Применить	Qo‘llash
-Старый формат .xls — откройте в Excel и сохраните как .xlsx	Eski .xls format — Excel da ochib, .xlsx qilib saqlang
-Нужен файл Excel (.xlsx)	Excel fayli kerak (.xlsx)
+Нужен файл Excel (.xlsx или .xls)	Excel fayli kerak (.xlsx yoki .xls)
+Партия выбрана по BL из файлов — проверьте.	Partiya fayllardagi BL bo‘yicha tanlandi — tekshiring.
+Нужен Excel (.xlsx, .xls), PDF или фото пакинг-листа	Packing listning Excel (.xlsx, .xls), PDF yoki fotosi kerak
+Файл больше 10 МБ ({n} МБ)	Fayl 10 MB dan katta ({n} MB)
+PDF читает ИИ	PDF ni SI o‘qiydi
+Фото читает ИИ	Fotoni SI o‘qiydi
+ИИ читает…	SI o‘qimoqda…
+прочитал ИИ	SI o‘qidi
+разобрано по правилам	qoidalar bo‘yicha o‘qildi
+автоматически	avtomatik
+по кнопке	tugma bilan
+Читать ИИ	SI bilan o‘qish
+🤖 Прочитать ИИ	🤖 SI bilan o‘qish
+ИИ не настроен.	SI sozlanmagan.
+Что не разобралось по правилам, а также PDF и фото, ИИ читает сразу.	Qoidalar bo‘yicha o‘qilmaganini, shuningdek PDF va fotoni SI darhol o‘qiydi.
+ИИ читает файл по кнопке «Прочитать ИИ».	SI faylni «SI bilan o‘qish» tugmasi bilan o‘qiydi.
+Фото HEIC не читается — сохраните как JPEG	HEIC foto o‘qilmaydi — JPEG qilib saqlang
+Не удалось открыть картинку	Rasmni ochib bo‘lmadi
+В PDF {n} страниц — не больше 30	PDF da {n} sahifa — 30 tadan ko‘p bo‘lmasin
+ИИ не нашёл в документе коробок с размерами	SI hujjatda o‘lchamli qutilarni topmadi
+У всех коробок из ответа ИИ размеры вне 1–500 см — проверьте единицы в документе	SI javobidagi barcha qutilar o‘lchamlari 1–500 sm dan tashqarida — hujjatdagi birliklarni tekshiring
+в итоге документа коробок: {n}, в строках: {n2} — проверьте	hujjat jamida qutilar: {n}, qatorlarda: {n2} — tekshiring
+объём по итогу документа: {n} м³, по коробкам: {n2} — проверьте единицы	hujjat jami bo‘yicha hajm: {n} m³, qutilar bo‘yicha: {n2} — birliklarni tekshiring
+Коробки отгрузок из пакинг-листов (Excel, PDF, фото): размеры и число коробок — для проверки рейсов и 3D	Jo‘natmalar qutilari packing listlardan (Excel, PDF, foto): o‘lchamlar va qutilar soni — reyslarni tekshirish va 3D uchun
 Нет ни одного файла с выбранным BL.	BL tanlangan birorta fayl yo‘q.
 Коробки по пакинг-листам записаны: {s}.	Packing listlar bo‘yicha qutilar yozildi: {s}.
 Планы проверят укладку, 3D покажет коробки.	Rejalar joylashni tekshiradi, 3D qutilarni ko‘rsatadi.
@@ -2645,9 +2670,9 @@ BL не найден — выберите	BL topilmadi — tanlang
 не сходится с числом коробок	qutilar soniga to‘g‘ri kelmaydi
 коробки уже есть — заменятся	qutilar allaqachon bor — almashtiriladi
 Коробки записываются отгрузкам выбранной партии (у BL с несколькими строками — в самую большую), пустые «мест» и CBM заполняются из списка.	Qutilar tanlangan partiya jo‘natmalariga yoziladi (bir necha qatorli BL da — eng kattasiga), bo‘sh «joy» va CBM ro‘yxatdan to‘ldiriladi.
-Старый формат .xls — пересохраните как .xlsx.	Eski .xls format — .xlsx qilib qayta saqlang.
 Нашёл размеры коробок (строка {n}), но не столбец с числом коробок (件数 / CTN / коробок)	Qutilar o‘lchamini topdim ({n}-qator), lekin qutilar soni ustunini emas (件数 / CTN / qutilar)
 Под заголовком (строка {n}) нет строк с размерами и числом коробок	Sarlavha ostida ({n}-qator) o‘lcham va qutilar soni bor qatorlar yo‘q
 Не нашёл строку заголовка с длиной, шириной и высотой коробки (长/宽/高, L/W/H, Д/Ш/В)	Quti uzunligi, kengligi va balandligi bor sarlavha qatorini topmadim (长/宽/高, L/W/H, D/Sh/B)
 строка {n} («{s}»): нет размеров коробки — пропущена	{n}-qator («{s}»): quti o‘lchamlari yo‘q — o‘tkazib yuborildi
 размеры вне 1–500 см: строки {s} — проверьте единицы	o‘lchamlar 1–500 sm dan tashqarida: {s}-qatorlar — birliklarni tekshiring
+шапка без названий столбцов — размеры и число коробок найдены по объёму	sarlavhada ustun nomlari yo‘q — o‘lchamlar va qutilar soni hajm bo‘yicha topildi

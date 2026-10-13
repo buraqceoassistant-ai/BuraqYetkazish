@@ -322,9 +322,10 @@
     return Math.abs(v - Math.round(v)) < 1e-9 ? iso.slice(0, 10) : iso.slice(0, 10) + ' ' + iso.slice(11, 16);
   }
   async function readGrid(ab) {
+    if (window.XlsBiff && window.XlsBiff.isOle(ab)) return window.XlsBiff.readGrid(ab);   // старый .xls (Excel 97–2003)
     const z = await readZip(ab), ss = shared(z), dates = dateStyles(z);
     const wb = txt(z, 'xl/workbook.xml'), rels = txt(z, 'xl/_rels/workbook.xml.rels'), rmap = {};
-    if (!wb) throw new Error('Это не книга Excel (.xlsx)');
+    if (!wb) throw new Error('Это не книга Excel (.xlsx или .xls)');
     for (const m of rels.matchAll(/<Relationship\b[^>]*>/g)) { const id = m[0].match(/Id="([^"]+)"/), t = m[0].match(/Target="([^"]+)"/); if (id && t) rmap[id[1]] = t[1]; }
     const out = [];
     for (const m of wb.matchAll(/<sheet\b[^>]*>/g)) {

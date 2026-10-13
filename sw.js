@@ -21,6 +21,7 @@ const SHELL = [
   'js/logi-engine.js',
   'js/logi-viz.js',
   'js/vendor/three/three-viz.min.js',
+  'js/xls-biff.js',
   'js/xlsx-io.js',
   'js/packing.js',
   'js/import-core.js',

@@ -31,6 +31,7 @@
 <script defer src="js/dc-runtime.js"></script>
 <script defer src="js/logi-engine.js"></script>
 <script defer src="js/logi-viz.js"></script>
+<script defer src="js/xls-biff.js"></script>
 <script defer src="js/xlsx-io.js"></script>
 <script defer src="js/packing.js"></script>
 <script defer src="js/import-core.js"></script>
@@ -136,8 +137,8 @@
           </sc-raw-select>
           <input class="input" style="width:240px" placeholder="Поиск: BL, клиент, телефон…" value="{{ jSearch }}" sc-camel-on-change="{{ onJSearch }}">
           <button data-edit class="btn btn-secondary" style="white-space:nowrap" sc-camel-on-click="{{ goImport }}">⇧ Импорт манифеста</button>
-          <button data-edit class="btn btn-secondary pack-btn" style="white-space:nowrap" sc-camel-on-click="{{ packPick }}" title="Коробки отгрузок из пакинг-листов (Excel): размеры и число коробок — для проверки рейсов и 3D">📦 Пакинг-листы</button>
-          <input type="file" accept=".xlsx,.xls" multiple="{{ true }}" ref="{{ packFileRef }}" sc-camel-on-change="{{ onPackFiles }}" style="display:none">
+          <button data-edit class="btn btn-secondary pack-btn" style="white-space:nowrap" sc-camel-on-click="{{ packPick }}" title="Коробки отгрузок из пакинг-листов (Excel, PDF, фото): размеры и число коробок — для проверки рейсов и 3D">📦 Пакинг-листы</button>
+          <input type="file" accept=".xlsx,.xls,.pdf,application/pdf,image/*" multiple="{{ true }}" ref="{{ packFileRef }}" sc-camel-on-change="{{ onPackFiles }}" style="display:none">
           <button data-edit class="btn btn-primary blueprint" style="white-space:nowrap" sc-camel-on-click="{{ newShipment }}"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>+ Добавить отгрузку</button>
         </div>
       </div>
@@ -1698,11 +1699,18 @@
       <div class="dialog blueprint pack-dialog" style="width:min(780px,100%);background:var(--color-bg)">
         <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
         <div class="dialog-title">{{ dialogTitle }}</div>
-        <div class="field" style="max-width:280px"><label>Партия</label><sc-raw-select class="input pack-date" value="{{ packDate }}" sc-camel-on-change="{{ onPackDate }}" aria-label="Партия"><sc-for list="{{ packDateOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select></div>
+        <div class="pack-head" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+          <div class="field" style="width:260px;max-width:100%"><label>Партия</label><sc-raw-select class="input pack-date" value="{{ packDate }}" sc-camel-on-change="{{ onPackDate }}" aria-label="Партия"><sc-for list="{{ packDateOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select>
+            <sc-if value="{{ packDateNote }}"><div class="pack-date-note" style="font-size:12px;color:var(--color-accent-900);margin-top:4px">{{ packDateNote }}</div></sc-if></div>
+          <div class="field" style="width:260px;max-width:100%"><label>Читать ИИ</label><sc-raw-select class="input pack-ai" value="{{ packAiMode }}" sc-camel-on-change="{{ onPackAiMode }}" aria-label="Читать ИИ"><sc-for list="{{ packAiModeOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select>
+            <div class="pack-ai-note" style="font-size:12px;color:{{ packAiNoteColor }};margin-top:4px;text-wrap:pretty">{{ packAiNote }}</div></div>
+        </div>
         <div class="pack-rows" style="display:flex;flex-direction:column">
           <sc-for list="{{ packRows }}" as="r">
             <div class="pack-row" style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:6px 12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-divider)">
-              <div style="min-width:0"><div style="font-weight:500;overflow-wrap:anywhere">{{ r.file }}</div><div style="font-size:12px;color:{{ r.color }};text-wrap:pretty">{{ r.info }}</div></div>
+              <div style="min-width:0"><div style="font-weight:500;overflow-wrap:anywhere">{{ r.file }}</div><div style="font-size:12px;color:{{ r.color }};text-wrap:pretty">{{ r.info }}</div>
+                <div class="pack-src" style="font-size:12px;color:var(--color-neutral-500)">{{ r.src }}</div>
+                <sc-if value="{{ r.canAi }}"><button class="btn btn-ghost pack-ai-btn" style="padding:4px 10px;margin-top:4px" sc-camel-on-click="{{ r.onAi }}">🤖 Прочитать ИИ</button></sc-if></div>
               <sc-if value="{{ r.ok }}"><sc-raw-select class="input pack-bl" value="{{ r.sel }}" sc-camel-on-change="{{ r.onSel }}" aria-label="BL"><option value="">— выберите BL</option><sc-for list="{{ packBlOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select></sc-if>
               <sc-if value="{{ r.ok }}"><div style="font-size:12px;color:var(--color-neutral-700);text-wrap:pretty">{{ r.journal }}</div></sc-if>
             </div>
@@ -1713,7 +1721,7 @@
         <div class="dialog-actions">
           <button class="btn btn-ghost" style="margin-right:auto" sc-camel-on-click="{{ packMore }}">+ Ещё файлы</button>
           <button class="btn btn-secondary" sc-camel-on-click="{{ closeDialog }}">Отмена</button>
-          <button data-edit class="btn btn-primary" sc-camel-on-click="{{ packApply }}">Применить</button>
+          <button data-edit class="btn btn-primary" sc-camel-on-click="{{ packApply }}" disabled="{{ packBusy }}">Применить</button>
         </div>
       </div>
     </div>
@@ -2754,7 +2762,7 @@ class Component extends DCLogic {
       bg: mode === k ? 'var(--color-accent)' : 'transparent', fg: mode === k ? 'var(--color-bg)' : 'var(--color-text)' }));
     out.impModeNote = mode === 'local' ? 'Строки Excel — прямо из ячеек, PDF — из текста страниц. Скан без ИИ не прочитать. Незнакомые маркировки сопоставляете вы — один раз: сайт запомнит их у клиента.' :
       'Claude разбирает любой формат, в том числе сканы, и предлагает клиентов для незнакомых маркировок. Нужен ключ Claude API — платно, центы за манифест.';
-    out.impDropNote = mode === 'local' ? 'Excel (.xlsx) или PDF с текстом · до 10 МБ, PDF — до 30 страниц' : 'Excel (.xlsx) или PDF, в том числе скан · до 10 МБ, PDF — до 30 страниц';
+    out.impDropNote = mode === 'local' ? 'Excel (.xlsx, .xls) или PDF с текстом · до 10 МБ, PDF — до 30 страниц' : 'Excel (.xlsx, .xls) или PDF, в том числе скан · до 10 МБ, PDF — до 30 страниц';
     out.impSetup = mode === 'local' ? '' : !this.gsUrl ? 'Подключите Google Таблицу («Настройки» → «Связь»): ИИ работает через её скрипт.' :
       !(this.gsVersion >= 8) ? 'Обновите код скрипта таблицы до версии 8 и впишите ключ Claude API в свойства скрипта: «Настройки» → «Связь» → «ИИ-импорт манифестов».' :
       own.state === 'locked' ? 'Секрет редактора закрыт на этом устройстве: «Настройки» → «Связь» → «ИИ-импорт манифестов» → пароль входа → «Открыть секрет».' :
@@ -3011,24 +3019,84 @@ class Component extends DCLogic {
   // ── пакинг-листы: файлы Excel → коробки отгрузок партии (js/packing.js) ──
   packBls(data, date) { return [...new Set(data.shipments.filter(s => s.date === date).map(s => s.bl))]; }
   packMatch(r, bls) { const P = window.LogiPacking; return (r.marks || []).map(m => P.matchBl(m, bls)).find(Boolean) || P.matchBl(r.file, bls) || ''; }
+  // режим ИИ для пакинг-листов: «автоматически» — всё, что не разобралось по правилам (и PDF, фото), читает ИИ сразу;
+  // «по кнопке» — только по «Прочитать ИИ» у файла
+  packAiMode() { try { return localStorage.getItem('logi-pack-ai') === 'button' ? 'button' : 'auto'; } catch (e) { return 'auto'; } }
+  packAiSet(m) { try { localStorage.setItem('logi-pack-ai', m); } catch (e) { /* без хранилища — до перезагрузки */ } this.setState({}); }
+  // ИИ готов? текст причины, если нет (те же шаги, что у ИИ-импорта)
+  packAiSetup() {
+    const own = window.LogiAuth ? window.LogiAuth.owner() : { state: 'none', config: {} };
+    return !this.gsUrl ? 'Подключите Google Таблицу («Настройки» → «Связь»): ИИ работает через её скрипт.' :
+      !(this.gsVersion >= 8) ? 'Обновите код скрипта таблицы до версии 8 и впишите ключ Claude API в свойства скрипта: «Настройки» → «Связь» → «ИИ-импорт манифестов».' :
+      own.state === 'locked' ? 'Секрет редактора закрыт на этом устройстве: «Настройки» → «Связь» → «ИИ-импорт манифестов» → пароль входа → «Открыть секрет».' :
+      own.state !== 'open' ? 'Секрет редактора не задан: «Настройки» → «Связь» → «ИИ-импорт манифестов» → «Новый секрет редактора».' : '';
+  }
+  packKind(f) { const n = (f.name || '').toLowerCase(), t = f.type || ''; return /\.xlsx?$/.test(n) ? 'xlsx' : /\.pdf$/.test(n) || t === 'application/pdf' ? 'pdf' : /^image\//.test(t) || /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/.test(n) ? 'image' : ''; }
   async packFiles(e) {
     const files = [...(e.target.files || [])]; e.target.value = '';
     if (!files.length || this.readOnly) return;
     const st = this.state, data = st.data, dl0 = st.dialog && st.dialog.type === 'packs' ? st.dialog : null;
     const date = dl0 ? dl0.date : okDate(st.jDate) ? st.jDate : data.shipments.map(s => s.date).sort().pop() || '';
-    const bls = this.packBls(data, date), rows = dl0 ? dl0.rows.slice() : [];
+    const bls = this.packBls(data, date), rows = dl0 ? dl0.rows.slice() : [], auto = this.packAiMode() === 'auto';
     for (const f of files) {
-      const row = { file: f.name, ok: false, error: '', n: 0, m3: 0, text: '', unit: '', marks: [], notes: [], sel: '' };
+      const row = { file: f.name, blob: f, kind: this.packKind(f), ok: false, error: '', n: 0, m3: 0, text: '', unit: '', marks: [], notes: [], sel: '', src: '', ai: null };
       try {
-        if (!/\.xlsx$/i.test(f.name)) throw new Error(/\.xls$/i.test(f.name) ? 'Старый формат .xls — откройте в Excel и сохраните как .xlsx' : 'Нужен файл Excel (.xlsx)');
-        const book = await window.XlsxIO.readGrid(await f.arrayBuffer());
-        const r = window.LogiPacking.parseBook(book, { fileName: f.name, bls });
-        if (!r.ok) throw new Error(r.error);
-        Object.assign(row, { ok: true, n: r.n, m3: r.m3, text: r.text, unit: r.unit, marks: r.marks, notes: r.notes, sel: r.bl });
-      } catch (err) { row.error = err.message || String(err); }
+        if (!row.kind) throw new Error('Нужен Excel (.xlsx, .xls), PDF или фото пакинг-листа');
+        if (f.size > 10 * 1024 * 1024) throw new Error('Файл больше 10 МБ (' + f1(f.size / 1048576, 1) + ' МБ)');
+        if (row.kind === 'xlsx') {
+          row.book = await window.XlsxIO.readGrid(await f.arrayBuffer());
+          const r = window.LogiPacking.parseBook(row.book, { fileName: f.name, bls });
+          if (r.ok) Object.assign(row, { ok: true, n: r.n, m3: r.m3, text: r.text, unit: r.unit, marks: r.marks, notes: r.notes, sel: r.bl, src: 'rules' });
+          else row.error = r.error;
+        } else row.error = row.kind === 'pdf' ? 'PDF читает ИИ' : 'Фото читает ИИ';
+      } catch (err) { row.error = err.message || String(err); row.kind = ''; }
       rows.push(row);
     }
-    this.setState({ dialog: { type: 'packs', date, rows, error: '' } });
+    this.setState({ dialog: { type: 'packs', date, rows, error: '', autoDate: !!(dl0 && dl0.autoDate), manual: !!(dl0 && dl0.manual) } });
+    if (auto) for (let i = 0; i < rows.length; i++) if (!rows[i].ok && rows[i].kind && !rows[i].ai) await this.packAiRead(i, true);   // по очереди: один запрос за раз
+    this.packRepick();
+  }
+  // партия — та, где есть BL из файлов: открытая, если в ней нашёлся хоть один; иначе партия с наибольшим числом
+  // совпадений (при равенстве — последняя); без совпадений — открытая. Выбранную вручную не трогаем
+  packRepick() {
+    const dl = this.state.dialog; if (!dl || dl.type !== 'packs' || dl.manual) return;
+    const data = this.state.data, rows = dl.rows, dates = [...new Set(data.shipments.map(s => s.date))].filter(Boolean).sort().reverse();
+    const hits = d => { const b = this.packBls(data, d); return rows.filter(r => r.ok && this.packMatch(r, b)).length; };
+    let best = dl.date, autoDate = dl.autoDate;
+    if (!hits(dl.date)) { const top = dates.map(d => [d, hits(d)]).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1))[0]; if (top && top[1] > 0) { best = top[0]; autoDate = true; } }
+    if (best === dl.date) return;
+    const nb = this.packBls(data, best);
+    this.setState(s0 => ({ dialog: { ...s0.dialog, date: best, autoDate, rows: s0.dialog.rows.map(r => ({ ...r, sel: r.ok ? this.packMatch(r, nb) : '' })) } }));
+  }
+  // фото пакинг-листа → JPEG не больше 1568 px по длинной стороне (больше ИИ всё равно уменьшает)
+  async packImage(file) {
+    if (/hei[cf]/i.test(file.type || file.name)) throw new Error('Фото HEIC не читается — сохраните как JPEG');
+    const bmp = await createImageBitmap(file).catch(() => null);
+    if (!bmp) throw new Error('Не удалось открыть картинку');
+    const MAX = 1568, k = Math.min(1, MAX / Math.max(bmp.width, bmp.height)), w = Math.max(1, Math.round(bmp.width * k)), h = Math.max(1, Math.round(bmp.height * k));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    return { base64: cv.toDataURL('image/jpeg', 0.85).split(',')[1], mediaType: 'image/jpeg' };
+  }
+  // файл строки i — через ИИ (скрипт таблицы, как ИИ-импорт): Excel — текстом ячеек, PDF — целиком, фото — картинкой
+  async packAiRead(i, quiet) {
+    const dl = this.state.dialog; if (!dl || dl.type !== 'packs' || !dl.rows[i] || this.readOnly) return;
+    const upd = patch => this.setState(s0 => s0.dialog && s0.dialog.type === 'packs' ? { dialog: { ...s0.dialog, rows: s0.dialog.rows.map((x, k) => k === i ? { ...x, ...patch } : x) } } : null);
+    const setup = this.packAiSetup();
+    if (setup) { if (!quiet) this.setState(s0 => ({ dialog: { ...s0.dialog, error: setup } })); return; }
+    const row = dl.rows[i], P = window.LogiPacking;
+    upd({ ai: 'busy', error: '' });
+    try {
+      let doc;
+      if (row.kind === 'xlsx') doc = { kind: 'xlsx', book: row.book || await window.XlsxIO.readGrid(await row.blob.arrayBuffer()) };
+      else if (row.kind === 'pdf') { const buf = await row.blob.arrayBuffer(); let pages = 0; try { pages = (await window.LogiPdf.open(buf)).numPages; } catch (e) { /* страницы не сочлись — ИИ прочитает и так */ } if (pages > 30) throw new Error('В PDF ' + pages + ' страниц — не больше 30'); doc = { kind: 'pdf', base64: window.LogiPdf.b64(buf), pages }; }
+      else doc = { kind: 'image', ...(await this.packImage(row.blob)) };
+      const bls = this.packBls(this.state.data, (this.state.dialog || dl).date);
+      const j = await this.aiCall(P.aiRequest(doc, { fileName: row.file, bls }));
+      if (j.error) throw new Error(j.error);
+      const r = P.fromAi(j.result, { fileName: row.file, bls });
+      if (!r.ok) throw new Error(r.error);
+      upd({ ok: true, n: r.n, m3: r.m3, text: r.text, unit: r.unit, marks: r.marks, notes: r.notes, sel: r.bl, src: 'ai', error: '', ai: { model: j.model || '', usage: j.usage || {}, ms: j.ms || 0 } });
+    } catch (err) { upd({ ai: null, error: err.message || String(err) }); }
   }
   packApply(dl) {
     if (this.readOnly) return;
@@ -4247,9 +4315,8 @@ class Component extends DCLogic {
     if (this.readOnly || !file) return;
     const name = file.name || 'manifest', lower = name.toLowerCase(), MAX = 10 * 1024 * 1024, fail = error => this.impBusy({ error, file: name });
     if (file.size > MAX) return fail('Файл больше 10 МБ (' + f1(file.size / 1048576, 1) + ' МБ). Уберите лишние листы или сожмите PDF.');
-    if (/\.xls$/.test(lower)) return fail('Старый формат .xls: откройте файл в Excel и сохраните как «Книга Excel (.xlsx)».');
-    const kind = /\.xlsx$/.test(lower) ? 'xlsx' : /\.pdf$/.test(lower) || file.type === 'application/pdf' ? 'pdf' : null;
-    if (!kind) return fail('Нужен манифест в Excel (.xlsx) или PDF.');
+    const kind = /\.xlsx?$/.test(lower) ? 'xlsx' : /\.pdf$/.test(lower) || file.type === 'application/pdf' ? 'pdf' : null;
+    if (!kind) return fail('Нужен манифест в Excel (.xlsx, .xls) или PDF.');
     const useAi = this.impModeGet() === 'ai';
     if (useAi) {
       if (!this.gsUrl) return fail('Сначала подключите Google Таблицу — ИИ работает через её скрипт.');
@@ -5485,19 +5552,26 @@ class Component extends DCLogic {
           } });
       } else if (dl.type === 'packs') {
         // пакинг-листы: файл → BL партии → коробок и м³ против журнала
-        const dates = [...new Set(data.shipments.map(s => s.date))].filter(Boolean).sort().reverse(), bls = this.packBls(data, dl.date);
+        const dates = [...new Set(data.shipments.map(s => s.date))].filter(Boolean).sort().reverse(), bls = this.packBls(data, dl.date), aiMode = this.packAiMode(), aiSetup = this.packAiSetup();
         const jOf = bl => { const m = data.shipments.filter(s => s.date === dl.date && s.bl === bl); return { places: m.reduce((a, s) => a + (+s.places || 0), 0), cbm: m.reduce((a, s) => a + (+s.cbm || 0), 0), boxes: m.some(s => s.boxes) }; };
         Object.assign(out, { isPackDialog: true, dialogTitle: 'Пакинг-листы', packDate: dl.date,
           packDateOpts: dates.map(d => ({ v: d, l: dLong(d) })),
-          onPackDate: e => { const date = e.target.value, nb = this.packBls(data, date); this.setState(s0 => ({ dialog: { ...s0.dialog, date, error: '', rows: s0.dialog.rows.map(r => ({ ...r, sel: r.ok ? this.packMatch(r, nb) : '' })) } })); },
+          onPackDate: e => { const date = e.target.value, nb = this.packBls(data, date); this.setState(s0 => ({ dialog: { ...s0.dialog, date, autoDate: false, manual: true, error: '', rows: s0.dialog.rows.map(r => ({ ...r, sel: r.ok ? this.packMatch(r, nb) : '' })) } })); },
+          packDateNote: dl.autoDate ? 'Партия выбрана по BL из файлов — проверьте.' : '',
+          packAiMode: aiMode, onPackAiMode: e => this.packAiSet(e.target.value), packAiModeOpts: [{ v: 'auto', l: 'автоматически' }, { v: 'button', l: 'по кнопке' }],
+          packAiNote: aiSetup ? 'ИИ не настроен. ' + aiSetup : aiMode === 'auto' ? 'Что не разобралось по правилам, а также PDF и фото, ИИ читает сразу.' : 'ИИ читает файл по кнопке «Прочитать ИИ».',
+          packAiNoteColor: aiSetup ? 'var(--color-accent-900)' : 'var(--color-neutral-700)',
           packBlOpts: bls.map(bl => { const j = jOf(bl), c = (data.clients.find(x => x.bl === bl) || {}); return { v: bl, l: bl + (c.brand ? ' · ' + c.brand : '') + ' — мест ' + f0(j.places) + ' · ' + f1(j.cbm, 2) + ' м³' + (j.boxes ? ' · 📦 есть' : '') }; }),
           packRows: dl.rows.map((r, i) => { const j = r.sel ? jOf(r.sel) : null;
-            return { file: r.file, ok: r.ok, sel: r.sel,
+            const u = r.ai && r.ai !== 'busy' ? r.ai.usage || {} : null;
+            return { file: r.file, ok: r.ok, sel: r.sel, busy: r.ai === 'busy', canAi: !!r.kind && r.ai !== 'busy' && r.src !== 'ai' && !aiSetup, onAi: () => this.packAiRead(i),
+              src: r.ai === 'busy' ? 'ИИ читает…' : r.src === 'ai' ? 'прочитал ИИ · ' + (r.ai.model || 'Claude') + ' · токенов ' + f0((u.in || 0) + (u.cache || 0)) + ' → ' + f0(u.out || 0) : r.src === 'rules' ? 'разобрано по правилам' : '',
               info: r.ok ? ['Коробок: ' + f0(r.n), f1(r.m3, 2) + ' м³', r.unit === 'm' ? 'размеры в файле в метрах' : r.unit === 'mm' ? 'размеры в файле в мм' : ''].concat(r.notes, !r.sel ? ['BL не найден — выберите'] : []).filter(Boolean).join(' · ') : r.error,
               color: r.ok ? (r.sel ? 'var(--color-neutral-700)' : 'var(--color-danger-ink)') : 'var(--color-danger-ink)',
               journal: !j ? '' : 'В журнале: мест ' + f0(j.places) + ' · ' + f1(j.cbm, 2) + ' м³' + (j.places && j.places !== r.n ? ' — не сходится с числом коробок' : '') + (j.boxes ? ' · коробки уже есть — заменятся' : ''),
               onSel: e => { const v = e.target.value; this.setState(s0 => ({ dialog: { ...s0.dialog, error: '', rows: s0.dialog.rows.map((x, k) => k === i ? { ...x, sel: v } : x) } })); } }; }),
-          packNote: 'Коробки записываются отгрузкам выбранной партии (у BL с несколькими строками — в самую большую), пустые «мест» и CBM заполняются из списка. Старый формат .xls — пересохраните как .xlsx.',
+          packNote: 'Коробки записываются отгрузкам выбранной партии (у BL с несколькими строками — в самую большую), пустые «мест» и CBM заполняются из списка.',
+          packBusy: dl.rows.some(r => r.ai === 'busy'),
           packMore: () => this.packFileRef.current && this.packFileRef.current.click(), packApply: () => this.packApply(dl) });
       } else if (dl.type === 'drvok') {
         // заявка водителя со своей машиной (скрипт 31): проверить, поправить, выбрать машину автопарка или новую
