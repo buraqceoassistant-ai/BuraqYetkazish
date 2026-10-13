@@ -325,6 +325,8 @@ textarea.input { min-height: 90px; resize: vertical; }
   width: min(440px, 100%); display: flex; flex-direction: column; gap: var(--space-3);
   padding: var(--space-4); border-radius: var(--radius-lg);
   background: var(--color-surface); box-shadow: var(--shadow-lg);
+  /* длинное окно (много файлов в «Пакинг-листах», низкий экран) прокручивается внутри себя — кнопки внизу всегда достижимы */
+  max-height: calc(100vh - 2 * var(--space-4)); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto;
 }
 .dialog-title {
   font-family: var(--font-heading); font-weight: var(--font-heading-weight);
@@ -332,6 +334,14 @@ textarea.input { min-height: 90px; resize: vertical; }
 }
 .dialog-body { font-size: 14px; opacity: 0.85; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+/* кнопки окна прилипают к нижнему краю, пока содержимое прокручивается (на телефоне — своё правило в mobile.css) */
+@media screen and (min-width: 761px) {
+  .dialog > .dialog-actions {
+    position: sticky; bottom: calc(-1 * var(--space-4)); z-index: 1;
+    margin: 0 calc(-1 * var(--space-4)) calc(-1 * var(--space-4)); padding: 10px var(--space-4) var(--space-4);
+    background: var(--color-bg); border-top: 1px solid var(--color-divider); border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  }
+}
 
 /* — фирменный стиль BURAQ (buraq-brand/BRAND.md, «Графический стиль»): тонкие линии 1 px, кнопки-«таблетки»,
      красная заливка у главных кнопок, белая/синяя обводка у остальных; скругления вместо «чертёжных» уголков — */
