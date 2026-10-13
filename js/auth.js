@@ -14,7 +14,7 @@
    поэтому вход «только просмотр» их не расшифрует. */
 (function () {
   'use strict';
-  var REPO = { owner: 'buraqceoassistant-ai', repo: 'buraqyetkazuv', path: 'data/vault.json' };
+  var REPO = { owner: 'buraqceoassistant-ai', repo: 'BuraqYetkazish', path: 'data/vault.json' };
   var VAULT_URL = REPO.path;
   var KEY = 'logi-auth-key';            // ключ данных: localStorage («запомнить») или sessionStorage
   var KEY_PREV = 'logi-auth-key-prev';  // прежний ключ, пока сайт не обновился после смены пароля

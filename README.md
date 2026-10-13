@@ -80,7 +80,7 @@
 
 1. https://github.com/settings/personal-access-tokens/new
 2. **Token name**: например, «Смена пароля на сайте». **Expiration**: на ваш выбор.
-3. **Repository access → Only select repositories →** `buraqyetkazuv`.
+3. **Repository access → Only select repositories →** `BuraqYetkazish`.
 4. **Permissions → Repository permissions → Contents → Read and write**.
 5. **Generate token** и скопируйте токен (`github_pat_…`) в поле на сайте.
 
@@ -1018,7 +1018,7 @@ node tools/vault.mjs init Mijozlar_omborlari_ro_yxati.xlsx buraq
 1. **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 2. Сайт собирается workflow `.github/workflows/pages.yml` при каждом пуше в основную ветку репозитория.
    Запустить вручную: **Actions → Deploy site to GitHub Pages → Run workflow**.
-3. Адрес: `https://<владелец>.github.io/<репозиторий>/` — сейчас https://buraqceoassistant-ai.github.io/buraqyetkazuv/ (до 12.10.2026 репозиторий назывался `xeeds`).
+3. Адрес: `https://<владелец>.github.io/<репозиторий>/` — сейчас https://buraqceoassistant-ai.github.io/BuraqYetkazish/ (до 12.10.2026 репозиторий назывался `xeeds`).
 
 При каждой сборке service worker получает новую версию кэша. Открытый сайт сам проверяет, нет ли новой версии, —
 раз в 30 минут и при возврате в приложение (телефон держит его открытым неделями, а браузер проверяет обновления
