@@ -99,3 +99,13 @@ test('кузов из карточки машины — у рейса на не�
   assert.ok(!g.own && g.w === 2.1 && g.h === 1.9, 'без кузова — типичные ширина и высота Gazel');
   assert.equal(V.bodyOf('gazel', 19, { l: 0, w: 2, h: 2 }).own, undefined, 'неполный кузов — не берём');
 });
+
+test('Shineray — малый грузовик вида changan (как Changan): по названию, марка в подписи; план B берёт Changan/Shineray, когда есть тариф', () => {
+  assert.deepEqual(['Shineray', 'Shinaray 2', 'Шинерей', 'Changan', 'Changan-1'].map(E.vehicleKind), ['changan', 'changan', 'changan', 'changan', 'changan']);
+  assert.deepEqual(['Shineray', 'Changan-1', 'Gazel Umid'].map(E.vehicleBrand), ['Shineray', 'Changan', 'Gazel']);
+  // малый груз в одну сторону: 2 точки по 3 м³ — в план B на Shineray (дешевле Gazel), в план A — тоже
+  const S2 = { ...S, changanBase: 180000, changanPt: 40000, changanCount: 1, gazelCount: 2, vehicles: [veh('Shineray', { m3: 8, kg: 1500 }), veh('Gazel Umid'), veh('Gazel Katta', { m3: 35, kg: 4000 })] };
+  const P = E.buildPlans([{ id: 'a', bl: 'BL-1', cbm: 3, kg: 300, places: 1, lat: 41.41, lon: 69.23, zone: 'in' }, { id: 'b', bl: 'BL-2', cbm: 3, kg: 300, places: 1, lat: 41.415, lon: 69.232, zone: 'in' }], S2);
+  assert.deepEqual([P.B.trips.length, P.B.trips[0].kind, P.B.trips[0].carName], [1, 'changan', 'Shineray']);
+  assert.equal(P.A.trips[0].carName, 'Shineray');
+});

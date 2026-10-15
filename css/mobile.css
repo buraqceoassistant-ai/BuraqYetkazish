@@ -251,6 +251,8 @@
   .dv-map { height: 340px; }
   .dv-set { grid-template-columns: minmax(0, 1fr); }
   .dv-kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .fleet-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .photo-box { padding: 0 8px; }
   .dv-kind { padding: 10px; }
   .dv-card:has(> .dv-table) { overflow-x: auto; }
   .dv-table { min-width: 640px; }

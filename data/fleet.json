@@ -1,0 +1,87 @@
+{
+  "note": "Автопарк компании: файл сайта. Список машин в Google Таблице (Sozlamalar C24:C39, госномера, карточки) заполняется с него кнопкой «Применить автопарк из файла» в «Настройки» → «Водители и автопарк». Фото — img/fleet/. Размеры кузова — внутренние, метры. kind: gazel, labo, changan (малые грузовики — Changan, Shineray), kamaz.",
+  "vehicles": [
+    {
+      "name": "Gazel Umid",
+      "kind": "gazel",
+      "plate": "01 U 912 TB",
+      "model": "GAZelle, тент",
+      "m3": 18,
+      "kg": 3500,
+      "l": 4.2,
+      "w": 1.9,
+      "h": 2.2,
+      "driver": "Umid aka",
+      "photos": [
+        "img/fleet/gazel-umid-1.jpg",
+        "img/fleet/gazel-umid-2.jpg",
+        "img/fleet/gazel-umid-3.jpg"
+      ]
+    },
+    {
+      "name": "Gazel Saidakmal",
+      "kind": "gazel",
+      "plate": "01 G 210 OC",
+      "model": "GAZelle, тент, длинная база",
+      "m3": 23,
+      "kg": 3500,
+      "l": 5.2,
+      "w": 1.9,
+      "h": 2.2,
+      "driver": "Saidakmal aka",
+      "photos": [
+        "img/fleet/gazel-saidakmal-1.jpg",
+        "img/fleet/gazel-saidakmal-2.jpg",
+        "img/fleet/gazel-saidakmal-3.jpg"
+      ]
+    },
+    {
+      "name": "Gazel Nuriddin",
+      "kind": "gazel",
+      "plate": "10 F 260 FB",
+      "model": "GAZelle, тент",
+      "m3": 17,
+      "kg": 3500,
+      "l": 4.2,
+      "w": 1.9,
+      "h": 2.2,
+      "driver": "Nuriddin aka",
+      "photos": [
+        "img/fleet/gazel-nuriddin-1.jpg",
+        "img/fleet/gazel-nuriddin-2.jpg"
+      ]
+    },
+    {
+      "name": "Gazel Katta",
+      "kind": "gazel",
+      "plate": "01 N 853 BD",
+      "model": "GAZelle Next, фургон",
+      "m3": 35,
+      "kg": 4000,
+      "l": 6.3,
+      "w": 2.2,
+      "h": 2.4,
+      "driver": "Hojiakbar",
+      "photos": [
+        "img/fleet/gazel-katta-1.jpg"
+      ]
+    },
+    {
+      "name": "Shineray",
+      "kind": "changan",
+      "plate": "01 Q 806 JC",
+      "model": "Shineray T30, фургон",
+      "m3": 8,
+      "kg": 1500,
+      "l": 3,
+      "w": 1.5,
+      "h": 1.75,
+      "driver": "Hojiakbar",
+      "photos": [
+        "img/fleet/shineray-1.jpg",
+        "img/fleet/shineray-2.jpg",
+        "img/fleet/shineray-3.jpg"
+      ]
+    }
+  ]
+}

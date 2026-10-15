@@ -482,3 +482,39 @@ input.set-input[type="text"] { text-align: left !important; }
 .dv-phone { white-space: nowrap; }
 .drv-car { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 40px; }
 .drv-del { color: var(--buraq-red) !important; }
+
+/* ── Автопарк: карточки машин с фото (Настройки → Водители и автопарк) ── */
+.fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+.fleet-card { border: 1px solid var(--color-divider); background: var(--color-bg); display: flex; flex-direction: column; min-width: 0; }
+.fleet-photo { position: relative; aspect-ratio: 16 / 10; background: var(--color-neutral-100); overflow: hidden; cursor: default; }
+.fleet-photo:has(.fleet-img) { cursor: zoom-in; }
+.fleet-img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s var(--ease-out, ease); }
+.fleet-card:hover .fleet-img { transform: scale(1.03); }
+.fleet-nophoto { height: 100%; display: grid; place-items: center; border-bottom: 1px solid var(--color-divider); background: var(--buraq-navy); }
+.fleet-nophoto span { font-family: var(--font-heading); letter-spacing: .12em; text-transform: uppercase; font-size: 22px; color: color-mix(in srgb, var(--buraq-white) 55%, transparent); }
+.fleet-photo-n { position: absolute; right: 10px; top: 10px; font-size: 11px; letter-spacing: .04em; color: var(--buraq-white); background: color-mix(in srgb, var(--buraq-navy) 70%, transparent); padding: 3px 8px; }
+.fleet-today { position: absolute; left: 10px; bottom: 10px; }
+.fleet-body { padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.fleet-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fleet-head b { font-weight: 500; font-size: 17px; }
+.fleet-kind { margin-left: auto; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-neutral-500); }
+.fleet-model { font-size: 13px; color: var(--color-neutral-700); min-height: 1em; }
+/* госномер — табличкой: тонкая рамка, крупные знаки */
+.fleet-card .dv-plate-in { width: 170px; max-width: 100%; font-family: var(--font-numeric, Inter, sans-serif); font-weight: 600; font-size: 16px !important; letter-spacing: .1em; text-transform: uppercase; text-align: center; border: 1.5px solid var(--buraq-navy); border-radius: 4px; background: var(--buraq-white); color: var(--buraq-navy); padding: 4px 10px; min-height: 36px; }
+.fleet-card .dv-plate-in::placeholder { font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 12px; }
+.fleet-cap-bar { height: 4px; background: var(--color-neutral-200); overflow: hidden; }
+.fleet-cap-bar i { display: block; height: 100%; background: var(--buraq-red); width: 0; transition: width .3s ease; }
+.fleet-cap-txt { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; margin-top: 4px; color: var(--color-neutral-700); font-variant-numeric: tabular-nums; }
+.fleet-info { font-size: 12px; color: var(--color-neutral-700); text-wrap: pretty; }
+.fleet-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; border-top: 1px solid var(--color-divider); padding-top: 8px; font-size: 13px; }
+.fleet-rows > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fleet-rows > div > span:first-child { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--color-neutral-500); }
+.fleet-rows b { font-weight: 500; overflow-wrap: anywhere; }
+.fleet-actions { display: flex; justify-content: flex-end; gap: 4px; padding: 4px 8px 8px; margin-top: auto; }
+/* просмотр фото */
+.photo-backdrop { background: color-mix(in srgb, var(--buraq-navy) 88%, transparent) !important; }
+.photo-box { display: flex; flex-direction: column; gap: 10px; max-width: min(1100px, 100%); max-height: 100%; }
+.photo-img { max-width: 100%; max-height: calc(100vh - 110px); max-height: calc(100dvh - 110px); object-fit: contain; display: block; margin: 0 auto; background: var(--buraq-navy); }
+.photo-bar { display: flex; align-items: center; gap: 6px; color: var(--buraq-white); font-size: 13px; }
+.photo-title { flex: 1; }
+.photo-bar .btn-ghost { color: var(--buraq-white); font-size: 22px; line-height: 1; padding: 2px 12px; }

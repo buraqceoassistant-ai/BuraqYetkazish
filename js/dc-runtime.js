@@ -372,6 +372,7 @@
   // value="{{ … }}" у <input type="number|date|…">: парсер шаблона применил бы к «{{ … }}» проверку формата и писал бы
   // предупреждение в консоль — в шаблоне атрибут переименован, при сборке свойств он снова value
   var TPL_VALUE_ATTR = "sc-tplvalue";
+  var TPL_SRC_ATTR = "sc-tplsrc";   // src="{{ … }}" у <img> в шаблоне браузер запросил бы как адрес — в разметке sc-tplsrc
   var TYPED_INPUT_RE = /<input\b[^>]*>/gi;
   function hideTypedValues(html) {
     return html.replace(TYPED_INPUT_RE, (tag) => /\btype\s*=\s*["']?(number|date|time|datetime-local|month|week|range|color|email|url)\b/i.test(tag)
@@ -445,6 +446,7 @@
         if (key === "class") key = "className";
         else if (key === "for") key = "htmlFor";
         else if (key === TPL_VALUE_ATTR) key = "value";
+        else if (key === TPL_SRC_ATTR) key = "src";
         else if (key.startsWith("on"))
           key = EVENT_MAP[key] || "on" + key[2].toUpperCase() + key.slice(3);
       }

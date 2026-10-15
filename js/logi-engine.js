@@ -66,12 +66,19 @@
     return { list, n: list.reduce((a, x) => a + x.n, 0), m3: Math.round(list.reduce((a, x) => a + x.l * x.w * x.h * x.n, 0) / 1e6 * 1000) / 1000 };
   }
   const boxesText = list => (list || []).map(x => [x.l, x.w, x.h].map(v => String(v).replace('.', ',')).join('×') + '×' + x.n).join('; ');
+  // малые грузовики одного класса (≈ 8–9 м³, 1,5–2 т) — вид «changan»: Changan, Shineray (Шинерей)
+  const SMALL_TRUCK = /^(changan|shineray|shinaray|шинер[ае]й|шинарай)/i;
   function vehicleKind(truck) {
     if (/^gazel/i.test(truck)) return 'gazel';
     if (/^labo/i.test(truck)) return 'labo';
     if (/^kamaz/i.test(truck)) return 'kamaz';
-    if (/^changan/i.test(truck)) return 'changan';
+    if (SMALL_TRUCK.test(truck)) return 'changan';
     return null;
+  }
+  // марка по названию для подписи: «Shineray» у машины вида changan, иначе подпись вида
+  function vehicleBrand(truck) {
+    const m = String(truck || '').match(/^(shineray|shinaray|шинер[ае]й|шинарай)/i);
+    return m ? 'Shineray' : { gazel: 'Gazel', labo: 'Labo', kamaz: 'Kamaz', changan: 'Changan' }[vehicleKind(truck)] || '';
   }
   // клиенты ближе 200 м друг к другу (один рынок, один дом) — одно место: перевозчик берёт доплату за адрес, а не за клиента
   const PLACE_KM = 0.2;
@@ -745,7 +752,7 @@
     // планы A и B: рейс — в одну сторону (сектор не шире MAX_SPREAD), мелкий груз и точки за кольцом — попутно
     const SD = { ...S, maxSpread: S.maxSpread != null ? +S.maxSpread : MAX_SPREAD };
     const A = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.aMaxStops || 99, SD, depot), { onlyIfNeeded: ['kamaz'], fit: { maxStops: S.aMaxStops || 99, join: true, S: SD } });   // строго по кузову
-    const B = plan(lab(['labo', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.bcMaxStops || 99, SD, depot),   // тот же поиск, свои правила
+    const B = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.bcMaxStops || 99, SD, depot),   // тот же поиск, свои правила; Changan/Shineray — тоже
       { onlyIfNeeded: ['kamaz'], tol: { gazel: { m3: S.bTolM3, kg: S.bTolKg } }, fit: { maxStops: S.bcMaxStops || 99, join: true, S: SD } });   // Gazel с допуском
     const C = plan(['kamaz'], (items, fleet) => kamazRuns(items, fleet, CARS.kamaz ? { ...S, cTrucks: CARS.kamaz.length } : S, depot));
     const xNotes = [], X = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => districtTrips(items, fleet, S.aMaxStops || 99, S, depot, xNotes), { onlyIfNeeded: ['kamaz'], fit: { maxStops: S.aMaxStops || 99, join: false } });   // план X (пробный): загрузка как в A
@@ -883,5 +890,5 @@
     return best ? { district: best[0], km: pts[0][1] } : null;
   }
 
-  window.LogiEngine = { parseBoxes, boxesText, guessDistrict, km, bearing, inside, distToRing, zoneOf, nnOrder, tripMetrics, priceTrip, pointTariff, PLACE_KM, costSplit, coordsFromLink, vehicleKind, buildPlans, stopKey, yRoute, yPoint, xlsx, NO_PRICE, NO_PLAN, withKeles, ringLength, KELES, TKAD_V2 };
+  window.LogiEngine = { parseBoxes, boxesText, vehicleBrand, guessDistrict, km, bearing, inside, distToRing, zoneOf, nnOrder, tripMetrics, priceTrip, pointTariff, PLACE_KM, costSplit, coordsFromLink, vehicleKind, buildPlans, stopKey, yRoute, yPoint, xlsx, NO_PRICE, NO_PLAN, withKeles, ringLength, KELES, TKAD_V2 };
 })();

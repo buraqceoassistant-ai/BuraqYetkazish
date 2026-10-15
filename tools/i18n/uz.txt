@@ -550,7 +550,7 @@ A — экономичный	A — tejamkor
 м³ /	m³ /
 кг, Kamaz — только если груз больше.	kg gacha, Kamaz — faqat yuk kattaroq bo‘lsa.
 B — Gazel и Labo	B — Gazel va Labo
-Как можно меньше машин: Gazel и Labo. Gazel можно загрузить с допуском — до	Iloji boricha kam mashina: Gazel va Labo. Gazel’ni ruxsat bilan yuklash mumkin —
+Как можно меньше машин: Gazel, Labo и малый грузовик (Changan, Shineray). Gazel можно загрузить с допуском — до	Iloji boricha kam mashina: Gazel, Labo va kichik yuk mashinasi (Changan, Shineray). Gazel’ni ruxsat bilan yuklash mumkin —
 кг. Kamaz — только если груз больше.	kg gacha. Kamaz — faqat yuk kattaroq bo‘lsa.
 C — только Kamaz	C — faqat Kamaz
 Большие машины делают несколько рейсов, каждая на своей стороне города.	Katta mashinalar bir nechta reys qiladi, har biri shaharning o‘z tomonida.
@@ -1558,7 +1558,7 @@ Labo, Changan, Gazel и Kamaz.	Labo, Changan, Gazel va Kamaz.
 Gazel и Kamaz.	Gazel va Kamaz.
 Gazel и Labo.	Gazel va Labo.
 Gazel строго до {n} м³ / {n2} кг, Kamaz — только если груз больше.	Gazel qat’iy {n} m³ / {n2} kg gacha, Kamaz — faqat yuk kattaroq bo‘lsa.
-Как можно меньше машин: Gazel и Labo.	Iloji boricha kam mashina: Gazel va Labo.
+Как можно меньше машин: Gazel, Labo и малый грузовик (Changan, Shineray).	Iloji boricha kam mashina: Gazel, Labo va kichik yuk mashinasi (Changan, Shineray).
 Gazel можно загрузить с допуском — до {n} м³ / {n2} кг.	Gazel’ni ruxsat bilan yuklash mumkin — {n} m³ / {n2} kg gacha.
 Kamaz — только если груз больше.	Kamaz — faqat yuk kattaroq bo‘lsa.
 Машины: {s}; рейсов на машину в день — до {n}.	Mashinalar: {s}; mashinaga kuniga reyslar — {n} tagacha.
@@ -2235,7 +2235,7 @@ X — по районам	X — tumanlar bo‘yicha
 в ремонте: {n}	ta’mirda: {n}
 {n} кг (своя)	{n} kg (o‘ziniki)
 + Добавить машину	+ Mashina qo‘shish
-Число машин и вместимость вида — те же настройки, что в «Тарифах и планах». Машину добавляют, меняют и удаляют в таблице «Машины» ниже; у машины может быть своя вместимость, машина в ремонте в планы не идёт.	Mashinalar soni va turining sig‘imi — «Tariflar va rejalar»dagi sozlamalarning o‘zi. Mashina quyidagi «Mashinalar» jadvalida qo‘shiladi, o‘zgartiriladi va o‘chiriladi; mashinaning o‘z sig‘imi bo‘lishi mumkin, ta’mirdagi mashina rejalarga kirmaydi.
+Число машин и вместимость вида — те же настройки, что в «Тарифах и планах». Машину добавляют, меняют и удаляют в карточках «Машины» ниже; у машины может быть своя вместимость, машина в ремонте в планы не идёт.	Mashinalar soni va turining sig‘imi — «Tariflar va rejalar»dagi sozlamalarning o‘zi. Mashina quyidagi «Mashinalar» jadvalida qo‘shiladi, o‘zgartiriladi va o‘chiriladi; mashinaning o‘z sig‘imi bo‘lishi mumkin, ta’mirdagi mashina rejalarga kirmaydi.
 Машину можно будет переименовать, отметить «в ремонте», записать марку, год и свою вместимость: «Настройки» → «Водители и автопарк».	Mashina nomini o‘zgartirish, «ta’mirda» deb belgilash, marka, yil va o‘z sig‘imini yozish mumkin bo‘ladi: «Sozlamalar» → «Haydovchilar va avtopark».
 например, GAZelle Next	masalan, GAZelle Next
 
@@ -2657,6 +2657,28 @@ PDF читает ИИ	PDF ni SI o‘qiydi
 в итоге документа коробок: {n}, в строках: {n2} — проверьте	hujjat jamida qutilar: {n}, qatorlarda: {n2} — tekshiring
 объём по итогу документа: {n} м³, по коробкам: {n2} — проверьте единицы	hujjat jami bo‘yicha hajm: {n} m³, qutilar bo‘yicha: {n2} — birliklarni tekshiring
 Коробки отгрузок из пакинг-листов (Excel, PDF, фото): размеры и число коробок — для проверки рейсов и 3D	Jo‘natmalar qutilari packing listlardan (Excel, PDF, foto): o‘lchamlar va qutilar soni — reyslarni tekshirish va 3D uchun
+Применить автопарк из файла	Avtoparkni fayldan qo‘llash
+В файле сайта автопарк компании: {n} машины.	Sayt faylida kompaniya avtoparki: {n} mashina.
+В файле сайта автопарк компании: {n} машин.	Sayt faylida kompaniya avtoparki: {n} mashina.
+Нет в таблице	Jadvalda yo‘q
+Лишние в таблице	Jadvalda ortiqcha
+Автопарк из файла записан	Avtopark fayldan yozildi
+убраны	olib tashlandi
+Записать автопарк из файла сайта в таблицу?	Sayt faylidagi avtoparkni jadvalga yozilsinmi?
+Добавить	Qo‘shish
+Убрать	Olib tashlash
+В журнале на сегодня и позже стоят	Jurnalda bugun va keyinga qo‘yilgan
+строки сохранят это название, машину в них нужно будет сменить.	qatorlarda shu nom qoladi, ulardagi mashinani almashtirish kerak bo‘ladi.
+Госномера, карточки (объём, вес, кузов, марка) и число машин по видам — из файла.	Davlat raqamlari, kartochkalar (hajm, og‘irlik, kuzov, marka) va turlar bo‘yicha mashinalar soni — fayldan.
+Планы пересчитаются.	Rejalar qayta hisoblanadi.
+В таблице место для 16 названий машин (Sozlamalar C24:C39), в файле {n} машин и ещё {n2} служебных строк — уберите лишнее из файла.	Jadvalda 16 ta mashina nomiga joy bor (Sozlamalar C24:C39), faylda {n} mashina va yana {n2} xizmat qatori — fayldan ortiqchasini olib tashlang.
+полезно {n} м³	foydali {n} m³
+{n} фото	{n} foto
+Водитель	Haydovchi
+по списку	ro‘yxat bo‘yicha
+тент	tent
+Предыдущее фото	Oldingi foto
+Следующее фото	Keyingi foto
 Нет ни одного файла с выбранным BL.	BL tanlangan birorta fayl yo‘q.
 Коробки по пакинг-листам записаны: {s}.	Packing listlar bo‘yicha qutilar yozildi: {s}.
 Планы проверят укладку, 3D покажет коробки.	Rejalar joylashni tekshiradi, 3D qutilarni ko‘rsatadi.
