@@ -147,3 +147,51 @@ test('машин вида 0 — вида нет в планах (Labo с тар�
   const P = E.buildPlans(st, { ...OWN(), cTrucks: 0 });
   assert.equal(P.C.noFleet || P.C.trips.length === 0, true, 'Kamaz 0 — плана C нет');
 });
+
+// мелкий груз (S.smallM3): отгрузка меньше порога — на Changan / Shineray, Gazel — от порога
+const small = (k, n, cbm, dy, dx) => cluster(k, n, cbm, dy, dx).map(s => ({ ...s, kg: Math.round(cbm * 150) }));
+const kindsOf = (P, k) => P[k].trips.map(t => t.kind + ':' + t.stops.map(s => s.cbm).join('+'));
+
+test('мелкий груз до 3 м³ — на Shineray, Gazel берёт только от 3 м³ (планы A и B)', () => {
+  // север: 3 мелкие по 1 м³ и 4 больших по 5 м³; юг: 2 мелкие по 1,5 м³ и 3 больших по 4 м³ — Gazel едет в обе стороны
+  const st = small('NS', 3, 1, 0.06, 0).concat(cluster('NB', 4, 5, 0.065, 0.004), small('SS', 2, 1.5, -0.06, 0), cluster('SB', 3, 4, -0.065, 0.004));
+  const off = E.buildPlans(JSON.parse(JSON.stringify(st)), OWN()), on = E.buildPlans(JSON.parse(JSON.stringify(st)), { ...OWN(), smallM3: 3 });
+  assert.ok(off.A.trips.some(t => t.kind === 'gazel' && t.stops.some(s => s.cbm < 3)), 'без правила мелкое едет на Gazel попутно: ' + kindsOf(off, 'A'));
+  for (const k of ['A', 'B']) {
+    const P = on[k];
+    assert.equal(P.smallTo, 3); assert.equal(P.smallAll, 5); assert.equal(P.sum.smallOn, 0, k + ': ' + kindsOf(on, k));
+    assert.ok(P.trips.filter(t => t.kind === 'gazel').every(t => t.stops.every(s => s.cbm >= 3)), k + ': Gazel — только от 3 м³: ' + kindsOf(on, k));
+    assert.ok(P.trips.filter(t => t.kind === 'changan').every(t => t.carName === 'Shineray' && t.stops.every(s => s.cbm < 3)), k + ': Shineray — мелкое');
+    assert.ok(P.trips.filter(t => t.kind === 'changan').length <= 2, k + ': у Shineray не больше 2 рейсов');
+    assert.ok(P.trips.every(t => !t.noVehicle && !t.over), k + ': без «нет машины»');
+  }
+  // ровно 3 м³ — не мелкий: едет с Gazel
+  const P3 = E.buildPlans(cluster('NB', 3, 5, 0.06, 0).concat([{ ...small('E', 1, 3, 0.061, 0.001)[0] }]), { ...OWN(), smallM3: 3 });
+  assert.equal(P3.A.smallAll, 0);
+});
+
+test('мелкого больше, чем Shineray успевает за день: самые полные рейсы — Shineray, остальное мелкое — на Gazel попутно', () => {
+  // четыре стороны света: в каждой 4 мелких по 1,5 м³ (24 м³ мелкого) и 3 больших по 5 м³; Shineray — 2 рейса по 7 м³
+  const st = ['N', 'S', 'E', 'W'].flatMap((k, i) => { const [dy, dx] = [[0.07, 0], [-0.07, 0], [0, 0.09], [0, -0.09]][i]; return small(k + 'S', 4, 1.5, dy, dx).concat(cluster(k + 'B', 3, 5, dy + 0.004, dx + 0.004)); });
+  const P = E.buildPlans(st, { ...OWN(), smallM3: 3 });
+  for (const k of ['A', 'B']) {
+    const sh = P[k].trips.filter(t => t.kind === 'changan');
+    assert.equal(sh.length, 2, k + ': Shineray делает оба рейса: ' + kindsOf(P, k));
+    assert.ok(sh.every(t => t.stops.length === 4 && t.stops.every(s => s.cbm < 3)), k + ': в рейсе Shineray — 4 мелкие отгрузки (6 м³ из 7): ' + kindsOf(P, k));
+    assert.equal(P[k].smallAll, 16); assert.equal(P[k].sum.smallOn, 8, k + ': 8 мелких — на Gazel попутно');
+    assert.ok(P[k].trips.every(t => !t.noVehicle && !t.over && t.cbm <= t.vehicle.m3 + 1e-6), k + ': все рейсы — в кузов своей машины');
+    assert.ok(P[k].trips.filter(t => t.kind === 'gazel').every(t => t.cbm >= 3), k + ': Gazel не едет с грузом меньше 3 м³');
+  }
+});
+
+test('правило мелкого груза не действует: порог 0, у Shineray нет тарифа, Shineray нет; план X — районами, как раньше', () => {
+  const st = small('NS', 3, 1, 0.06, 0).concat(cluster('NB', 4, 5, 0.065, 0.004));
+  const base = E.buildPlans(JSON.parse(JSON.stringify(st)), OWN());
+  for (const S1 of [{ ...OWN(), smallM3: 0 }, { ...OWN(), smallM3: 3, changanBase: null, changanPt: null }, { ...OWN(), smallM3: 3, changanCount: 0, vehicles: OWN().vehicles.filter(v => v.kind !== 'changan') }]) {
+    const P = E.buildPlans(JSON.parse(JSON.stringify(st)), S1);
+    assert.equal(P.A.smallTo, 0); assert.equal(P.B.smallTo, 0);
+    if (S1.smallM3 === 0) assert.deepEqual(kindsOf(P, 'A'), kindsOf(base, 'A'), 'порог 0 — план как без правила');
+  }
+  const X = E.buildPlans(JSON.parse(JSON.stringify(st)), { ...OWN(), smallM3: 3 }).X;
+  assert.equal(X.smallTo, 0); assert.deepEqual(X.trips.map(t => t.kind), base.X.trips.map(t => t.kind));
+});

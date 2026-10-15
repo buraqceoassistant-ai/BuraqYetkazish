@@ -246,9 +246,14 @@
   // a tariff) carries only cargo that fits no regular vehicle: Gazel first, Kamaz only when it does not fit.
   // Plan B may load a Gazel above its body by a tolerance (bTolM3 / bTolKg), so Kamaz there only takes cargo bigger than that.
   // Plan A keeps every vehicle within its body: Gazel up to gazelM3 / gazelKg.
-  const EPS = 1e-6, UNPRICED = 1e8, KM_COST = 1000, MAX_SPREAD = 120;
+  // Мелкий груз (S.smallM3, планы A и B): отгрузка меньше порога едет на Changan / Shineray, Gazel — от порога. Gazel (и
+  // Kamaz) с мелкой отгрузкой — штраф SMALL_PEN в оценке рейса (не в цене): он дороже любого рейса маленькой машины, поэтому
+  // Gazel берёт мелкое, только когда у Changan не осталось рейсов (Labo мелкое берёт без штрафа, как раньше — по тарифу).
+  // Gazel с грузом меньше порога на весь рейс — ещё один такой штраф: такой рейс — только когда иначе никак.
+  const EPS = 1e-6, UNPRICED = 1e8, KM_COST = 1000, MAX_SPREAD = 120, SMALL_PEN = 2e6;
   const known = s => (s.cbm || 0) > 0 || (s.kg || 0) > 0;
   const small = v => v.kind === 'labo' || v.kind === 'changan';   // груз без объёма и веса на маленькую машину не ставим
+  const smallCar = v => v.kind === 'changan' && v.priced && !v.onlyIfNeeded;   // машина правила мелкого груза: Changan / Shineray с тарифом
   // полезный объём кузова (S.fillPct, %): между коробками воздух — машина берёт меньше, чем объём кузова. 100 — весь объём
   const fillOf = S => { const f = +S.fillPct; return f > 0 && f <= 100 ? f / 100 : 1; };
   const useful = (m3, S) => Math.round(m3 * fillOf(S) * 100) / 100;
@@ -259,7 +264,7 @@
       changan: { kind: 'changan', label: 'Changan', m3: +S.changanM3, kg: +S.changanKg },
       kamaz: { kind: 'kamaz', label: 'Kamaz', m3: +S.cM3, kg: +S.cKg }
     };
-    const onlyIfNeeded = opt.onlyIfNeeded || [], tol = opt.tol || {}, classes = opt.classes || {}, avail = opt.avail || {};
+    const onlyIfNeeded = opt.onlyIfNeeded || [], tol = opt.tol || {}, classes = opt.classes || {}, avail = opt.avail || {}, smallTo = +opt.smallTo || 0;
     Object.keys(all).forEach(k => { all[k].nom = all[k].m3; all[k].m3 = useful(all[k].m3, S); });
     // classes (машины автопарка поимённо) — по классу на каждую вместимость вида, по возрастанию: { m3 (полезный), kg, nom, n — машин }.
     // Машины одного вида разной вместимости (Gazel 17 и 35 м³) — разные классы: рейс встаёт в машину по её кузову, а
@@ -276,8 +281,14 @@
           priced: priceTrip([{ bl: '-', zone: 'in', cbm: 0, kg: 0 }], k, S).total != null, onlyIfNeeded: onlyIfNeeded.includes(k) });
       });
     });
+    // правило мелкого груза — только если в плане есть Changan / Shineray с тарифом: у каждой машины плана порог и его кузова
+    const caps = smallTo > 0 ? out.filter(smallCar) : [];
+    if (caps.length) out.forEach(v => { v.smallTo = smallTo; v.smallCaps = caps; });
     return out;
   }
+  // мелкая отгрузка: объём меньше порога, помещается в Changan; часть большой отгрузки — не мелкая (едет с остальными)
+  const isSmall = (s, f) => (s.cbm || 0) > 0 && s.cbm < f.smallTo - EPS && !(s.parts > 1) && f.smallCaps.some(v => fitsIn(load([s]), v));
+  const smallCount = (stops, fleet) => { const f = fleet[0]; return f && f.smallTo ? stops.filter(s => isSmall(s, f)).length : 0; };
   function load(stops) {
     let cbm = 0, kg = 0, places = 0; const bl = new Set();
     stops.forEach(s => { cbm += s.cbm || 0; kg += s.kg || 0; places += s.places || 0; bl.add(s.bl); });
@@ -306,6 +317,7 @@
     const ordered = nnOrder(depot, stops);
     const regular = fleet.filter(v => v.priced && !v.onlyIfNeeded);
     const needsBig = s => !regular.some(v => fitsIn(load([s]), v) && (!small(v) || known(s)));
+    const nSmall = smallCount(stops, fleet), T = fleet[0] ? fleet[0].smallTo || 0 : 0;
     let best = null;
     fleet.forEach(v => {
       if (!fitsIn(l, v)) return;
@@ -313,12 +325,14 @@
       // Kamaz in A/B and vehicles without a tariff carry only cargo that fits no regular vehicle
       if ((v.onlyIfNeeded || !v.priced) && regular.length && !stops.every(needsBig)) return;
       const price = priceTrip(ordered, v.kind, S);
-      const cost = price.total != null ? price.total : UNPRICED;
-      if (!best || cost < best.cost) best = { v, cost, price };
+      // мелкое на Gazel и Gazel с грузом меньше порога — штраф
+      const smallOn = small(v) ? 0 : nSmall, under = !small(v) && T && l.cbm > 0 && l.cbm < T - EPS ? 1 : 0;
+      const cost = price.total != null ? price.total : UNPRICED, pen = (smallOn + under) * SMALL_PEN;
+      if (!best || cost + pen < best.cost + best.pen) best = { v, cost, pen, smallOn, under, price };
     });
     if (!best) return null;
     const m = tripMetrics(depot, ordered, S);
-    return { stops: ordered, l, ...best, real: m.real, val: best.cost + KM_COST * m.real };
+    return { stops: ordered, l, ...best, real: m.real, val: best.cost + best.pen + KM_COST * m.real };
   }
   // a single cargo that fits no vehicle (e.g. one piece that cannot be split): the largest vehicle, flagged as overloaded
   function overTrip(s, fleet, S, depot) {
@@ -644,14 +658,16 @@
   // Сначала у каждой машины один рейс; второй круг (до per = tripsPerVehicle) — только когда свободных машин нет, и тоже
   // без рейсов сверх числа машин × кругов: Labo не едет второй раз, пока стоят свободные Gazel, а 30 м³ большой Gazel не
   // ждут её второго рейса, если груз помещается в две маленькие. join = false (план X: район — одна машина) — в чужой
-  // рейс не добавляем и не делим.
+  // рейс не добавляем и не делим. С правилом мелкого груза (smallTo) Changan / Shineray сразу делает все свои рейсы:
+  // мелкое возит он, а не свободные Gazel. Два рейса одного класса можно слить в один рейс той же машины.
   const clsOf = v => v.cls || v.kind;
   function fitFleet(trips, fleet, per, maxStops, S, depot, join) {
+    const rule = fleet.length && fleet[0].smallTo > 0;
     const sub = keys => fleet.filter(v => keys.includes(clsOf(v)));
     const ev = (stops, keys) => evalTrip(stops, sub(keys), maxStops, S, depot);
     const split = (stops, keys) => { const f = sub(keys); if (!f.length || stops.length < 2) return null; const parts = partition(sweepOrder(stops), f, maxStops, S, depot); return parts.length > 1 && !parts.some(p => p.over) ? parts : null; };
     for (let r = 1; r <= per; r++) {
-      const lim = k => { const v = fleet.find(x => clsOf(x) === k); return v && v.count != null ? v.count * r : Infinity; };
+      const lim = k => { const v = fleet.find(x => clsOf(x) === k); return v && v.count != null ? v.count * (rule && smallCar(v) ? per : r) : Infinity; };
       const freeOf = c => fleet.filter(v => v.priced && !v.onlyIfNeeded && (c[clsOf(v)] || 0) < lim(clsOf(v))).map(clsOf);
       const within = (c, add) => { const d = { ...c }; add.forEach(t => { d[clsOf(t.v)] = (d[clsOf(t.v)] || 0) + 1; }); return add.every(t => d[clsOf(t.v)] <= lim(clsOf(t.v))); };
       for (let guard = 0; guard < 200; guard++) {
@@ -668,7 +684,7 @@
           trips.forEach((u, j) => {
             if (j === i || u.over) return;
             const m = ev(u.stops.concat(t.stops), [...new Set([clsOf(u.v)].concat(free))]);
-            if (m && clsOf(m.v) !== clsOf(t.v) && m.val - u.val - t.val < (best ? best.d : Infinity) - EPS) best = { drop: [i, j], add: [m], d: m.val - u.val - t.val };
+            if (m && (clsOf(m.v) !== clsOf(t.v) || clsOf(u.v) === clsOf(t.v)) && m.val - u.val - t.val < (best ? best.d : Infinity) - EPS) best = { drop: [i, j], add: [m], d: m.val - u.val - t.val };
           });
           // рейс не помещается ни в одну свободную машину целиком — делим на несколько рейсов свободных машин
           const parts = !alt && free.length && split(t.stops, free);
@@ -719,7 +735,7 @@
     const RANK = { labo: 0, changan: 1, gazel: 2, kamaz: 3 };
     const finish = raw => {
       const trips = raw.map(t => ({ name: t.name, car: t.car, round: t.round, manual: !!t.manual, stops: t.stops, cbm: t.l.cbm, kg: t.l.kg, places: t.l.places, ...tripMetrics(depot, t.stops, S), start: S.dayStart * 1440,
-        price: t.price, kind: t.v.kind, vehicle: t.v, over: !!t.over, outside: t.stops.filter(s => s.zone === 'out') }));
+        price: t.price, kind: t.v.kind, vehicle: t.v, over: !!t.over, outside: t.stops.filter(s => s.zone === 'out'), smallOn: t.smallOn || 0, under: t.under || 0 }));   // smallOn — мелких отгрузок на Gazel, under — Gazel меньше порога
       const leave = (t, at) => Object.assign(t, tripMetrics(depot, t.stops, S, at), { start: at });   // the trip starts later: arrivals move
       // рейс на конкретной машине: её имя и вместимость (у плана B — плюс допуск Gazel), кузов из карточки (скрипт 31)
       const onCar = (t, c, round, name) => Object.assign(t, { name, car: c.no, round, carName: c.name,
@@ -773,8 +789,60 @@
     const one = f => Object.fromEntries(Object.entries(CLASSES).map(([k, c]) => [k, c.length > 1 ? [{ m3: f(c.map(x => x.m3)), kg: f(c.map(x => x.kg)), nom: f(c.map(x => x.nom)), n: c.reduce((a, x) => a + x.n, 0) }] : c]));
     const VARIANTS = Object.values(CLASSES).some(c => c.length > 1) ? [CLASSES, one(a => Math.min(...a)), one(a => Math.max(...a))] : [CLASSES];
     const score = trips => [trips.filter(t => t.noVehicle).length, trips.filter(t => !t.over && (t.cbm > t.vehicle.m3 + EPS || t.kg > t.vehicle.kg + EPS)).length,
-      trips.reduce((a, t) => a + (t.price.total != null ? t.price.total : UNPRICED) + KM_COST * t.real, 0)];
+      trips.reduce((a, t) => a + (t.price.total != null ? t.price.total : UNPRICED) + KM_COST * t.real + (t.smallOn + t.under) * SMALL_PEN, 0)];
     const better = (a, b) => { for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > EPS) return a[i] < b[i]; return false; };
+    // Правило мелкого груза (планы A и B, smallTo): сначала рейсы Changan / Shineray — только из мелких
+    // отгрузок и не больше его рейсов за день (машин × рейсов на машину). Рейсов хватает — самый дешёвый план для мелкого.
+    // Не хватает — рейсы, в которые входит больше всего мелких отгрузок: лучший из двух вариантов — самые полные рейсы
+    // дешёвого плана (остальное мелкое — в них, если помещается) или жадный набор: рейс за рейсом сектор направления, где
+    // помещается больше всего отгрузок (сначала самые маленькие). Мелкое без рейса и весь остальной груз — обычным планом:
+    // Gazel берёт мелкое попутно. Свободные рейсы Changan остаются и для остального груза.
+    const smallFirst = (items, fleet, build, fit) => {
+      const f0 = fleet[0], sf = fleet.filter(smallCar), sm = items.filter(s => isSmall(s, f0));
+      if (!sm.length) return build(items, fleet);
+      const S2 = fit.S || S, room = {};
+      sf.forEach(v => { room[clsOf(v)] = v.count != null ? v.count * PER : Infinity; });
+      const tally = ts => { const c = {}; ts.forEach(t => { c[clsOf(t.v)] = (c[clsOf(t.v)] || 0) + 1; }); return c; };
+      const n = ts => ts.reduce((a, t) => a + t.stops.length, 0), val = ts => ts.reduce((a, t) => a + t.val, 0);
+      let runs = build(sm, sf);
+      if (runs.some(t => t.over) || Object.entries(tally(runs)).some(([k, c]) => c > room[k])) {
+        // самые полные рейсы дешёвого плана; отложенные отгрузки — в оставленные рейсы той же машины, если помещаются
+        const left = { ...room }, top = [], drop = [];
+        runs.filter(t => !t.over).sort((a, b) => b.stops.length - a.stops.length || b.l.cbm - a.l.cbm).forEach(t => { if (left[clsOf(t.v)] > 0) { left[clsOf(t.v)]--; top.push(t); } else drop.push(...t.stops); });
+        runs.filter(t => t.over).forEach(t => drop.push(...t.stops));
+        drop.sort((a, b) => a.cbm - b.cbm).forEach(s => {
+          let bi = -1, bt = null;
+          top.forEach((t, i) => { const t2 = evalTrip(t.stops.concat([s]), sf.filter(v => clsOf(v) === clsOf(t.v)), fit.maxStops, S2, depot); if (t2 && (bi < 0 || t2.val - t.val < bt.val - top[bi].val)) { bi = i; bt = t2; } });
+          if (bi >= 0) top[bi] = bt;
+        });
+        // жадно: рейс за рейсом — сектор направления (maxSpread) с наибольшим числом отгрузок, которые помещаются
+        const cover = [], rest = new Set(sm), left2 = { ...room }, spread = +S2.maxSpread || 360;
+        for (;;) {
+          const pool = [...rest], far = pool.filter(s => s.depotKm > SPREAD_KM), near = pool.filter(s => !(s.depotKm > SPREAD_KM));
+          let best = null;
+          for (const v of sf) {
+            if (!(left2[clsOf(v)] > 0)) continue;
+            for (const a of far.length ? far : [null]) {
+              const cand = (a ? far.filter(s => (s.angle - a.angle + 360) % 360 <= spread + EPS) : []).concat(near).sort((x, y) => x.cbm - y.cbm || x.depotKm - y.depotKm);
+              const pick = [], bls = new Set(); let c = 0, k = 0, p = 0;
+              cand.forEach(s => {
+                if (c + s.cbm > v.m3 + EPS || k + (s.kg || 0) > v.kg + EPS || (v.places && p + (s.places || 0) > v.places + EPS) || (!bls.has(s.bl) && bls.size >= fit.maxStops)) return;
+                pick.push(s); bls.add(s.bl); c += s.cbm; k += s.kg || 0; p += s.places || 0;
+              });
+              const t = pick.length && evalTrip(pick, [v], fit.maxStops, S2, depot);
+              if (t && (!best || pick.length > best.stops.length || (pick.length === best.stops.length && t.val < best.val - EPS))) best = t;
+            }
+          }
+          if (!best) break;
+          left2[clsOf(best.v)]--; cover.push(best); best.stops.forEach(s => rest.delete(s));
+        }
+        runs = n(cover) > n(top) || (n(cover) === n(top) && val(cover) < val(top)) ? cover : top;
+      }
+      const used = new Set(runs.flatMap(t => t.stops)), c = tally(runs);
+      // остальной груз: Changan, у которого не осталось рейсов, в этом плане не участвует
+      const fleet2 = fleet.filter(v => !(clsOf(v) in room) || (c[clsOf(v)] || 0) < room[clsOf(v)]), rest = items.filter(s => !used.has(s));
+      return runs.concat(rest.length ? build(rest, fleet2.length ? fleet2 : fleet) : []);
+    };
     const plan = (kinds, build, opt = {}) => {
       let best = null, shown = null;
       const vs = kinds.some(k => (CLASSES[k] || []).length > 1) ? VARIANTS : [CLASSES];   // в плане нет машин разной вместимости — один вариант
@@ -782,18 +850,21 @@
         const fleet = fleetOf(S, kinds, { ...opt, classes, avail: AVAIL }), splits = [];
         if (!shown) shown = fleet;   // в заметке «Машины: …» — машины по кузовам
         if (!fleet.length) return { trips: [], splits, noFleet: true };
-        const items = splitOversize(withC, fleet, splits), raw = build(items, fleet);
+        const items = splitOversize(withC, fleet, splits), raw = fleet[0].smallTo && opt.fit ? smallFirst(items, fleet, build, opt.fit) : build(items, fleet);
         const trips = finish(opt.fit ? fitFleet(raw, fleet, PER, opt.fit.maxStops, opt.fit.S || S, depot, opt.fit.join) : raw), sc = score(trips);
         if (!best || better(sc, best.sc)) best = { trips, splits, sc, vi: vs.indexOf(classes) };
       }
-      return { trips: best.trips, splits: best.splits, fleet: shown, variant: best.vi };
+      // smallTo — порог мелкого груза (0 — правила нет), smallAll — мелких отгрузок в плане
+      return { trips: best.trips, splits: best.splits, fleet: shown, variant: best.vi, smallTo: (shown[0] || {}).smallTo || 0, smallAll: best.trips.reduce((a, t) => a + smallCount(t.stops, shown), 0) };
     };
     const lab = kinds => S.smartLabo !== 0 ? kinds : kinds.filter(k => k !== 'labo');
     // планы A и B: рейс — в одну сторону (сектор не шире MAX_SPREAD), мелкий груз и точки за кольцом — попутно
     const SD = { ...S, maxSpread: S.maxSpread != null ? +S.maxSpread : MAX_SPREAD };
-    const A = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.aMaxStops || 99, SD, depot), { onlyIfNeeded: ['kamaz'], fit: { maxStops: S.aMaxStops || 99, join: true, S: SD } });   // строго по кузову
+    // мелкий груз (до S.smallM3 м³) в планах A и B — на Changan / Shineray, Gazel — от порога (план X — районами, C — Kamaz)
+    const SMALL = +S.smallM3 > 0 ? +S.smallM3 : 0;
+    const A = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.aMaxStops || 99, SD, depot), { onlyIfNeeded: ['kamaz'], smallTo: SMALL, fit: { maxStops: S.aMaxStops || 99, join: true, S: SD } });   // строго по кузову
     const B = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.bcMaxStops || 99, SD, depot),   // тот же поиск, свои правила; Changan/Shineray — тоже
-      { onlyIfNeeded: ['kamaz'], tol: { gazel: { m3: S.bTolM3, kg: S.bTolKg } }, fit: { maxStops: S.bcMaxStops || 99, join: true, S: SD } });   // Gazel с допуском
+      { onlyIfNeeded: ['kamaz'], smallTo: SMALL, tol: { gazel: { m3: S.bTolM3, kg: S.bTolKg } }, fit: { maxStops: S.bcMaxStops || 99, join: true, S: SD } });   // Gazel с допуском
     const C = plan(['kamaz'], (items, fleet) => kamazRuns(items, fleet, CARS.kamaz ? { ...S, cTrucks: CARS.kamaz.length } : S, depot));
     const xNotes = [], X = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => districtTrips(items, fleet, S.aMaxStops || 99, S, depot, xNotes), { onlyIfNeeded: ['kamaz'], fit: { maxStops: S.aMaxStops || 99, join: false } });   // план X (пробный): загрузка как в A
     X.districts = xNotes;
@@ -808,7 +879,8 @@
         price: priced.reduce((a, t) => a + t.price.total, 0),
         unpriced: trips.length - priced.length,
         labo: n('labo'), changan: n('changan'), gazel: n('gazel'), kamaz: n('kamaz'), over: trips.filter(t => t.over).length,
-        noVehicle: trips.filter(t => t.noVehicle).length, second: trips.filter(t => t.round > 1).length
+        noVehicle: trips.filter(t => t.noVehicle).length, second: trips.filter(t => t.round > 1).length,
+        smallOn: trips.reduce((a, t) => a + (t.smallOn || 0), 0)   // мелких отгрузок на Gazel (правило мелкого груза)
       };
     };
     const out = { noCoords: noC };

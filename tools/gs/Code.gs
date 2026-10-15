@@ -77,16 +77,18 @@
  *   C24:C39 (та же по госномеру, свободная того же вида или новая «Вид-N»), госномер, марка, объём, вес и кузов (K:M).
  * Версия 32: настройка «Полезный объём кузова, %» (Sozlamalar B73) — планы считают машину по кузову × процент.
  * Версия 33: коробки отгрузки по пакинг-листу — Yuborishlar W «Qutilar, sm» («60×40×50×12; …»), текстом с сайта.
+ * Версия 34: настройка «Мелкий груз — на Changan / Shineray, до, м³» (Sozlamalar B74): в планах A и B отгрузку меньше
+ *   порога везёт маленькая машина, Gazel — от порога.
  */
 var TOKEN = '';
-var VERSION = 33; // сайт сверяет версию и просит обновить код, если он старый
+var VERSION = 34; // сайт сверяет версию и просит обновить код, если он старый
 
 var SH = { ship: 'Yuborishlar', cli: 'Mijozlar', wh: 'Qoshimcha omborlar', set: 'Sozlamalar', ring: 'Halqa zonasi', notes: 'O‘zgarishlar' };
 var LOC_COL = 22;   // Yuborishlar V — куда везти (версия 25)
 var BOX_COL = 23;   // Yuborishlar W — коробки по пакинг-листу (версия 33)
 var COLS = { ship: 16, cli: 25, wh: 8, set: 13, ring: 3, notes: 3 };   // Mijozlar Y (25) — маркировки клиента для импорта; Sozlamalar D — госномера, E:J — карточка машины
 var SET_ROWS = { isuzuM3: 5, isuzuKg: 6, depotName: 7, depotLat: 8, depotLon: 9, unloadMin: 10, dayStart: 11, speed: 12, aMaxStops: 13, maxPlaces: 14, bSmallM3: 15, bcMaxStops: 16, cM3: 17, cKg: 18, cTrucks: 19, roadK: 20, gazelBase: 43, gazelHeavy: 44, gazelHeavyKg: 45, gazelPtIn: 46, gazelPtOut: 47, laboBase: 48, laboPt: 49, laboM3: 50, laboKg: 51, baseIncludesPts: 52, kamazBase: 53, kamazPt: 54, laboBaseIncludesPts: 55, kamazBaseIncludesPts: 56, gazelM3: 57, gazelKg: 58, bTolM3: 59, bTolKg: 60,
-  changanM3: 61, changanKg: 62, changanBase: 63, changanPt: 64, changanBaseIncludesPts: 65, gazelCount: 66, laboCount: 67, changanCount: 68, tripsPerVehicle: 69, freeOutM3: 70, densityMin: 71, densityMax: 72, fillPct: 73 };
+  changanM3: 61, changanKg: 62, changanBase: 63, changanPt: 64, changanBaseIncludesPts: 65, gazelCount: 66, laboCount: 67, changanCount: 68, tripsPerVehicle: 69, freeOutM3: 70, densityMin: 71, densityMax: 72, fillPct: 73, smallM3: 74 };
 // подписи новых строк «Sozlamalar»: пишутся, только если в столбце A пусто
 var SET_LABELS = {
   baseIncludesPts: ['Gazel — bazaviy narxga kirgan tochkalar', '0 = har bir tochka alohida to‘lanadi: 450 + 3×100. 1 = birinchi tochka bazaviy narx ichida: 450 + 2×100.'],
@@ -108,7 +110,8 @@ var SET_LABELS = {
   freeOutM3: ['Mayda yuk chegarasi, m³', 'Nuqtaning yuki shundan kichik bo‘lsa, yetkazib berish uchun biz to‘lamaymiz. Halqadan tashqaridagi nuqtalar uchun ham to‘lamaymiz (har qanday hajmda). Rejada bu xarajatlar alohida ko‘rsatiladi. 0 = faqat halqadan tashqaridagilar uchun to‘lamaymiz.'],
   densityMin: ['Import — zichlik, pastki chegara (kg/m³)', 'Manifestdagi yuk bundan yengil bo‘lsa — ogohlantirish (xato bo‘lishi mumkin).'],
   densityMax: ['Import — zichlik, yuqori chegara (kg/m³)', 'Manifestdagi yuk bundan og‘ir bo‘lsa — ogohlantirish (og‘ir yuk yoki xato).'],
-  fillPct: ['Kuzovning foydali hajmi, %', 'Qutilar orasida havo qoladi: reja mashinani kuzov hajmi × shu foizdan hisoblaydi (Gazel 19 m³ × 88% = 16,7 m³). 100 — butun hajm.']
+  fillPct: ['Kuzovning foydali hajmi, %', 'Qutilar orasida havo qoladi: reja mashinani kuzov hajmi × shu foizdan hisoblaydi (Gazel 19 m³ × 88% = 16,7 m³). 100 — butun hajm.'],
+  smallM3: ['Mayda yuk — Changan / Shineray uchun, m³ gacha', 'A va B rejalarda shundan kichik jo‘natmani Changan / Shineray olib boradi, Gazel — shu hajmdan boshlab. Kichik mashinaning reyslari yetmasa — qolgani Gazelda yo‘l-yo‘lakay. 0 — qoidasiz.']
 };
 // ro‘yxat «Yuborishlar» M ustunidagi mashinalar: Sozlamalar C24:C39
 var TRUCKS_ROW = 24, TRUCKS_N = 16;

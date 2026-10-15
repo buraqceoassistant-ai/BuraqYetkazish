@@ -2629,4 +2629,16 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Не нашёл строку заголовка с длиной, шириной и высотой коробки (长/宽/高, L/W/H, Д/Ш/В)":"Quti uzunligi, kengligi va balandligi bor sarlavha qatorini topmadim (长/宽/高, L/W/H, D/Sh/B)",
 "строка {n} («{s}»): нет размеров коробки — пропущена":"{n}-qator («{s}»): quti o‘lchamlari yo‘q — o‘tkazib yuborildi",
 "размеры вне 1–500 см: строки {s} — проверьте единицы":"o‘lchamlar 1–500 sm dan tashqarida: {s}-qatorlar — birliklarni tekshiring",
-"шапка без названий столбцов — размеры и число коробок найдены по объёму":"sarlavhada ustun nomlari yo‘q — o‘lchamlar va qutilar soni hajm bo‘yicha topildi"};
+"шапка без названий столбцов — размеры и число коробок найдены по объёму":"sarlavhada ustun nomlari yo‘q — o‘lchamlar va qutilar soni hajm bo‘yicha topildi",
+"Мелкий груз — на Changan / Shineray, до":"Mayda yuk Changan / Shineray’da — chegara",
+"Отгрузку меньше этого объёма в планах A и B везёт Changan / Shineray, Gazel — от этого объёма.":"A va B rejalarda shu hajmdan kichik jo‘natmani Changan / Shineray olib boradi, Gazel — shu hajmdan boshlab.",
+"Не хватает рейсов маленькой машины — остальное мелкое едет на Gazel попутно.":"Kichik mashinaning reyslari yetmasa — qolgan mayda yuk Gazel’da yo‘l-yo‘lakay ketadi.",
+"0 — без правила":"0 — qoidasiz",
+"Мелкий груз (меньше {n} м³) — на {s}, Gazel — от {n2} м³.":"Mayda yuk ({n} m³ dan kichik) — {s}’da, Gazel — {n2} m³ dan boshlab.",
+"Мелкий груз (меньше {n} м³): {s} везёт {n2} из {n3} отгрузок.":"Mayda yuk ({n} m³ dan kichik): {n3} ta jo‘natmadan {n2} tasini {s} olib boradi.",
+"Мелкий груз (меньше {n} м³): {s} везёт {n2} из {n3} отгрузки.":"Mayda yuk ({n} m³ dan kichik): {n3} ta jo‘natmadan {n2} tasini {s} olib boradi.",
+"Ещё {n} — на Gazel попутно: у {s} не хватает рейсов за день (рейсов на машину — до {n2}).":"Yana {n} tasi — Gazel’da yo‘l-yo‘lakay: {s}’ning kunlik reyslari yetmaydi (mashinaga {n2} tagacha reys).",
+"Мелкий груз меньше {n} м³ должен ехать на {s}, но у него нет тарифа — пока везёт Gazel.":"{n} m³ dan kichik mayda yuk {s}’da ketishi kerak, lekin uning tarifi yo‘q — hozircha Gazel olib boradi.",
+"Заполните базовую цену и цену точки Changan во вкладке «Тарифы».":"«Tariflar» bo‘limida Changan’ning bazaviy narxi va nuqta narxini to‘ldiring.",
+"Порог мелкого груза («Тарифы и планы» → «Мелкий груз — на Changan / Shineray, до») будет храниться в таблице и станет общим для всех устройств.":"Mayda yuk chegarasi («Tariflar va rejalar» → «Mayda yuk Changan / Shineray’da — chegara») jadvalda saqlanadi va barcha qurilmalar uchun umumiy bo‘ladi.",
+"Обновите код до 34.":"Kodni 34-versiyaga yangilang."};

@@ -18,7 +18,7 @@ const call = (extra = {}) => ({ token: '', login: 'buraq', ai: { action: 'call',
 test('проверка связи: ключ из свойств, модель по умолчанию, инструмент strict и tool_choice на него, запись в журнал', () => {
   const s = loadScript({ props: { ANTHROPIC_API_KEY: 'sk-test' }, sheets: book(), fetch: () => toolReply({ reply: 'готов' }) });
   const r = s.post(ping());
-  assert.equal(r.ok, true); assert.equal(r.v, 33); assert.equal(r.model, 'claude-sonnet-5'); assert.deepEqual(r.result, { reply: 'готов' });
+  assert.equal(r.ok, true); assert.equal(r.v, 34); assert.equal(r.model, 'claude-sonnet-5'); assert.deepEqual(r.result, { reply: 'готов' });
   assert.equal(r.mode, 'tool'); assert.equal(r.editorSet, true); assert.deepEqual(r.usage, { in: 120, cache: 0, out: 30 });
   const c = s.calls[0];
   assert.equal(c.url, 'https://api.anthropic.com/v1/messages');
@@ -81,7 +81,7 @@ test('пароль скрипта из свойства TOKEN проверяет
   assert.equal(s.post(ping({ token: 'x' })).error, 'Неверный пароль');
   assert.equal(s.get({ token: 'x' }).error, 'Неверный пароль');
   assert.equal(s.post(ping({ token: 'pw' })).ok, true);
-  assert.equal(s.get({ token: 'pw' }).v, 33);
+  assert.equal(s.get({ token: 'pw' }).v, 34);
 });
 
 test('Opus 5.5 и Fable 5.1 не принимают принудительный tool_choice — схема уходит через output_config.format', () => {
@@ -166,6 +166,14 @@ test('пределы плотности — строки 71–72 листа «So
   assert.equal(z[70][1], 40); assert.equal(z[71][1], 800); assert.match(z[70][0], /zichlik/i); assert.match(z[71][0], /zichlik/i);
 });
 
+test('версия 34: порог мелкого груза — строка 74 «Sozlamalar» с подписью, сайт получает его в B74', () => {
+  const s = loadScript({ sheets: book(), fetch: () => toolReply({}) });
+  s.post({ token: '', ops: [{ t: 'set', v: { smallM3: 3 } }] });
+  const z = s.book.sheets.Sozlamalar.rows;
+  assert.equal(z[73][1], 3); assert.match(z[73][0], /Mayda yuk — Changan \/ Shineray/); assert.match(z[73][2] || '', /Gazel — shu hajmdan boshlab/);
+  assert.equal(s.get({ token: '' }).data.sheets.Sozlamalar[73][1], 3);
+});
+
 // Сайт выбирает дату партии 04.05.2006, скрипт с поясом «Алматы» (в 2006 году — UTC+6) записывал её как полночь
 // своего пояса = 23:00 03.05.2006 в таблице с поясом Ташкента (UTC+5), и дата на сайте становилась 03.05.2006.
 // В заглушке таблица — Ташкент; пояс скрипта — это пояс процесса Node (new Date(г, м, д) в скрипте).
@@ -206,7 +214,7 @@ const noFetch = () => { throw new Error('внешний запрос не дол
 test('версия 19: без свойства TOKEN скрипт никого не пускает — «Задайте TOKEN…», данные и ИИ не отдаются', () => {
   const s = loadScript({ auth: false, props: { ANTHROPIC_API_KEY: 'k', EDITOR_TOKEN: 'ed' }, sheets: book(), fetch: noFetch });
   for (const r of [s.rawGet({}), s.rawGet({ token: 'что-угодно' }), s.rawGet({ resolve: 'https://maps.app.goo.gl/x' }), s.rawPost({ ops: [] }), s.rawPost(ping({ token: '', editor: 'ed' })), s.rawPost({ token: 'x', tg: { action: 'setup' }, editor: 'ed' })]) {
-    assert.equal(r.code, 'nopass', JSON.stringify(r)); assert.match(r.error, /^Задайте TOKEN в свойствах скрипта/); assert.equal(r.v, 33);
+    assert.equal(r.code, 'nopass', JSON.stringify(r)); assert.match(r.error, /^Задайте TOKEN в свойствах скрипта/); assert.equal(r.v, 34);
     assert.equal(r.data, undefined); assert.equal(r.ok, undefined);
   }
   assert.equal(s.calls.length, 0, 'ни ИИ, ни раскрытия ссылок');
@@ -218,7 +226,7 @@ test('версия 19: без свойства TOKEN скрипт никого �
 test('версия 19: TOKEN задан — без пароля и с чужим «Неверный пароль» (code pass); свойство находится и в другом регистре', () => {
   const s = loadScript({ auth: false, props: { ' token ': ' pw \n', EDITOR_TOKEN: 'ed' }, sheets: book(), fetch: noFetch });
   for (const r of [s.rawGet({}), s.rawGet({ token: '' }), s.rawGet({ token: 'PW' }), s.rawPost({ ops: [] }), s.rawPost({ token: 'x', ops: [] })]) {
-    assert.deepEqual([r.error, r.code, r.v, r.data], ['Неверный пароль', 'pass', 33, undefined]);
+    assert.deepEqual([r.error, r.code, r.v, r.data], ['Неверный пароль', 'pass', 34, undefined]);
   }
   const ok = s.rawGet({ token: 'pw' });
   assert.equal(ok.ok, true); assert.ok(ok.data.sheets.Yuborishlar);
@@ -241,7 +249,7 @@ test('версия 19: без EDITOR_TOKEN — отказ ИИ и боту с с
   const s = loadScript({ auth: false, props: { TOKEN: 'pw', ANTHROPIC_API_KEY: 'k', TG_TOKEN: '123:ABC' }, sheets: book(), fetch: noFetch });
   for (const r of [s.rawPost(ping({ token: 'pw' })), s.rawPost(ping({ token: 'pw', editor: 'любой' })), s.rawPost({ token: 'pw', tg: { action: 'setup', url: 'https://script.google.com/macros/s/A/exec' } }),
     s.rawPost({ token: 'pw', editor: '', tg: { action: 'dispatch', date: '2026-09-28' } })]) {
-    assert.equal(r.code, 'noeditor', JSON.stringify(r)); assert.match(r.error, /^Задайте EDITOR_TOKEN в свойствах скрипта/); assert.equal(r.v, 33);
+    assert.equal(r.code, 'noeditor', JSON.stringify(r)); assert.match(r.error, /^Задайте EDITOR_TOKEN в свойствах скрипта/); assert.equal(r.v, 34);
   }
   assert.equal(s.calls.length, 0, 'ни Claude, ни Telegram');
   assert.equal(s.book.sheets['ИИ-журнал'], undefined, 'в журнал ИИ ничего не записано');
@@ -323,7 +331,7 @@ const card = { repair: true, model: 'GAZelle Next', year: 2021, m3: 17.5, kg: 35
 test('версия 21: карточка машины — Sozlamalar E:J напротив названия, заголовки в строке 23, сайт получает E:J', () => {
   const s = loadScript({ sheets: fleetBook() });
   const r = s.post({ ops: [{ t: 'fleet', v: { 'Gazel-2': card } }] });
-  assert.equal(r.v, 33); assert.deepEqual(r.results[0], { ok: true });
+  assert.equal(r.v, 34); assert.deepEqual(r.results[0], { ok: true });
   const z = s.book.sheets.Sozlamalar.rows;
   assert.deepEqual(z[22].slice(4, 10), ['Holati', 'Marka', 'Yili', 'Hajm, m³', 'Yuk, kg', 'Izoh']);
   assert.deepEqual(z[24].slice(2, 10), ['Gazel-2', '01B777CC', 'ta’mirda', 'GAZelle Next', 2021, 17.5, 3500, 'длинная база']);
@@ -400,8 +408,8 @@ test('ошибка кода или таблицы — ответ JSON с тек�
   const s = loadScript({ props: { TOKEN: 'pw' }, sheets: book() });
   s.ctx.dump_ = () => { throw new Error('Service Spreadsheets failed'); };
   const r = s.post({ token: 'pw', ops: [] });
-  assert.deepEqual(r, { error: 'Ошибка скрипта таблицы: Service Spreadsheets failed', code: 'script', v: 33 });
-  assert.deepEqual(s.get({ token: 'pw' }), { error: 'Ошибка скрипта таблицы: Service Spreadsheets failed', code: 'script', v: 33 });
+  assert.deepEqual(r, { error: 'Ошибка скрипта таблицы: Service Spreadsheets failed', code: 'script', v: 34 });
+  assert.deepEqual(s.get({ token: 'pw' }), { error: 'Ошибка скрипта таблицы: Service Spreadsheets failed', code: 'script', v: 34 });
   s.ctx.LockService.getScriptLock = () => ({ waitLock() { throw new Error('Lock timeout: another process was holding the lock for too long.'); }, releaseLock() {} });
   const b = s.post({ token: 'pw', ops: [] });
   assert.deepEqual([b.code, b.error], ['busy', 'Таблица занята другой записью — сайт повторит сам через полминуты']);
