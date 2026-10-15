@@ -109,3 +109,41 @@ test('Shineray — малый грузовик вида changan (как Changan)
   assert.deepEqual([P.B.trips.length, P.B.trips[0].kind, P.B.trips[0].carName], [1, 'changan', 'Shineray']);
   assert.equal(P.A.trips[0].carName, 'Shineray');
 });
+
+// автопарк компании: четыре Gazel разной вместимости (17, 18, 23, 35 м³) и Shineray; полезный объём 88%
+const OWN = () => ({ ...S, fillPct: 88, gazelCount: 4, laboCount: 0, changanCount: 1, cTrucks: 0, changanBase: 200000, changanPt: 40000,
+  vehicles: [veh('Gazel Umid', { m3: 18, kg: 3500 }), veh('Gazel Saidakmal', { m3: 23, kg: 3500 }), veh('Gazel Nuriddin', { m3: 17, kg: 3500 }), veh('Gazel Katta', { m3: 35, kg: 4000 }), veh('Shineray', { m3: 8, kg: 1500 })] });
+const cluster = (k, n, cbm, dy, dx) => Array.from({ length: n }, (_, i) => ({ id: k + i, bl: k + '-' + i, cbm, kg: cbm * 100, places: 2, lat: 41.38 + dy + i * 0.002, lon: 69.23 + dx + i * 0.002, zone: 'in' }));
+
+test('машины одного вида разной вместимости: большая Gazel берёт полный груз, рейс — не больше кузова своей машины', () => {
+  // одно направление, 28 м³ — помещается только в Gazel Katta (30,8 м³ полезных), а не в 15–20 м³
+  const P = E.buildPlans(cluster('N', 7, 4, 0.06, 0), OWN());
+  for (const k of ['A', 'B']) {
+    const ts = P[k].trips;
+    assert.ok(ts.every(t => !t.noVehicle && !t.over), k + ': без «нет машины»');
+    assert.ok(ts.every(t => t.cbm <= t.vehicle.m3 + 1e-6), k + ': каждый рейс — в кузов своей машины: ' + ts.map(t => t.carName + ' ' + t.cbm + '/' + t.vehicle.m3).join(', '));
+  }
+  assert.deepEqual(P.A.trips.map(t => [t.carName, t.cbm]), [['Gazel Katta', 28]], 'один рейс на большой Gazel');
+  // классы в плане: четыре Gazel разной вместимости — четыре класса по возрастанию, Shineray — свой
+  assert.deepEqual(P.A.fleet.filter(v => v.kind === 'gazel').map(v => [v.useM3, v.count]), [[14.96, 1], [15.84, 1], [20.24, 1], [30.8, 1]]);
+});
+
+test('груза больше, чем у большой машины за день: лишние рейсы — на маленькие машины, а не «нет машины»', () => {
+  // четыре направления по 22–30 м³: 104 м³ — больше, чем Gazel Katta за два рейса; план раскладывает на все машины
+  const st = cluster('N', 7, 4, 0.07, 0).concat(cluster('S', 6, 4, -0.07, 0), cluster('E', 6, 4.5, 0, 0.09), cluster('W', 6, 4, 0, -0.09));
+  const P = E.buildPlans(st, OWN());
+  const A = P.A.trips, cars = [...new Set(A.map(t => t.carName))];
+  assert.ok(A.every(t => !t.noVehicle && !t.over && t.cbm <= t.vehicle.m3 + 1e-6), 'все рейсы в кузов своей машины: ' + A.map(t => t.name + ' ' + t.cbm + '/' + t.vehicle.m3).join(', '));
+  assert.ok(A.filter(t => t.carName === 'Gazel Katta').length <= 2, 'Gazel Katta — не больше двух рейсов');
+  assert.ok(cars.length >= 3, 'работают разные машины: ' + cars.join(', '));
+  assert.ok(Math.abs(A.reduce((a, t) => a + t.cbm, 0) - st.reduce((a, s) => a + s.cbm, 0)) < 1e-6, 'весь груз в плане');
+});
+
+test('машин вида 0 — вида нет в планах (Labo с тарифом не появляется); число не задано — без ограничения, как раньше', () => {
+  const st = cluster('N', 2, 1, 0.06, 0);   // 2 м³ — Labo дешевле Gazel
+  const S1 = { ...OWN(), laboCount: 0, laboBase: 150000, laboPt: 30000, smartLabo: 1 };
+  assert.ok(E.buildPlans(st, S1).A.trips.every(t => t.kind !== 'labo'), 'laboCount 0 — без Labo');
+  assert.ok(E.buildPlans(st, { ...S1, laboCount: null }).A.trips.some(t => t.kind === 'labo'), 'laboCount не задан — Labo можно');
+  const P = E.buildPlans(st, { ...OWN(), cTrucks: 0 });
+  assert.equal(P.C.noFleet || P.C.trips.length === 0, true, 'Kamaz 0 — плана C нет');
+});

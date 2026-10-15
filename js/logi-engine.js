@@ -259,15 +259,24 @@
       changan: { kind: 'changan', label: 'Changan', m3: +S.changanM3, kg: +S.changanKg },
       kamaz: { kind: 'kamaz', label: 'Kamaz', m3: +S.cM3, kg: +S.cKg }
     };
-    const onlyIfNeeded = opt.onlyIfNeeded || [], tol = opt.tol || {}, caps = opt.caps || {}, avail = opt.avail || {};
-    // caps (из автопарка) — уже полезный объём [useM3, kg, nomM3]; без них — объём вида × полезный процент
+    const onlyIfNeeded = opt.onlyIfNeeded || [], tol = opt.tol || {}, classes = opt.classes || {}, avail = opt.avail || {};
     Object.keys(all).forEach(k => { all[k].nom = all[k].m3; all[k].m3 = useful(all[k].m3, S); });
-    Object.keys(caps).forEach(k => { if (all[k] && caps[k]) Object.assign(all[k], { m3: +caps[k][0], kg: +caps[k][1], nom: caps[k][2] != null ? +caps[k][2] : +caps[k][0] }); });
-    return kinds.map(k => all[k]).filter(v => v.m3 > 0 && v.kg > 0 && avail[v.kind] !== 0).map(v => {
-      const tM3 = Math.max(0, +(tol[v.kind] || {}).m3 || 0), tKg = Math.max(0, +(tol[v.kind] || {}).kg || 0);
-      return { ...v, nomM3: v.nom, nomKg: v.kg, useM3: v.m3, fill, tolM3: tM3, tolKg: tKg, m3: v.m3 + tM3, kg: v.kg + tKg, places: +S.maxPlaces || 0,
-        priced: priceTrip([{ bl: '-', zone: 'in', cbm: 0, kg: 0 }], v.kind, S).total != null, onlyIfNeeded: onlyIfNeeded.includes(v.kind) };
+    // classes (машины автопарка поимённо) — по классу на каждую вместимость вида, по возрастанию: { m3 (полезный), kg, nom, n — машин }.
+    // Машины одного вида разной вместимости (Gazel 17 и 35 м³) — разные классы: рейс встаёт в машину по её кузову, а
+    // fitFleet знает, сколько машин каждого класса. Без классов — один класс вида с объёмом из настроек, машин без счёта
+    const out = [];
+    kinds.forEach(k => {
+      const base = all[k], cl = (classes[k] || []).length ? classes[k] : [null];
+      if (!base || avail[k] === 0) return;
+      cl.forEach((c, i) => {
+        const v = c ? { ...base, m3: +c.m3, kg: +c.kg, nom: c.nom != null ? +c.nom : +c.m3 } : base;
+        if (!(v.m3 > 0 && v.kg > 0)) return;
+        const tM3 = Math.max(0, +(tol[k] || {}).m3 || 0), tKg = Math.max(0, +(tol[k] || {}).kg || 0);
+        out.push({ ...v, cls: cl.length > 1 ? k + '#' + (i + 1) : k, count: c ? c.n : null, nomM3: v.nom, nomKg: v.kg, useM3: v.m3, fill, tolM3: tM3, tolKg: tKg, m3: v.m3 + tM3, kg: v.kg + tKg, places: +S.maxPlaces || 0,
+          priced: priceTrip([{ bl: '-', zone: 'in', cbm: 0, kg: 0 }], k, S).total != null, onlyIfNeeded: onlyIfNeeded.includes(k) });
+      });
     });
+    return out;
   }
   function load(stops) {
     let cbm = 0, kg = 0, places = 0; const bl = new Set();
@@ -482,29 +491,37 @@
     // the tightest packing: the fewest vehicles that hold the cargo (search with a node limit); each point goes first
     // to the trip whose points are nearest, so the trips stay compact. Cargo for Kamaz is packed separately.
     function packStart() {
-      const regular = fleet.filter(v => v.priced && !v.onlyIfNeeded), cap = regular.length ? regular.reduce((a, v) => (v.m3 + v.kg / 1000 > a.m3 + a.kg / 1000 ? v : a)) : null;
+      const bigOf = list => list.reduce((a, v) => (v.m3 + v.kg / 1000 > a.m3 + a.kg / 1000 ? v : a));
+      const regular = fleet.filter(v => v.priced && !v.onlyIfNeeded), cap = regular.length ? bigOf(regular) : null;
       const fitsCap = (s, c) => (s.cbm || 0) <= c.m3 + EPS && (s.kg || 0) <= c.kg + EPS;
-      const big = fleet.reduce((a, v) => (v.m3 + v.kg / 1000 > a.m3 + a.kg / 1000 ? v : a));
+      const big = bigOf(fleet), per = Math.max(1, S.tripsPerVehicle | 0 || 1);
+      // корзины — машины автопарка от большой к маленькой (у каждой — её кузов), затем их вторые рейсы; машин вида без счёта —
+      // сколько угодно самой большой. Корзин больше, чем машин × рейсов, — самой большой (fitFleet и раздача по машинам разберутся)
+      const slotsOf = c => {
+        if (c !== cap || regular.some(v => v.count == null)) return [];
+        const one = regular.slice().sort((a, b) => b.m3 - a.m3 || b.kg - a.kg).flatMap(v => Array(v.count).fill({ m3: v.m3, kg: v.kg }));
+        return Array.from({ length: per }, () => one).flat();
+      };
       const groups = cap ? [[items.filter(s => fitsCap(s, cap)), cap], [items.filter(s => !fitsCap(s, cap)), big]] : [[items, big]];
       const out = [];
       for (const [list, c] of groups) {
         if (!list.length) continue;
         const its = list.slice().sort((a, b) => Math.max(b.cbm / c.m3, b.kg / c.kg) - Math.max(a.cbm / c.m3, a.kg / c.kg) || id(a) - id(b));
-        const pts = new Set(its.map(s => s.bl)).size;
+        const pts = new Set(its.map(s => s.bl)).size, slots = slotsOf(c);
         const lb = Math.max(1, Math.ceil(its.reduce((a, s) => a + (s.cbm || 0), 0) / c.m3 - EPS), Math.ceil(its.reduce((a, s) => a + (s.kg || 0), 0) / c.kg - EPS), Math.ceil(pts / maxStops));
         let found = null;
         for (let K = lb; K <= its.length && !found; K++) {
-          const bins = Array.from({ length: K }, () => ({ c: 0, k: 0, p: 0, bl: new Map(), lat: 0, lon: 0, m: 0, st: [] }));
+          const bins = Array.from({ length: K }, (_, i) => ({ cm3: (slots[i] || c).m3, ckg: (slots[i] || c).kg, c: 0, k: 0, p: 0, bl: new Map(), lat: 0, lon: 0, m: 0, st: [] }));
           let nodes = 0;
           const put = (b, s, sign) => { b.c += sign * (s.cbm || 0); b.k += sign * (s.kg || 0); b.p += sign * (s.places || 0); b.lat += sign * s.lat; b.lon += sign * s.lon; b.m += sign; b.bl.set(s.bl, (b.bl.get(s.bl) || 0) + sign); if (!b.bl.get(s.bl)) b.bl.delete(s.bl); if (sign > 0) b.st.push(s); else b.st.pop(); };
           const rec = i => {
             if (i === its.length) return true;
             if (++nodes > 20000) return false;
             const s = its[i], d = b => b.m ? Math.hypot(b.lat / b.m - s.lat, (b.lon / b.m - s.lon) * 0.75) : Infinity;
-            let emptyTried = false;
+            const emptyTried = new Set();
             for (const b of bins.slice().sort((x, y) => d(x) - d(y))) {
-              if (!b.m) { if (emptyTried) continue; emptyTried = true; }
-              if (b.c + (s.cbm || 0) > c.m3 + EPS || b.k + (s.kg || 0) > c.kg + EPS || (PL && b.p + (s.places || 0) > PL + EPS) || (!b.bl.has(s.bl) && b.bl.size >= maxStops)) continue;
+              if (!b.m) { const ek = b.cm3 + '|' + b.ckg; if (emptyTried.has(ek)) continue; emptyTried.add(ek); }   // пустые корзины одной вместимости — одна попытка
+              if (b.c + (s.cbm || 0) > b.cm3 + EPS || b.k + (s.kg || 0) > b.ckg + EPS || (PL && b.p + (s.places || 0) > PL + EPS) || (!b.bl.has(s.bl) && b.bl.size >= maxStops)) continue;
               put(b, s, 1);
               if (rec(i + 1)) return true;
               put(b, s, -1);
@@ -620,35 +637,45 @@
     return fixed.concat(ts.map(g => g.t));
   }
 
-  // Рейсов вида — не больше, чем машин этого вида (cars: { вид: [машины] }; вида нет — без ограничения). Лишний рейс
-  // уходит на машину другого вида: в другой рейс, где есть место (машин не прибавится), или отдельным рейсом на
-  // свободную машину — что дешевле. Свободные — обычные машины с тарифом (Kamaz в A и B — только груз, который больше
-  // никуда не влезает). Сначала у каждой машины один рейс; второй круг (до per = tripsPerVehicle) — только когда
-  // свободных машин нет, и тоже без рейсов сверх числа машин × кругов: Labo не едет второй раз, пока стоят свободные
-  // Gazel. join = false (план X: район — одна машина) — в чужой рейс не добавляем.
-  function fitFleet(trips, fleet, cars, per, maxStops, S, depot, join) {
-    const ev = (stops, kinds) => evalTrip(stops, fleet.filter(v => kinds.includes(v.kind)), maxStops, S, depot);
+  // Рейсов класса — не больше, чем машин этого класса (класс — вид машины и её вместимость, fleetOf; count — машин, без счёта —
+  // без ограничения). Лишний рейс уходит на машину другого класса: целиком (того же вида другой вместимости или другого
+  // вида), в другой рейс, где есть место (машин не прибавится), или делится на несколько рейсов свободных машин — что
+  // дешевле. Свободные — обычные машины с тарифом (Kamaz в A и B — только груз, который больше никуда не влезает).
+  // Сначала у каждой машины один рейс; второй круг (до per = tripsPerVehicle) — только когда свободных машин нет, и тоже
+  // без рейсов сверх числа машин × кругов: Labo не едет второй раз, пока стоят свободные Gazel, а 30 м³ большой Gazel не
+  // ждут её второго рейса, если груз помещается в две маленькие. join = false (план X: район — одна машина) — в чужой
+  // рейс не добавляем и не делим.
+  const clsOf = v => v.cls || v.kind;
+  function fitFleet(trips, fleet, per, maxStops, S, depot, join) {
+    const sub = keys => fleet.filter(v => keys.includes(clsOf(v)));
+    const ev = (stops, keys) => evalTrip(stops, sub(keys), maxStops, S, depot);
+    const split = (stops, keys) => { const f = sub(keys); if (!f.length || stops.length < 2) return null; const parts = partition(sweepOrder(stops), f, maxStops, S, depot); return parts.length > 1 && !parts.some(p => p.over) ? parts : null; };
     for (let r = 1; r <= per; r++) {
-      const lim = k => cars[k] ? cars[k].length * r : Infinity;
-      const freeOf = c => fleet.filter(v => v.priced && !v.onlyIfNeeded && (c[v.kind] || 0) < lim(v.kind)).map(v => v.kind);
+      const lim = k => { const v = fleet.find(x => clsOf(x) === k); return v && v.count != null ? v.count * r : Infinity; };
+      const freeOf = c => fleet.filter(v => v.priced && !v.onlyIfNeeded && (c[clsOf(v)] || 0) < lim(clsOf(v))).map(clsOf);
+      const within = (c, add) => { const d = { ...c }; add.forEach(t => { d[clsOf(t.v)] = (d[clsOf(t.v)] || 0) + 1; }); return add.every(t => d[clsOf(t.v)] <= lim(clsOf(t.v))); };
       for (let guard = 0; guard < 200; guard++) {
-        const c = {}; trips.forEach(t => { if (!t.over) c[t.v.kind] = (c[t.v.kind] || 0) + 1; });
+        const c = {}; trips.forEach(t => { if (!t.over) c[clsOf(t.v)] = (c[clsOf(t.v)] || 0) + 1; });
         const over = Object.keys(c).filter(k => c[k] > lim(k));
         if (!over.length) return trips;
         let best = null;
         trips.forEach((t, i) => {
-          if (t.over || !over.includes(t.v.kind)) return;
-          const free = freeOf({ ...c, [t.v.kind]: c[t.v.kind] - 1 }).filter(k => k !== t.v.kind);
+          if (t.over || !over.includes(clsOf(t.v))) return;
+          const c1 = { ...c, [clsOf(t.v)]: c[clsOf(t.v)] - 1 }, free = freeOf(c1).filter(k => k !== clsOf(t.v));
           const alt = free.length && ev(t.stops, free);
-          if (alt && (!best || alt.val - t.val < best.d - EPS)) best = { drop: [i], add: alt, d: alt.val - t.val };
-          if (join) trips.forEach((u, j) => {
+          if (alt && (!best || alt.val - t.val < best.d - EPS)) best = { drop: [i], add: [alt], d: alt.val - t.val };
+          if (!join) return;
+          trips.forEach((u, j) => {
             if (j === i || u.over) return;
-            const m = ev(u.stops.concat(t.stops), [...new Set([u.v.kind].concat(free))]);
-            if (m && m.v.kind !== t.v.kind && m.val - u.val - t.val < (best ? best.d : Infinity) - EPS) best = { drop: [i, j], add: m, d: m.val - u.val - t.val };
+            const m = ev(u.stops.concat(t.stops), [...new Set([clsOf(u.v)].concat(free))]);
+            if (m && clsOf(m.v) !== clsOf(t.v) && m.val - u.val - t.val < (best ? best.d : Infinity) - EPS) best = { drop: [i, j], add: [m], d: m.val - u.val - t.val };
           });
+          // рейс не помещается ни в одну свободную машину целиком — делим на несколько рейсов свободных машин
+          const parts = !alt && free.length && split(t.stops, free);
+          if (parts && within(c1, parts)) { const d = parts.reduce((a, p) => a + p.val, 0) - t.val; if (!best || d < best.d - EPS) best = { drop: [i], add: parts, d }; }
         });
         if (!best) break;   // этот круг не разгрузить — разрешаем следующий
-        trips = trips.filter((_, i) => !best.drop.includes(i)).concat([best.add]);
+        trips = trips.filter((_, i) => !best.drop.includes(i)).concat(best.add);
       }
     }
     return trips;
@@ -674,16 +701,20 @@
     const CARS = {};
     Object.keys(COUNT).forEach(k => {
       const named = (S.vehicles || []).filter(v => v.kind === k), active = named.filter(v => !v.repair);
-      if (!(COUNT[k] > 0) && !named.length) return;   // число машин не задано — без ограничения
+      if ((COUNT[k] == null || COUNT[k] === '') && !named.length) return;   // число машин не задано — без ограничения; 0 — машин этого вида нет
       const n = Math.max(0, (COUNT[k] | 0 || named.length) - (named.length - active.length)), used = new Set(named.map(v => v.name));
       // m3 — полезный объём (кузов × полезный процент), nom — объём кузова
       const cars = active.slice(0, n).map(v => ({ name: v.name, nom: +v.m3 || DEF[k][0], m3: useful(+v.m3 || DEF[k][0], S), kg: +v.kg || DEF[k][1], dims: v.l > 0 && v.w > 0 && v.h > 0 ? { l: +v.l, w: +v.w, h: +v.h } : null }));
       for (let i = 1; cars.length < n; i++) if (!used.has(LABEL[k] + '-' + i)) cars.push({ name: LABEL[k] + '-' + i, nom: DEF[k][0], m3: useful(DEF[k][0], S), kg: DEF[k][1], unnamed: true });
       CARS[k] = cars.map((c, i) => ({ ...c, no: i + 1 }));
     });
-    const CAPS = {}, MINCAP = {}, AVAIL = {};
-    Object.keys(CARS).forEach(k => { const c = CARS[k]; AVAIL[k] = c.length;
-      if (c.length) { CAPS[k] = [Math.max(...c.map(x => x.m3)), Math.max(...c.map(x => x.kg)), Math.max(...c.map(x => x.nom))]; MINCAP[k] = [Math.min(...c.map(x => x.m3)), Math.min(...c.map(x => x.kg)), Math.min(...c.map(x => x.nom))]; } });
+    // классы вместимости: машины вида с одинаковым полезным объёмом и весом — один класс (n — сколько их), по возрастанию
+    const CLASSES = {}, AVAIL = {};
+    Object.keys(CARS).forEach(k => {
+      const m = new Map(); AVAIL[k] = CARS[k].length;
+      CARS[k].forEach(c => { const key = c.m3 + '|' + c.kg, e = m.get(key) || { m3: c.m3, kg: c.kg, nom: c.nom, n: 0 }; e.n++; e.nom = Math.max(e.nom, c.nom); m.set(key, e); });
+      CLASSES[k] = [...m.values()].sort((a, b) => a.m3 - b.m3 || a.kg - b.kg);
+    });
     const back = t => t.finish + t.back / S.speed * 60 * S.roadK;
     const RANK = { labo: 0, changan: 1, gazel: 2, kamaz: 3 };
     const finish = raw => {
@@ -709,7 +740,8 @@
         const list = byKind[kind], cars = CARS[kind], label = list[0].vehicle.label;
         if (!cars) { list.forEach((t, k) => { t.name = label + '-' + (k + 1); }); return; }   // число машин не задано
         const dur = t => back(t) - t.start, slots = cars.map(c => ({ ...c, free: S.dayStart * 1440, used: 0 }));
-        const order = list.slice().sort((a, b) => dur(b) - dur(a)), rest = [];
+        // сначала рейсы, которые помещаются в меньшее число машин (большой груз — в большую), потом самые длинные
+        const nFit = t => slots.filter(x => fits(t, x)).length, order = list.slice().sort((a, b) => nFit(a) - nFit(b) || dur(b) - dur(a)), rest = [];
         // первый рейс: самые длинные — по одному на машину, каждому — самая маленькая свободная машина, в которую он помещается
         order.forEach(t => {
           const c = slots.filter(x => !x.used && fits(t, x)).sort((a, b) => a.m3 - b.m3 || a.kg - b.kg || a.no - b.no)[0];
@@ -734,19 +766,27 @@
       out.blocked = [...new Set(blocked)];
       return out;
     };
+    // Машины вида разной вместимости — план считается в трёх вариантах и берётся лучший: по кузову каждой машины (классы),
+    // все машины вида как самая маленькая (любой рейс встаёт в любую машину) и как самая большая (меньше рейсов, если
+    // большие машины успевают). Лучший — без «нет машины», без рейсов сверх кузова своей машины, дешевле (тариф и км).
+    // Машины вида одной вместимости — один вариант, как раньше
+    const one = f => Object.fromEntries(Object.entries(CLASSES).map(([k, c]) => [k, c.length > 1 ? [{ m3: f(c.map(x => x.m3)), kg: f(c.map(x => x.kg)), nom: f(c.map(x => x.nom)), n: c.reduce((a, x) => a + x.n, 0) }] : c]));
+    const VARIANTS = Object.values(CLASSES).some(c => c.length > 1) ? [CLASSES, one(a => Math.min(...a)), one(a => Math.max(...a))] : [CLASSES];
+    const score = trips => [trips.filter(t => t.noVehicle).length, trips.filter(t => !t.over && (t.cbm > t.vehicle.m3 + EPS || t.kg > t.vehicle.kg + EPS)).length,
+      trips.reduce((a, t) => a + (t.price.total != null ? t.price.total : UNPRICED) + KM_COST * t.real, 0)];
+    const better = (a, b) => { for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > EPS) return a[i] < b[i]; return false; };
     const plan = (kinds, build, opt = {}) => {
-      const run = caps => {
-        const fleet = fleetOf(S, kinds, { ...opt, caps, avail: AVAIL }), splits = [];
+      let best = null, shown = null;
+      const vs = kinds.some(k => (CLASSES[k] || []).length > 1) ? VARIANTS : [CLASSES];   // в плане нет машин разной вместимости — один вариант
+      for (const classes of vs) {
+        const fleet = fleetOf(S, kinds, { ...opt, classes, avail: AVAIL }), splits = [];
+        if (!shown) shown = fleet;   // в заметке «Машины: …» — машины по кузовам
         if (!fleet.length) return { trips: [], splits, noFleet: true };
         const items = splitOversize(withC, fleet, splits), raw = build(items, fleet);
-        return { trips: finish(opt.fit ? fitFleet(raw, fleet, CARS, PER, opt.fit.maxStops, opt.fit.S || S, depot, opt.fit.join) : raw), splits, fleet };
-      };
-      const r = run(CAPS), bl = (r.trips.blocked || []).filter(k => MINCAP[k] && (MINCAP[k][0] < CAPS[k][0] || MINCAP[k][1] < CAPS[k][1]));
-      if (!bl.length) return r;
-      // машины разной вместимости: рейсы под самую большую не нашли машину — рейсы вида по самой маленькой машине
-      const caps = { ...CAPS }; bl.forEach(k => { caps[k] = MINCAP[k]; });
-      const r2 = run(caps), nv = x => x.trips.filter(t => t.noVehicle).length;
-      return nv(r2) < nv(r) ? r2 : r;
+        const trips = finish(opt.fit ? fitFleet(raw, fleet, PER, opt.fit.maxStops, opt.fit.S || S, depot, opt.fit.join) : raw), sc = score(trips);
+        if (!best || better(sc, best.sc)) best = { trips, splits, sc, vi: vs.indexOf(classes) };
+      }
+      return { trips: best.trips, splits: best.splits, fleet: shown, variant: best.vi };
     };
     const lab = kinds => S.smartLabo !== 0 ? kinds : kinds.filter(k => k !== 'labo');
     // планы A и B: рейс — в одну сторону (сектор не шире MAX_SPREAD), мелкий груз и точки за кольцом — попутно

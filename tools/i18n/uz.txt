@@ -2583,6 +2583,9 @@ https://yandex.uz/maps/… или 41.311, 69.279	https://yandex.uz/maps/… yoki
 план берёт меньше объёма кузова.	reja kuzov hajmidan kamroq oladi.
 Планы будут считать машины по полезному объёму кузова («Тарифы и планы» → «Полезный объём кузова, %»): между коробками воздух, Gazel на 19 м³ реально берёт около 17.	Rejalar mashinalarni kuzovning foydali hajmi bo‘yicha hisoblaydi («Tariflar va rejalar» → «Kuzovning foydali hajmi, %»): qutilar orasida havo, 19 m³ li Gazel aslida 17 ga yaqin oladi.
 {n} × {w} {n2} из {n3} м³ / {n4} кг	{n} × {w} {n2} / {n3} m³ / {n4} kg
+{n} из {n2} м³ / {n3}–{n4} кг	{n} / {n2} m³ / {n3}–{n4} kg
+{n} из {n2} м³ / {n3} кг	{n} / {n2} m³ / {n3} kg
+{n} × {w} {n2} из {n3}	{n} × {w} {n2} / {n3}
 {n} × {w} {n2} из {n3} м³ / {n4} кг (нет тарифа)	{n} × {w} {n2} / {n3} m³ / {n4} kg (tarif yo‘q)
 {n} × {w} {n2} из {n3} м³ / {n4} кг + допуск {n5} м³ / {n6} кг	{n} × {w} {n2} / {n3} m³ / {n4} kg + ruxsat {n5} m³ / {n6} kg
 {n} × {w} {n2} из {n3} м³ / {n4} кг + допуск {n5} м³ / {n6} кг (нет тарифа)	{n} × {w} {n2} / {n3} m³ / {n4} kg + ruxsat {n5} m³ / {n6} kg (tarif yo‘q)
