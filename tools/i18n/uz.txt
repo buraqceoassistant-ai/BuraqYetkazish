@@ -2682,6 +2682,12 @@ PDF читает ИИ	PDF ni SI o‘qiydi
 тент	tent
 Предыдущее фото	Oldingi foto
 Следующее фото	Keyingi foto
+Машины: {s}.	Mashinalar: {s}.
+Как можно меньше машин: {s}.	Iloji boricha kam mashina: {s}.
+{s} — нет тарифа, в план не идёт (вкладка «Тарифы»).	{s} — tarif yo‘q, rejaga kirmaydi («Tariflar» bo‘limi).
+Gazel можно загрузить с допуском — +{n} м³ / +{n2} кг к полезному объёму каждой.	Gazel’ni ruxsat bilan yuklash mumkin — har birining foydali hajmiga +{n} m³ / +{n2} kg.
+Каждая — строго по своему кузову, Kamaz — только если груз больше.	Har biri — qat’iy o‘z kuzovi bo‘yicha, Kamaz — faqat yuk kattaroq bo‘lsa.
+Каждая — строго по своему кузову.	Har biri — qat’iy o‘z kuzovi bo‘yicha.
 Нет ни одного файла с выбранным BL.	BL tanlangan birorta fayl yo‘q.
 Коробки по пакинг-листам записаны: {s}.	Packing listlar bo‘yicha qutilar yozildi: {s}.
 Планы проверят укладку, 3D покажет коробки.	Rejalar joylashni tekshiradi, 3D qutilarni ko‘rsatadi.

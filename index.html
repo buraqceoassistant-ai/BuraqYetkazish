@@ -2187,6 +2187,22 @@ class Component extends DCLogic {
     this.commit(next, false, this.gsUrl ? ops : null);
     this.setState({ dvMsg: { text: 'Автопарк из файла записан: ' + f.length + ' ' + mashin(f.length) + (d.extra.length ? '; убраны: ' + d.extra.join(', ') : '') + '. Планы пересчитаны.', color: 'var(--color-accent)' } });
   }
+  // подпись вида в планах: марки машин автопарка этого вида (Shineray — вид Changan), иначе вид
+  kindLabel(P, k) { const cars = ((P && P.cars) || {})[k] || [], b = [...new Set(cars.map(c => window.LogiEngine.vehicleBrand(c.name)).filter(Boolean))]; return b.length ? b.join(' / ') : VEH[k]; }
+  // машины плана по видам: on — обычные с тарифом, noPrice — без тарифа (в план не идут), big — Kamaz «только если груз больше»
+  planKinds(plan, P) {
+    const out = { on: [], noPrice: [], big: false, tol: null }, seen = new Set();
+    const ORD = ['gazel', 'changan', 'labo', 'kamaz'];
+    ((plan && plan.fleet) || []).slice().sort((a, b) => ORD.indexOf(a.kind) - ORD.indexOf(b.kind)).forEach(v => { if (seen.has(v.kind)) return; seen.add(v.kind); if (v.tolM3 || v.tolKg) out.tol = v; if (v.onlyIfNeeded) { out.big = true; return; } (v.priced ? out.on : out.noPrice).push(this.kindLabel(P, v.kind)); });
+    return out;
+  }
+  planTitle(k, P) { if (k !== 'B' || !P || !P.B || !P.B.fleet) return PLAN_INFO[k].title; const m = this.planKinds(P.B, P); return m.on.length ? 'B — ' + m.on.join(' · ') : PLAN_INFO.B.title; }
+  planDesc(k, S, P) {
+    if ((k !== 'A' && k !== 'B') || !P || !P[k] || !P[k].fleet) return PLAN_INFO[k].desc(S);
+    const m = this.planKinds(P[k], P), np = m.noPrice.length ? ' ' + m.noPrice.join(', ') + ' — нет тарифа, в план не идёт (вкладка «Тарифы»).' : '';
+    if (k === 'A') return 'Самый дешёвый по тарифам без перегруза: как можно меньше рейсов, маршруты по направлениям. Машины: ' + (m.on.join(', ') || '—') + '.' + np + (m.big ? ' Каждая — строго по своему кузову, Kamaz — только если груз больше.' : ' Каждая — строго по своему кузову.');
+    return 'Как можно меньше машин: ' + (m.on.join(', ') || '—') + '.' + np + (m.tol ? ' Gazel можно загрузить с допуском — +' + f1(m.tol.tolM3, 1) + ' м³ / +' + f0(m.tol.tolKg) + ' кг к полезному объёму каждой.' : '') + (m.big ? ' Kamaz — только если груз больше.' : '');
+  }
   openPhotos(v) { if (!v.photos || !v.photos.length) return; this.setState({ dialog: { type: 'photo', title: v.name, photos: v.photos, i: 0 } }); }
   staleNotes(d) {
     d.notes = (d.notes || []).map(s => ({ ...s, items: s.items.filter(i => !/bazaviy narxga kiradimi/i.test(i.what)) }));
@@ -2948,8 +2964,8 @@ class Component extends DCLogic {
       const stops = ships.map((x, i) => { const cl = cmap[x.bl] || {}; return { id: 'p' + i, bl: x.bl, cbm: x.cbm, kg: x.kg, places: x.places, boxList: boxesOf(x), lat: cl.lat ?? null, lon: cl.lon ?? null, zone: (D.zones[x.bl] || {}).zone, client: cl }; });
       c.plans = E.buildPlans(stops, { ...S, vehicles: this.fleetVehicles(data) }); c.plansKey = pk;
     }
-    const P = c.plans, kinds = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => VEH[k] + ' ' + s[k]).join(' · ');
-    out.impPlans = ['A', 'B', 'C', 'X'].map(k => { const s = P[k].sum; return { k, title: PLAN_INFO[k].title, trips: s.trips + ' ' + reys(s.trips), kinds: kinds(s),
+    const P = c.plans, kinds = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => this.kindLabel(P, k) + ' ' + s[k]).join(' · ');
+    out.impPlans = ['A', 'B', 'C', 'X'].map(k => { const s = P[k].sum; return { k, title: this.planTitle(k, P), trips: s.trips + ' ' + reys(s.trips), kinds: kinds(s),
       price: P[k].noFleet ? 'нет машин' : s.unpriced && !s.price ? 'нет тарифа' : money(s.price) + (s.unpriced ? ' +' : '') }; });
     out.impPlanNote = (P.noCoords.length ? P.noCoords.length + ' отгр. без координат клиента — в планы не вошли. ' : '') + 'Отгрузок в партии: ' + ships.length + ' (маркировки одного клиента — одна отгрузка).';
     // документ
@@ -5152,14 +5168,14 @@ class Component extends DCLogic {
       // план C свёрнут, пока его не откроют; «самый дешёвый» — среди показанных планов, где у всех рейсов есть цена
       const shown = st.planC ? ['A', 'B', 'X', 'C'] : ['A', 'B', 'X'], planKey = shown.includes(st.planKey) ? st.planKey : 'A';   // план X (пробный)
       const full = shown.filter(k => PL(k).sum.trips && !PL(k).sum.unpriced), minP = full.length ? Math.min(...full.map(k => PL(k).sum.price)) : null;
-      const kindsOf = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => VEH[k] + ' ' + s[k]).join(' · ');
+      const kindsOf = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => this.kindLabel(P, k) + ' ' + s[k]).join(' · ');
       out.planCols = shown.length;
       const costs = {}; ['A', 'B', 'C', 'X'].forEach(k => { costs[k] = this.costOf(PL(k).trips.map(t => E.costSplit(t.stops, t.price, S))); });
       // «выгоднее всех» — где меньше всех платит компания (остальное — с клиентов); поровну — где дешевле в целом
       const ourOf = k => costs[k].n ? Math.round(costs[k].ours) : PL(k).sum.price, minC = full.length ? Math.min(...full.map(ourOf)) : null;
       const best = full.filter(k => ourOf(k) === minC).sort((a, b) => PL(a).sum.price - PL(b).sum.price)[0];
       out.planCards = shown.map(k => { const s = PL(k).sum, sel = planKey === k, noPrice = s.unpriced && !s.price, c = costs[k];
-        return { title: PLAN_INFO[k].title, desc: PLAN_INFO[k].desc(S), trips: s.trips, kinds: kindsOf(s), real: f0(s.real) + ' км', outside: s.outside + ' · ' + f1(s.outsideCbm, 1) + ' м³',
+        return { title: this.planTitle(k, P), desc: this.planDesc(k, S, P), trips: s.trips, kinds: kindsOf(s), real: f0(s.real) + ' км', outside: s.outside + ' · ' + f1(s.outsideCbm, 1) + ' м³',
           price: PL(k).noFleet ? 'нет машин' : noPrice ? 'нет тарифа' : money(s.price) + (s.unpriced ? ' +' : ''),
           cheapest: full.length > 1 && k === best, manual: !!PL(k).manual,
           hasCost: !PL(k).noFleet && c.n > 0, cost: this.costRows(c, S, s.unpriced),
@@ -5299,7 +5315,7 @@ class Component extends DCLogic {
           .map(o => ({ ...o, bg: o.sel ? 'var(--color-accent-100)' : 'var(--color-bg)', border: o.sel ? 'var(--color-accent)' : 'var(--color-divider)', subColor: o.warn ? 'var(--color-danger)' : 'var(--color-neutral-700)' }));
         if (one === 'all') {
           out.vizIsAll = true;
-          out.vizTitle = PLAN_INFO[M.key].title;
+          out.vizTitle = this.planTitle(M.key, M.P);
           out.vizSummary = vPre + lays.length + ' ' + reys(lays.length) + ' · ' + f1(lays.reduce((a, l) => a + l.cbm, 0), 1) + ' м³ · ' + f0(lays.reduce((a, l) => a + l.kg, 0)) + ' кг';
           out.vizAllRows = lays.map((l, i) => { const kgF = l.maxKg ? l.kg / l.maxKg : 0;
             return { name: l.name + ' · ' + l.label, pts: l.points.length + ' точ.', cbm: f1(l.cbm, 1) + ' / ' + f1(l.body.v, 0) + ' м³', kg: f0(l.kg) + ' / ' + f0(l.maxKg) + ' кг',
