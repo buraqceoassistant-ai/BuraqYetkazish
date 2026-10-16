@@ -1949,6 +1949,11 @@ const plural = (n, one, few, many) => n % 10 === 1 && n % 100 !== 11 ? one : [2,
 const tochki = n => plural(n, 'точка', 'точки', 'точек'), mashin = n => plural(n, 'машины', 'машин', 'машин');   // «у 1 машины», «у 3 машин»
 // вкладка → раздел шапки: импорт — в «Журнале», дашборд и отчёты — в «Отчётах», настройки — четыре подвкладки
 const TAB_GROUP = { import: 'journal', dash: 'reports', reports: 'reports', tariffs: 'settings', fleetset: 'settings', link: 'settings', check: 'settings' };
+// Где был пользователь: вкладка, подвкладка, план и партии. Обновление страницы возвращает туда же (sessionStorage —
+// только эта вкладка браузера; новое окно и новый запуск приложения открываются, как раньше, с «Журнала»)
+const NAV_KEY = 'logi-nav', NAV_TABS = ['journal', 'import', 'clients', 'map', 'dash', 'reports', 'plans', 'drivers', 'viz', 'tariffs', 'fleetset', 'link', 'check'];
+const navLoad = () => { try { const v = JSON.parse(sessionStorage.getItem(NAV_KEY) || 'null'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } };
+const NAV0 = navLoad();
 const f0 = n => (n == null || isNaN(n)) ? '—' : Math.round(n).toLocaleString('ru-RU');
 const f1 = (n, d = 1) => (n == null || isNaN(n)) ? '—' : (+n).toLocaleString('ru-RU', { maximumFractionDigits: d });
 const money = n => n == null ? '—' : Math.round(n).toLocaleString('ru-RU') + ' сум';
@@ -2027,7 +2032,11 @@ class Component extends DCLogic {
     planEdits: (() => { try { const v = JSON.parse(localStorage.getItem('logi-plan-edits') || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } })(), planHi: null,
     vizTrip: 'all', vizStep: 0, vizSel: null, vizView: '3d', vizErr: '',
     calc: { kind: 'gazel', nin: 3, nout: 0, kg: 1200, cbm: 8 },
-    dvTab: 'day', dvDate: '', dvPeriod: '7', dvTruck: 'all', dvRes: 'all', dvMsg: null, dvBusy: false, dvSet: null, dvCarryTo: '' };
+    dvTab: 'day', dvDate: '', dvPeriod: '7', dvTruck: 'all', dvRes: 'all', dvMsg: null, dvBusy: false, dvSet: null, dvCarryTo: '',
+    // вкладка и подвкладка — сразу (партии — в setReady, когда известны даты)
+    ...(NAV_TABS.includes(NAV0.tab) ? { tab: NAV0.tab } : {}), ...(['batch', 'cost', 'fleet', 'drivers', 'ai'].includes(NAV0.repKind) ? { repKind: NAV0.repKind } : {}),
+    ...(['tariffs', 'fleetset', 'link', 'check'].includes(NAV0.setLast) ? { setLast: NAV0.setLast } : {}), ...(['A', 'B', 'C', 'X'].includes(NAV0.planKey) ? { planKey: NAV0.planKey } : {}),
+    ...(['day', 'deliv'].includes(NAV0.dvTab) ? { dvTab: NAV0.dvTab } : {}) };
   mapRef = React.createRef();
   dvMapRef = React.createRef();
   planMapRef = React.createRef();
@@ -2250,12 +2259,25 @@ class Component extends DCLogic {
   setReady(data) {
     clearTimeout(this._autoD); this._autoD = setTimeout(() => this.runAutoDistrict(), 600);
     try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch (e) {}
-    const dates = [...new Set(data.shipments.map(s => s.date))].sort();
-    this.setState(s => ({ ready: true, data, ver: s.ver + 1, planDate: dates[dates.length - 1] || '', jDate: dates[dates.length - 1] || 'all' }));
+    const dates = [...new Set(data.shipments.map(s => s.date))].sort(), last = dates[dates.length - 1] || '';
+    // партии, выбранные до обновления страницы, — если они ещё есть; иначе последняя, как раньше
+    const nav = NAV0, ok = v => !!v && String(v).split('+').every(d => dates.includes(d));
+    const planDate = ok(nav.planDate) ? nav.planDate : last;
+    this.setState(s => ({ ready: true, data, ver: s.ver + 1, planDate, planDate2: ok(nav.planDate2) && nav.planDate2 !== planDate ? nav.planDate2 : '',
+      jDate: nav.jDate === 'all' || ok(nav.jDate) ? nav.jDate : last || 'all', jDate2: ok(nav.jDate2) ? nav.jDate2 : '',
+      ...(nav.mapDate === 'all' || ok(nav.mapDate) ? { mapDate: nav.mapDate } : {}), ...(ok(nav.dvDate) ? { dvDate: nav.dvDate } : {}) }));
     // Excel-файл — спросить про открытую партию сразу; с таблицей — после её загрузки
     if (!this.gsUrl) setTimeout(() => { if (this.state.tab === 'journal') this.maybeAskLoc(this.state.jDate); }, 0);
   }
   componentDidUpdate() {
+    // запомнить, где пользователь (NAV_KEY): после загрузки данных, чтобы пустые партии до неё не затёрли сохранённые
+    if (this.state.ready) {
+      const st = this.state, tab = this.readOnly && st.tab === 'link' ? 'journal' : st.tab;
+      if (tab !== st.tab) { this.setState({ tab }); return; }   // «Связь» — только руководителю
+      const j = JSON.stringify({ tab, repKind: st.repKind, setLast: st.setLast, planKey: st.planKey, planDate: st.planDate, planDate2: st.planDate2,
+        jDate: st.jDate, jDate2: st.jDate2, mapDate: st.mapDate, dvDate: st.dvDate, dvTab: st.dvTab });
+      if (j !== this._navSaved) { this._navSaved = j; try { sessionStorage.setItem(NAV_KEY, j); } catch (e) {} }
+    }
     if (this.state.ready && !this._autoNameT && this.canLoc && (!this.gsUrl || (this.state.gsAt && this.state.gsStatus !== 'loading'))) { this._autoNameT = true; setTimeout(() => this.autoNamePoints(), 3000); }
     this.syncMap(); this.syncDvMap(); this.syncPlanMap(); this.syncViz(); this.syncSmooth(); this.syncImport();
     // страница «Связь» открыта — черновик есть; ушли с неё — черновик убираем (Esc, кнопки вкладок)
