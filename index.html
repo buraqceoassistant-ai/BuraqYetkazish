@@ -2208,6 +2208,25 @@ class Component extends DCLogic {
   }
   // машина правила мелкого груза — Changan / Shineray: подпись по маркам автопарка («Shineray»)
   smallLabels(plan, P) { return this.kindLabel(P, 'changan'); }
+  // почему в плане A или B нет рейсов Changan / Shineray: машины нет в плане (0 в автопарке, в ремонте, нет вместимости),
+  // нет тарифа (какого поля не хватает) или рейсов не досталось (нет мелкого груза / по тарифам дешевле Gazel)
+  whyNoChangan(plan, P, data) {
+    const S = data.settings, lbl = this.kindLabel(P, 'changan'), v = (plan.fleet || []).find(x => x.kind === 'changan');
+    const named = this.fleetVehicles(data).filter(x => x.kind === 'changan'), T = +S.smallM3 > 0 ? +S.smallM3 : 0, empty = x => x == null || x === '';
+    if (!v) {
+      if (named.length && named.every(x => x.repair)) return named.map(x => x.name).join(', ') + ' в ремонте — в планы не идёт. Снимите отметку «в ремонте» в карточке машины («Водители и автопарк»).';
+      if (!named.length && !empty(S.changanCount) && !(+S.changanCount > 0)) return 'Changan / Shineray нет в планах: «Машин в автопарке» у Changan — 0 (вкладка «Тарифы»).';
+      if (!(+S.changanM3 > 0 && +S.changanKg > 0) && !named.some(x => x.m3 > 0 && x.kg > 0)) return 'Changan / Shineray нет в планах: не заполнены объём кузова и грузоподъёмность Changan (вкладка «Тарифы»).';
+      return '';
+    }
+    if (!v.priced) {
+      const nb = empty(S.changanBase), np = empty(S.changanPt);
+      return lbl + ' нет в плане: у Changan не заполнен' + (nb && np ? 'ы базовая цена рейса и цена точки' : nb ? 'а базовая цена рейса' : 'а цена точки') + ' (вкладка «Тарифы» → Changan).' +
+        (T ? ' Пока мелкий груз (меньше ' + f1(T, 2) + ' м³) везёт Gazel.' : '');
+    }
+    if (plan.smallTo) return plan.smallAll ? '' : 'Рейсов ' + lbl + ' нет: в партии нет мелких отгрузок (меньше ' + f1(plan.smallTo, 2) + ' м³), которые помещаются в ' + lbl + ', а остальной груз дешевле везут Gazel.';
+    return 'Рейсов ' + lbl + ' нет: по тарифам дешевле везут Gazel. Чтобы мелкое возил ' + lbl + ', задайте «Мелкий груз — на Changan / Shineray, до» во вкладке «Тарифы» (например, 3 м³).';
+  }
   openPhotos(v) { if (!v.photos || !v.photos.length) return; this.setState({ dialog: { type: 'photo', title: v.name, photos: v.photos, i: 0 } }); }
   staleNotes(d) {
     d.notes = (d.notes || []).map(s => ({ ...s, items: s.items.filter(i => !/bazaviy narxga kiradimi/i.test(i.what)) }));
@@ -5208,8 +5227,7 @@ class Component extends DCLogic {
       if (plan.smallTo && plan.smallAll) { const on = plan.sum.smallOn || 0, sl = this.smallLabels(plan, P);
         notes.push('Мелкий груз (меньше ' + f1(plan.smallTo, 2) + ' м³): ' + sl + ' везёт ' + (plan.smallAll - on) + ' из ' + plan.smallAll + ' ' + plural(plan.smallAll, 'отгрузки', 'отгрузок', 'отгрузок') + '.' +
           (on ? ' Ещё ' + on + ' — на Gazel попутно: у ' + sl + ' не хватает рейсов за день (рейсов на машину — до ' + (S.tripsPerVehicle || 1) + ').' : '')); }
-      else if ((planKey === 'A' || planKey === 'B') && +S.smallM3 > 0 && !plan.smallTo && plan.fleet && plan.fleet.some(v => v.kind === 'changan' && !v.priced))
-        notes.push('Мелкий груз меньше ' + f1(S.smallM3, 2) + ' м³ должен ехать на ' + this.kindLabel(P, 'changan') + ', но у него нет тарифа — пока везёт Gazel. Заполните базовую цену и цену точки Changan во вкладке «Тарифы».');
+      if ((planKey === 'A' || planKey === 'B') && plan.fleet && !plan.sum.changan) { const why = this.whyNoChangan(plan, P, data); if (why) notes.push(why); }
       if (plan.sum.unpriced) { const np = [...new Set(plan.trips.filter(t => t.price.total == null).map(t => VEH[t.kind]))].join(', ');
         notes.push(np + ' без тарифа: ' + plan.sum.unpriced + ' ' + reys(plan.sum.unpriced) + ' не входят в сумму. Заполните базовую цену и цену точки во вкладке «Тарифы».'); }
       const pc = costs[planKey];
