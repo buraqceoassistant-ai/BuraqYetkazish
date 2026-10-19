@@ -153,6 +153,50 @@
     return loading;
   }
 
+  // Качество 3D. «Высокое» — лак и хром, точёные колёса, мелкие детали кабины и фургона, картон коробок, мягкие тени
+  // в щелях (GTAO), свечение фар (bloom), сглаживание MSAA, чёткость до 2. «Обычное» — проще и быстрее: телефоны и
+  // слабые видеокарты. Само выбирается высокое на компьютере: экран от 700 px, мышь, от 4 ядер и 4 ГБ памяти и
+  // настоящая видеокарта (не программная отрисовка).
+  let gpu = null;
+  function gpuName() {
+    if (gpu != null) return gpu;
+    gpu = '';
+    try {
+      const c = document.createElement('canvas'), gl = c.getContext('webgl2') || c.getContext('webgl');
+      if (gl) {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        gpu = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
+        const lose = gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext();
+      }
+    } catch (e) { gpu = ''; }
+    return gpu;
+  }
+  function autoQuality() {
+    const mm = q => !!(window.matchMedia && window.matchMedia(q).matches), nav = window.navigator || {};
+    if (Math.min(window.innerWidth, window.innerHeight) < 700 || (mm('(pointer: coarse)') && !mm('(any-pointer: fine)'))) return 'std';
+    if ((nav.deviceMemory && nav.deviceMemory < 4) || (nav.hardwareConcurrency && nav.hardwareConcurrency < 4)) return 'std';
+    return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(gpuName()) ? 'std' : 'hq';
+  }
+
+  // тон NeutralToneMapping (как в three.js) и обратный к нему цвет: фон в высоком качестве проходит через тон
+  const neutral = ([r, g, b]) => {
+    const x = Math.min(r, g, b), off = x < 0.08 ? x - 6.25 * x * x : 0.04;
+    r -= off; g -= off; b -= off;
+    const peak = Math.max(r, g, b);
+    if (peak < 0.76) return [r, g, b];
+    const np = 1 - 0.0576 / (peak - 0.52), s = np / peak, k = 1 - 1 / (0.15 * (peak - np) + 1);
+    return [r, g, b].map(v => v * s + (np - v * s) * k);
+  };
+  function untone(col) {
+    const t = [col.r, col.g, col.b];
+    let x = t.slice();
+    for (let i = 0; i < 60; i++) {
+      const y = neutral(x);
+      x = x.map((v, c) => { const e = x.slice(); e[c] += 1e-4; return Math.max(0, v + (t[c] - y[c]) / Math.max((neutral(e)[c] - y[c]) / 1e-4, 0.02)); });
+    }
+    return col.setRGB(x[0], x[1], x[2]);
+  }
+
   const DIRS = { '3d': [1, 0.8, 1.15], side: [0.001, 0.12, 1], top: [0.001, 1, 0.12], back: [1, 0.35, 0.001] };
   const GAP = 0.08, CAB_Y = -0.3;              // зазор между кабиной и кузовом; низ кабины (пол кузова — y = 0)
   const wheelY = r => -0.14 - r;               // центр колеса: верх колеса чуть ниже пола кузова
@@ -192,12 +236,13 @@
       navy: tok('--buraq-navy', '#0E2E54'), red: tok('--buraq-red', '#DE0441') };
     const still = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };   // без анимаций
     const small = Math.min(window.innerWidth, window.innerHeight) < 700;
+    const HQ = (h.quality === 'hq' || h.quality === 'std' ? h.quality : autoQuality()) === 'hq';
 
-    // Скорость: чёткость не выше 1,5 (дальше разницы почти не видно, а кадр в 2–4 раза дороже) и снижается сама,
-    // если устройство не успевает; сглаживание — только на обычных экранах; на ноутбуке — мощная видеокарта.
+    // Скорость: чёткость не выше 1,5 (в высоком качестве — 2) и снижается сама, если устройство не успевает;
+    // сглаживание — только на обычных экранах (в высоком качестве — MSAA в буфере эффектов); на ноутбуке — мощная видеокарта.
     const hiDpi = (window.devicePixelRatio || 1) >= 1.5;
-    let dpr = Math.min(window.devicePixelRatio || 1, 1.5), slow = 0;
-    const renderer = new T.WebGLRenderer({ antialias: !hiDpi, powerPreference: 'high-performance' });
+    let dpr = Math.min(window.devicePixelRatio || 1, HQ ? 2 : 1.5), slow = 0, aoMove = true;
+    const renderer = new T.WebGLRenderer({ antialias: !hiDpi && !HQ, powerPreference: 'high-performance' });
     renderer.setPixelRatio(dpr);
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.NeutralToneMapping;
@@ -211,25 +256,53 @@
     scene.background = new T.Color(C.bg);
     scene.fog = new T.Fog(C.bg, 30, 90);
     // мягкие отражения на краске, стёклах и дисках — от «комнаты» вокруг сцены
-    const pmrem = new T.PMREMGenerator(renderer), room = new T.RoomEnvironment(), envTex = pmrem.fromScene(room, 0.04).texture;
+    const pmrem = new T.PMREMGenerator(renderer), room = new T.RoomEnvironment(), envTex = pmrem.fromScene(room, HQ ? 0.02 : 0.04).texture;
     pmrem.dispose(); if (room.dispose) room.dispose();
-    scene.environment = envTex; scene.environmentIntensity = 0.55;
+    scene.environment = envTex; scene.environmentIntensity = HQ ? 0.7 : 0.55;
     const camera = new T.PerspectiveCamera(38, 1, 0.05, 500);
     const controls = new T.OrbitControls(camera, cv);
     controls.enableDamping = true; controls.dampingFactor = 0.085;   // вращение с инерцией
     controls.screenSpacePanning = true; controls.maxPolarAngle = Math.PI * 0.49;
     scene.add(new T.HemisphereLight(0xffffff, 0xcfd6df, 0.75));
     const sun = new T.DirectionalLight(0xffffff, 2.3);
-    sun.castShadow = true; sun.shadow.mapSize.set(small ? 1024 : 2048, small ? 1024 : 2048);
-    sun.shadow.radius = 4; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+    const sm = HQ ? 4096 : small ? 1024 : 2048;
+    sun.castShadow = true; sun.shadow.mapSize.set(sm, sm);
+    sun.shadow.radius = HQ ? 6 : 4; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
     scene.add(sun, sun.target);
     const fill = new T.DirectionalLight(0xffffff, 0.9); scene.add(fill, fill.target);   // со стороны камеры, без теней
-    let root = null, ground = null, grid = null, pick = [], hits = [], cur = {}, disposed = false, raf = 0, tween = null, anims = [], compiling = null;
+    // Эффекты высокого качества: кадр рисуется в буфер с MSAA, затем тени в щелях (GTAO — между коробками, под машиной,
+    // у колёс), свечение фар и бликов лака (bloom: только ярче белого, фон не светится), тон и цвет — как у сайта.
+    // Подписи рисуются после эффектов поверх кадра (слой 1), чтобы не темнели и не светились.
+    let composer = null, gtao = null;
+    if (HQ) {
+      composer = new T.EffectComposer(renderer, new T.WebGLRenderTarget(1, 1, { type: T.HalfFloatType, samples: 4 }));
+      composer.addPass(new T.RenderPass(scene, camera));
+      gtao = new T.GTAOPass(scene, camera, 1, 1);
+      gtao.updateGtaoMaterial({ radius: 0.42, distanceExponent: 1.6, thickness: 1.4, scale: 1.15, samples: 16 });
+      gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 16 });
+      gtao.blendIntensity = 0.9;
+      // стёкла, стенки фургона, невидимый объём для тени, подписи и дальняя земля — не дают теней в щелях
+      const hide = gtao._overrideVisibility.bind(gtao);
+      gtao._overrideVisibility = function () {
+        hide();
+        scene.traverse(o => { if (o.visible && (o.isSprite || o.userData.noAO || (o.material && !Array.isArray(o.material) && (o.material.transparent || o.material.colorWrite === false)))) { o.visible = false; this._visibilityCache.push(o); } });
+      };
+      composer.addPass(gtao);
+      composer.addPass(new T.UnrealBloomPass(new T.Vector2(1, 1), 0.25, 0.25, 2.2));
+      composer.addPass(new T.OutputPass());
+      // фон и дымка проходят через тон вместе с кадром — берём такой цвет, чтобы на экране он совпал с фоном сайта
+      const bgc = untone(new T.Color(C.bg));
+      scene.background = bgc; scene.fog.color.copy(bgc);
+    }
+    let root = null, ground = null, grid = null, bays = null, pick = [], hits = [], cur = {}, disposed = false, raf = 0, tween = null, anims = [], compiling = null;
 
     // общие материалы сцены: создаются один раз, освобождаются в dispose()
     // Standard — с отражениями (краска, стёкла, диски); Lambert — проще и быстрее (груз, земля, резина, рама)
     const shared = new Set(), std = o => { const m = new T.MeshStandardMaterial(o); shared.add(m); return m; };
     const lam = o => { const m = new T.MeshLambertMaterial(o); shared.add(m); return m; };
+    const phys = o => { const m = new T.MeshPhysicalMaterial(o); shared.add(m); return m; };
+    // краска: в высоком качестве — под лаком (второй слой бликов)
+    const paint = (color, roughness, metalness) => HQ ? phys({ color, roughness, metalness, clearcoat: 1, clearcoatRoughness: 0.07 }) : std({ color, roughness, metalness });
     const logoTex = [];
     const logoMat = file => {   // логотип — готовый файл из бренд-бука, без изменений
       const c = document.createElement('canvas'); c.width = 1052; c.height = 362;
@@ -242,13 +315,54 @@
       img.src = new URL('buraq-brand/logo/' + file, document.baseURI).href;
       return m;
     };
+    // картон коробок (высокое качество): светлый, чтобы цвет точки читался, края темнее, скотч сверху и на торцах,
+    // наклейка сбоку. Три плитки в одной текстуре: верх — скотч вдоль, торцы — скотч сверху вниз, бока и низ — без скотча
+    const boxTex = HQ ? (() => {
+      const S = 128, c = document.createElement('canvas'), x = c.getContext('2d');
+      c.width = S * 3; c.height = S;
+      let seed = 7;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      for (let t = 0; t < 3; t++) {
+        const x0 = t * S;
+        x.fillStyle = '#ebe3d5'; x.fillRect(x0, 0, S, S);
+        for (let i = 0; i < 900; i++) { const v = 214 + Math.floor(rnd() * 36); x.fillStyle = 'rgba(' + v + ',' + (v - 7) + ',' + (v - 18) + ',0.3)'; x.fillRect(x0 + rnd() * S, rnd() * S, 1 + rnd() * 3, 1); }   // волокна
+        [[0, 0, S, 10, 0, 0, 0, 10], [0, S - 10, S, 10, 0, S, 0, S - 10], [0, 0, 10, S, 0, 0, 10, 0], [S - 10, 0, 10, S, S, 0, S - 10, 0]].forEach(([a, b, w, hh, g0x, g0y, g1x, g1y]) => {
+          const g = x.createLinearGradient(x0 + g0x, g0y, x0 + g1x, g1y); g.addColorStop(0, 'rgba(90,76,58,0.28)'); g.addColorStop(1, 'rgba(90,76,58,0)');
+          x.fillStyle = g; x.fillRect(x0 + a, b, w, hh);
+        });
+        const tape = (tx, ty, tw, th) => { x.fillStyle = 'rgba(176,146,104,0.5)'; x.fillRect(tx, ty, tw, th); x.fillStyle = 'rgba(110,96,76,0.35)'; if (tw > th) { x.fillRect(tx, ty, tw, 1.5); x.fillRect(tx, ty + th - 1.5, tw, 1.5); } else { x.fillRect(tx, ty, 1.5, th); x.fillRect(tx + tw - 1.5, ty, 1.5, th); } };
+        if (t === 0) tape(x0, S * 0.41, S, S * 0.18);
+        if (t === 1) tape(x0 + S * 0.41, 0, S * 0.18, S * 0.36);
+        if (t === 2) { x.fillStyle = 'rgba(255,255,255,0.85)'; x.fillRect(x0 + S * 0.56, S * 0.6, S * 0.3, S * 0.2); x.fillStyle = 'rgba(70,70,70,0.45)'; [0.65, 0.7, 0.75].forEach(v => x.fillRect(x0 + S * 0.59, S * v, S * 0.22, 1.5)); }
+      }
+      const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      logoTex.push(tex);
+      return tex;
+    })() : null;
+    // номерной знак (высокое качество): белый, с тонкой рамкой; номер условный
+    const plateTex = HQ ? (() => {
+      const c = document.createElement('canvas'), x = c.getContext('2d'); c.width = 520; c.height = 112;
+      x.fillStyle = '#ffffff'; x.fillRect(0, 0, 520, 112);
+      x.strokeStyle = '#1d2126'; x.lineWidth = 6; x.strokeRect(5, 5, 510, 102); x.fillStyle = '#1d2126'; x.fillRect(118, 8, 4, 96);
+      x.font = '500 76px ' + font; x.textBaseline = 'middle'; x.textAlign = 'center';
+      x.fillText('01', 62, 60); x.fillText('A 777 BL', 312, 60);
+      const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace; logoTex.push(tex);
+      return tex;
+    })() : null;
     const M = {
-      white: std({ color: '#f3f5f8', roughness: 0.3, metalness: 0.1 }),
-      navy: std({ color: C.navy, roughness: 0.34, metalness: 0.15 }),
-      red: std({ color: C.red, roughness: 0.4 }),
-      glass: std({ color: '#15263c', roughness: 0.06, metalness: 0.4, envMapIntensity: 1.6 }),
-      rubber: lam({ color: '#1d2126' }),
-      rim: std({ color: '#cdd3da', roughness: 0.28, metalness: 0.75 }),
+      white: paint('#f3f5f8', 0.3, 0.1),
+      navy: paint(C.navy, 0.34, 0.15),
+      red: paint(C.red, 0.4, 0),
+      glass: HQ ? phys({ color: '#15263c', roughness: 0.04, metalness: 0.4, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.6 })
+        : std({ color: '#15263c', roughness: 0.06, metalness: 0.4, envMapIntensity: 1.6 }),
+      // боковые стёкла в высоком качестве — тонированные и прозрачные: окна прорезаны, за ними салон
+      side: HQ ? phys({ color: '#0d1826', roughness: 0.04, metalness: 0.1, transparent: true, opacity: 0.55, envMapIntensity: 0.9 }) : null,
+      rubber: HQ ? std({ color: '#1b1e22', roughness: 0.86, side: T.DoubleSide }) : lam({ color: '#1d2126' }),
+      rim: HQ ? std({ color: '#cdd3da', roughness: 0.2, metalness: 0.9, side: T.DoubleSide }) : std({ color: '#cdd3da', roughness: 0.28, metalness: 0.75 }),
+      chrome: std({ color: '#eef1f4', roughness: 0.1, metalness: 1 }),
+      inner: lam({ color: '#2a2f36' }),       // салон: панель, сиденья, руль
+      lens: phys({ color: '#f4f6f8', roughness: 0.05, clearcoat: 1 }),   // фонарь заднего хода — без свечения
+      plate: lam({ map: plateTex }),
       dark: lam({ color: '#2b3138' }),
       fender: lam({ color: '#262b31' }),
       chassis: lam({ color: '#39414a' }),
@@ -256,19 +370,20 @@
       floor: lam({ color: '#9aa3ad' }),
       board: lam({ color: '#eef1f5' }),
       panel: std({ color: '#dde7f3', roughness: 0.12, transparent: true, opacity: 0.12, depthWrite: false }),
-      head: std({ color: '#ffffff', emissive: '#fff3d6', emissiveIntensity: 0.9, roughness: 0.2 }),
-      tail: std({ color: C.red, emissive: C.red, emissiveIntensity: 0.5, roughness: 0.3 }),
-      cargo: lam({ color: '#ffffff' }),
-      cargoOut: lam({ color: '#ffffff', transparent: true, opacity: 0.5, depthWrite: false }),
+      head: HQ ? phys({ color: '#ffffff', emissive: '#fff3d6', emissiveIntensity: 5, roughness: 0.05, clearcoat: 1 }) : std({ color: '#ffffff', emissive: '#fff3d6', emissiveIntensity: 0.9, roughness: 0.2 }),
+      tail: std({ color: C.red, emissive: C.red, emissiveIntensity: HQ ? 12 : 0.5, roughness: 0.3 }),
+      cargo: lam({ color: '#ffffff', map: boxTex }),
+      cargoOut: lam({ color: '#ffffff', map: boxTex, transparent: true, opacity: 0.5, depthWrite: false }),
       cargoApprox: lam({ color: '#ffffff', transparent: true, opacity: 0.32, depthWrite: false }),   // точка без списка коробок — условный блок
       ground: lam({ color: C.bg }),
+      bay: lam({ color: C.grid1 }),             // разметка стоянки (высокое качество)
       logo: logoMat('buraq-logo.svg'),            // на белой кабине — основной
       logoWhite: logoMat('buraq-logo-white.svg')  // на синей — белый
     };
     // невидимый объём кузова: тень от машины с грузом одним блоком, а не от сотен коробок
     const shadowOnly = new T.MeshBasicMaterial({ colorWrite: false, depthWrite: false }); shared.add(shadowOnly);
     const pickMat = new T.MeshBasicMaterial(); shared.add(pickMat);   // невидимые коробки-«мишени» машин для нажатия
-    const noShadow = new Set([M.glass, M.logo, M.logoWhite, M.head, M.tail, M.red, M.panel]);
+    const noShadow = new Set([M.glass, M.side, M.logo, M.logoWhite, M.head, M.tail, M.red, M.panel, M.inner, M.plate, M.lens]);
     // слияние: все неподвижные детали всех машин — одна сетка на материал (десятки вызовов отрисовки вместо сотен)
     const m4b = new T.Matrix4();
     const flipWinding = geo => Object.values(geo.attributes).forEach(a => {   // зеркальная деталь: порядок вершин обратно
@@ -307,14 +422,17 @@
       anims.forEach(wait); if (tween) wait(tween);
       // устройство не успевает (кадр дольше 30 мс раз за разом) — чёткость ниже, движение плавнее
       if (last) { if (lag > 14) slow++; else if (slow) slow--; }
-      if (slow > 10 && dpr > 0.75) { dpr = Math.max(0.75, dpr - 0.25); renderer.setPixelRatio(dpr); slow = 0; }
+      // в высоком качестве сначала тени в щелях считаются только в покое, потом — ниже чёткость
+      if (slow > 10 && gtao && aoMove) { aoMove = false; slow = 0; }
+      else if (slow > 10 && dpr > 0.75) { dpr = Math.max(0.75, dpr - 0.25); renderer.setPixelRatio(dpr); if (composer) composer.setPixelRatio(dpr); slow = 0; }
       last = now;
       let moving = false;
       if (tween) moving = stepTween(now) || moving;
       if (anims.length) moving = stepAnims(now) || moving;
       if (controls.update()) moving = true;
+      if (gtao) gtao.enabled = aoMove || !moving;   // последний кадр движения — всегда с тенями в щелях
       frame();
-      renderer.render(scene, camera);
+      draw();
       raf = 0;
       if (moving && !disposed) raf = requestAnimationFrame(tick); else last = 0;
     };
@@ -325,7 +443,15 @@
       scene.fog.near = d * 1.6; scene.fog.far = d * 4.5;
       if (Math.abs(camera.near - d / 100) > d / 1000) { camera.near = d / 100; camera.far = d * 30; camera.updateProjectionMatrix(); }
     };
-    const render = () => { if (!disposed && !compiling && el) { frame(); renderer.render(scene, camera); } };
+    const draw = () => {
+      if (!composer) { renderer.render(scene, camera); return; }
+      composer.render();
+      const bg = scene.background;   // подписи (слой 1) — поверх готового кадра
+      scene.background = null; camera.layers.set(1); renderer.autoClear = false;
+      renderer.setRenderTarget(null); renderer.clearDepth(); renderer.render(scene, camera);
+      renderer.autoClear = true; camera.layers.set(0); scene.background = bg;
+    };
+    const render = () => { if (!disposed && !compiling && el) { if (gtao) gtao.enabled = true; frame(); draw(); } };
     // шейдеры собираются параллельно, без подвисания страницы; сцена проявляется, когда всё готово
     const compile = () => {
       const job = compiling = (renderer.compileAsync ? renderer.compileAsync(scene, camera) : Promise.resolve()).catch(() => {}).then(() => {
@@ -340,6 +466,7 @@
       if (!el) return;
       const w = el.clientWidth || 1, hh = el.clientHeight || 1;
       renderer.setSize(w, hh, false); cv.style.width = w + 'px'; cv.style.height = hh + 'px';
+      if (composer) { composer.setPixelRatio(dpr); composer.setSize(w, hh); }
       camera.aspect = w / hh; camera.updateProjectionMatrix(); render();
     };
     const ro = window.ResizeObserver ? new ResizeObserver(resize) : null;
@@ -359,6 +486,7 @@
       const tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
       const sp = new T.Sprite(new T.SpriteMaterial({ map: tex, depthTest: false, transparent: true, fog: false }));
       sp.scale.set(o.size * w / hgt, o.size, 1); sp.renderOrder = 10;
+      if (composer) sp.layers.set(1);
       return sp;
     };
 
@@ -408,6 +536,29 @@
       return true;
     }
 
+    // точёное колесо (высокое качество): шина с боковиной и тремя канавками протектора, диск-«тарелка» с гайками,
+    // отверстиями и колпаком; тёмный диск за «тарелкой» закрывает шину изнутри. Ось колеса — y (как у цилиндра), наружу — +y.
+    function hqWheel(r, tw) {
+      const h = tw / 2, ri = r * 0.64, gr = r - Math.min(0.014, r * 0.04), V = pts => pts.map(([a, b]) => new T.Vector2(a, b));
+      const tp = [[ri, -h * 0.8], [r * 0.8, -h], [r * 0.94, -h * 0.97], [r * 0.99, -h * 0.84], [r, -h * 0.7]];
+      [-0.42, 0, 0.42].forEach(c => tp.push([r, (c - 0.1) * h], [gr, (c - 0.07) * h], [gr, (c + 0.07) * h], [r, (c + 0.1) * h]));
+      tp.push([r, h * 0.7], [r * 0.99, h * 0.84], [r * 0.94, h * 0.97], [r * 0.8, h], [ri, h * 0.8]);
+      const rim = [new T.LatheGeometry(V([[r * 0.13, h * 0.7], [r * 0.2, h * 0.66], [r * 0.34, h * 0.42], [r * 0.5, h * 0.44], [r * 0.58, h * 0.62], [ri + 0.006, h * 0.72], [ri + 0.006, h * 0.3]]), 48)];
+      const hub = new T.CylinderGeometry(ri + 0.003, ri + 0.003, 0.02, 32), dark = [hub];
+      hub.translate(0, h * 0.1, 0);
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * Math.PI * 2, nut = new T.CylinderGeometry(r * 0.04, r * 0.04, 0.05, 6), hole = new T.CylinderGeometry(r * 0.065, r * 0.065, 0.01, 16);
+        nut.translate(Math.cos(a) * r * 0.25, h * 0.68, Math.sin(a) * r * 0.25); rim.push(nut);
+        hole.translate(Math.cos(a + Math.PI / 6) * r * 0.42, h * 0.45, Math.sin(a + Math.PI / 6) * r * 0.42); dark.push(hole);
+      }
+      const cap = new T.SphereGeometry(r * 0.14, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2); cap.translate(0, h * 0.66, 0); rim.push(cap);
+      const merge = list => { const g = T.mergeGeometries(list, false); list.forEach(x => x.dispose()); return g; };
+      return { tire: new T.LatheGeometry(V(tp), 56), rim: merge(rim), dark: merge(dark) };
+    }
+    // грани коробки по порядку BoxGeometry: +x, −x — торцы (скотч сверху вниз), +y — верх (скотч вдоль), −y, ±z — без скотча
+    const TILE = [1, 1, 0, 2, 2, 2];
+    const boxUV = geo => { const uv = geo.attributes.uv, per = uv.count / 6; for (let i = 0; i < uv.count; i++) uv.setX(i, (TILE[Math.floor(i / per)] + uv.getX(i)) / 3); uv.needsUpdate = true; return geo; };
+
     // одна машина с грузом; кабина к x<0, кузов от x=0 (стенка кабины) до x=L (двери), y — вверх, z — поперёк
     function truck(lay, o) {
       const g = new T.Group(), B = lay.body, L = B.l, W = B.w, H = B.h, kind = lay.kind, parts = [];
@@ -429,23 +580,27 @@
         for (let i = 0; i <= 14; i++) { const t = t0 + (Math.PI - 2 * t0) * i / 14; prof.push([ua + rr * Math.cos(t), vc + rr * Math.sin(t)]); }
       }
       const split = Math.max(cH * 0.2, vc + rr + 0.06);
-      const extr = (pts, mat) => {
-        const bt = 0.05, depth = CW - 2 * bt;
-        const geo = new T.ExtrudeGeometry(new T.Shape(pts.map(([u, v]) => new T.Vector2(X(u), Y(v)))), { depth, bevelEnabled: true, bevelThickness: bt, bevelSize: 0.05, bevelOffset: -0.05, bevelSegments: 3, curveSegments: 4 });
+      // боковые окна: сзади — от стойки, спереди — вдоль лобового стекла
+      const [w1, w2] = F.ws;
+      const uAt = v => Math.min(cab, w1[0] + (w2[0] - w1[0]) * (cH - v) / (cH - w2[1]));   // передний край окна — вдоль лобового стекла
+      const vb = F.belt + 0.04, vt = cH - 0.1, ur = kind === 'kamaz' ? cab * 0.42 : cab * 0.1;
+      const win = [[ur, vb], [ur, vt], [uAt(vt) - 0.08, vt], [uAt(vb) - 0.08, vb]], V2 = ([u, v]) => new T.Vector2(X(u), Y(v));
+      const extr = (pts, mat, holes) => {
+        const bt = 0.05, depth = CW - 2 * bt, sh = new T.Shape(pts.map(V2));
+        (holes || []).forEach(hp => sh.holes.push(new T.Shape(hp.map(V2))));
+        const geo = new T.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bt, bevelSize: 0.05, bevelOffset: -0.05, bevelSegments: 3, curveSegments: 4 });
         geo.translate(0, 0, -depth / 2);
         return add(new T.Mesh(geo, mat));
       };
       extr(clipV(prof, split, true), M.navy);
-      extr(clipV(prof, split, false), navyCab ? M.navy : M.white);
+      extr(clipV(prof, split, false), navyCab ? M.navy : M.white, HQ ? [win] : null);   // в высоком качестве окна прорезаны насквозь
       [-1, 1].forEach(sd => box(cab - 0.12, 0.035, 0.006, X(cab / 2), Y(split + 0.035), sd * (CW / 2 + 0.003), M.red, false));
       // стёкла
-      const [w1, w2] = F.ws, dx = X(w2[0]) - X(w1[0]), dy = w2[1] - w1[1], wl = Math.hypot(dx, dy);
+      const dx = X(w2[0]) - X(w1[0]), dy = w2[1] - w1[1], wl = Math.hypot(dx, dy);
       const ws = box(wl * 0.84, 0.012, CW * 0.84, X((w1[0] + w2[0]) / 2) + dy / wl * 0.006, Y((w1[1] + w2[1]) / 2) - dx / wl * 0.006, 0, M.glass, false);
       ws.rotation.z = Math.atan2(dy, dx);
-      const uAt = v => Math.min(cab, w1[0] + (w2[0] - w1[0]) * (cH - v) / (cH - w2[1]));   // передний край окна — вдоль лобового стекла
-      const vb = F.belt + 0.04, vt = cH - 0.1, ur = kind === 'kamaz' ? cab * 0.42 : cab * 0.1;
-      const wgeo = new T.ShapeGeometry(new T.Shape([[ur, vb], [ur, vt], [uAt(vt) - 0.08, vt], [uAt(vb) - 0.08, vb]].map(([u, v]) => new T.Vector2(X(u), Y(v)))));
-      [-1, 1].forEach(sd => { const m = new T.Mesh(wgeo, M.glass); m.position.z = sd * (CW / 2 + 0.002); m.scale.z = sd; add(m, false); });
+      const wgeo = new T.ShapeGeometry(new T.Shape(win.map(V2)));
+      [-1, 1].forEach(sd => { const m = new T.Mesh(wgeo, M.side || M.glass); m.position.z = sd * (CW / 2 + 0.002); m.scale.z = sd; add(m, false); });
       // логотип на дверях — пропорции 526 × 181, с полем вокруг
       const lw = Math.min(cab * 0.52, (F.belt - split) * 0.6 * 526 / 181), lh = lw * 181 / 526, lgeo = new T.PlaneGeometry(lw, lh);
       [-1, 1].forEach(sd => { const m = new T.Mesh(lgeo, navyCab ? M.logoWhite : M.logo); m.position.set(X(cab * 0.42), Y((split + F.belt) / 2 + 0.02), sd * (CW / 2 + 0.004)); if (sd < 0) m.rotation.y = Math.PI; add(m); });
@@ -455,33 +610,90 @@
       rbox(0.04, F.grille[1] - F.grille[0], CW * (navyCab ? 0.62 : 0.46), xf - 0.008, Y((F.grille[0] + F.grille[1]) / 2), 0, M.dark, 0.02, false);
       rbox(0.18, 0.2 + r * 0.1, CW + 0.04, xf - 0.04, CAB_Y + 0.03, 0, M.dark, 0.05);
       const mx = X(w2[0] - 0.06), my = Y(F.belt + cH * 0.08), mh = 0.18 + cH * 0.04;
+      const trim = HQ ? M.chrome : M.dark;   // кронштейны зеркал и ручки дверей
       [-1, 1].forEach(sd => {
-        box(0.03, 0.03, 0.16, mx, my, sd * (CW / 2 + 0.08), M.dark, false);
+        box(0.03, 0.03, 0.16, mx, my, sd * (CW / 2 + 0.08), trim, false);
         rbox(0.06, mh, 0.11, mx - 0.02, my, sd * (CW / 2 + 0.17), M.dark, 0.02);
-        box(0.1, 0.022, 0.02, X(ur + 0.14), Y(F.belt - 0.1), sd * (CW / 2 + 0.008), M.dark, false);
+        box(0.1, 0.022, 0.02, X(ur + 0.14), Y(F.belt - 0.1), sd * (CW / 2 + 0.008), trim, false);
       });
       if (kind === 'kamaz') {
         rbox(0.32, 0.05, CW * 0.94, X(w1[0]) - 0.12, Y(cH) - 0.03, 0, M.navy, 0.02);   // козырёк над стеклом
         [-1, 1].forEach(sd => [0.1, 0.36].forEach(v => rbox(0.42, 0.045, 0.14, X(cab * 0.26), Y(v), sd * (CW / 2 + 0.03), M.dark, 0.02)));   // ступеньки
       }
-      // рама, бак, колёса с дисками, крылья, брызговики
-      const xr0 = xf + 0.1, xr1 = L + 0.04;
-      [-1, 1].forEach(sd => box(xr1 - xr0, 0.14, 0.09, (xr0 + xr1) / 2, -0.19, sd * W * 0.28, M.chassis));
+      if (HQ) {
+        // мелкие детали: шов двери, дворники, салон за стёклами, решётка с хромовыми планками, хромовые ободки фар и
+        // ходовые огни, противотуманки и номер на бампере, стёкла зеркал
+        const seam = (pts, sd) => pts.forEach((p, i) => {
+          if (!i) return;
+          const a = pts[i - 1], du = p[0] - a[0], dv = p[1] - a[1], len = Math.hypot(du, dv);
+          if (len > 0.01) box(len + 0.009, 0.009, 0.004, X((a[0] + p[0]) / 2), Y((a[1] + p[1]) / 2), sd * (CW / 2 + 0.002), M.dark, false).rotation.z = Math.atan2(dv, -du);
+        });
+        // дверь: сзади — за окном, спереди — вдоль лобового стекла; над передним колесом низ двери обходит арку
+        const archTop = vc + rr + 0.03, archBack = ua - rr - 0.03, u0 = Math.max(0.05, ur - 0.06), vtop = cH - 0.06, uf = uAt(F.belt) - 0.05;
+        const overArch = d > 0 && uf > archBack && ua + rr > u0, notch = overArch && archBack > u0 + 0.2, vb0 = overArch && !notch ? archTop : 0.08;
+        const door = [[u0, vb0], [u0, vtop], [uAt(vtop) - 0.05, vtop], [uf, F.belt]].concat(notch ? [[uf, archTop], [archBack, archTop], [archBack, vb0]] : [[uf, vb0]], [[u0, vb0]]);
+        [-1, 1].forEach(sd => seam(door, sd));
+        const wpx = X(w1[0]) + dx * 0.9 + dy / wl * 0.02, wpy = Y(w1[1]) + dy * 0.9 - dx / wl * 0.02;
+        [-0.21, 0.19].forEach(zz => { box(0.014, 0.012, CW * 0.36, wpx, wpy, zz * CW, M.dark, false).rotation.z = Math.atan2(dy, dx); });
+        const uw = Math.min(w2[0], cab - 0.05);   // низ лобового стекла
+        box(0.36, 0.14, CW * 0.86, X(uw - 0.22), Y(F.belt - 0.05), 0, M.inner, false);   // панель приборов
+        [-1, 1].forEach(sd => {
+          rbox(0.42, 0.12, CW * 0.3, X(ur + 0.38), Y(F.belt - 0.42), sd * CW * 0.24, M.inner, 0.04);   // сиденье
+          rbox(0.1, 0.66, CW * 0.3, X(ur + 0.14), Y(F.belt - 0.06), sd * CW * 0.24, M.inner, 0.04);    // спинка
+          rbox(0.09, 0.17, CW * 0.17, X(ur + 0.13), Y(F.belt + 0.37), sd * CW * 0.24, M.inner, 0.04);   // подголовник
+        });
+        const sw = new T.Mesh(new T.TorusGeometry(0.17, 0.022, 8, 28), M.inner);   // руль — у водителя слева (+z)
+        sw.position.set(X(uw - 0.42), Y(F.belt + 0.04), CW * 0.24); sw.rotation.set(0, Math.PI / 2, 0); sw.rotateOnWorldAxis(new T.Vector3(0, 0, 1), 0.5); add(sw);
+        const gw = CW * (navyCab ? 0.62 : 0.46), g0 = F.grille[0], gh = F.grille[1] - g0, gx = xf - 0.03;
+        for (let i = 1; i <= 3; i++) box(0.012, 0.014, gw * 0.9, gx, Y(g0 + gh * i / 4), 0, M.chrome, false);
+        [g0 - 0.008, g0 + gh + 0.008].forEach(v => box(0.016, 0.018, gw + 0.03, gx, Y(v), 0, M.chrome, false));
+        [-1, 1].forEach(sd => box(0.016, gh + 0.034, 0.018, gx, Y(g0 + gh / 2), sd * (gw / 2 + 0.006), M.chrome, false));
+        const lhh = 0.11 + cH * 0.02, bx = xf - 0.133, by = CAB_Y + 0.03;
+        [-1, 1].forEach(sd => {
+          const lz = sd * (CW / 2 - lwid / 2 - 0.08);
+          rbox(0.04, lhh + 0.035, lwid + 0.035, xf - 0.004, Y(F.light), lz, M.chrome, 0.02);
+          box(0.012, 0.014, lwid * 0.85, xf - 0.006, Y(F.light) - lhh / 2 - 0.035, lz, M.head, false);
+          const fl = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, 0.02, 20), M.head); fl.rotation.z = Math.PI / 2; fl.position.set(bx, by, sd * CW * 0.36); add(fl);
+          box(0.006, mh * 0.82, 0.088, mx + 0.012, my, sd * (CW / 2 + 0.17), M.chrome, false);
+        });
+        const pl = new T.Mesh(new T.PlaneGeometry(0.52, 0.112), M.plate); pl.position.set(bx - 0.001, by, 0); pl.rotation.y = -Math.PI / 2; add(pl);
+        if (kind === 'kamaz') [-0.3, 0, 0.3].forEach(zz => box(0.05, 0.035, 0.09, X(cab - 0.3), Y(cH) + 0.035, zz, M.head, false));   // огни на крыше
+      }
+      // рама, бак, колёса с дисками, крылья, брызговики; у Kamaz в высоком качестве задние колёса спаренные
+      const xr0 = xf + 0.1, xr1 = L + 0.04, dualRear = HQ && kind === 'kamaz', twd = tw * 0.8;
+      const outerZ = dualRear ? track + (tw - twd) / 2 : track, innerZ = outerZ - twd - 0.03;
+      const span = ai => dualRear && ai > 0 ? { z: (outerZ + innerZ) / 2, w: 2 * twd + 0.03 } : { z: track, w: tw };
+      [-1, 1].forEach(sd => box(xr1 - xr0, 0.14, 0.09, (xr0 + xr1) / 2, -0.19, sd * W * (dualRear ? 0.18 : 0.28), M.chassis));
       if (kind !== 'labo') {
         const tr = kind === 'kamaz' ? 0.25 : 0.16, tl = kind === 'kamaz' ? 1.0 : 0.6, tank = new T.Mesh(new T.CylinderGeometry(tr, tr, tl, 24), M.rim);
         tank.rotation.z = Math.PI / 2; tank.position.set((fa + ra) / 2, -0.2 - tr, W / 2 - tr - 0.12); add(tank);
       }
-      const tireG = new T.CylinderGeometry(r, r, tw, 32), rimG = new T.CylinderGeometry(r * 0.6, r * 0.6, tw + 0.012, 24), hubG = new T.CylinderGeometry(r * 0.18, r * 0.24, tw + 0.05, 12);
-      axles.forEach(ax => [-1, 1].forEach(sd => [[tireG, M.rubber], [rimG, M.rim], [hubG, M.dark]].forEach(([geo, m], j) => {
-        const w = new T.Mesh(geo, m); w.rotation.x = Math.PI / 2; w.position.set(ax, wy, sd * track); add(w, j === 0 ? undefined : false);
-      })));
-      const fendG = new T.CylinderGeometry(r + 0.05, r + 0.05, tw + 0.08, 20, 1, true, Math.PI / 2, Math.PI);
-      axles.slice(1).forEach(ax => [-1, 1].forEach(sd => { const f = new T.Mesh(fendG, M.fender); f.rotation.x = Math.PI / 2; f.position.set(ax, wy, sd * track); add(f); }));
-      const lastAx = axles[axles.length - 1];
-      [-1, 1].forEach(sd => box(0.015, r * 1.1, tw, lastAx + r + 0.14, wy + r * 0.05, sd * track, M.fender));
-      // задний свет и отбойник
+      if (HQ) {
+        const wf = hqWheel(r, tw), wr = dualRear ? hqWheel(r, twd) : wf;
+        axles.forEach((ax, ai) => [-1, 1].forEach(sd => {
+          const put = (geo, m, z) => { const ms = new T.Mesh(geo, m); ms.rotation.x = sd * Math.PI / 2; ms.position.set(ax, wy, sd * z); add(ms); };
+          if (ai && dualRear) [[outerZ, true], [innerZ, false]].forEach(([z, out]) => { put(wr.tire, M.rubber, z); if (out) put(wr.rim, M.rim, z); put(wr.dark, M.dark, z); });
+          else { put(wf.tire, M.rubber, track); put(wf.rim, M.rim, track); put(wf.dark, M.dark, track); }
+        }));
+      } else {
+        const tireG = new T.CylinderGeometry(r, r, tw, 32), rimG = new T.CylinderGeometry(r * 0.6, r * 0.6, tw + 0.012, 24), hubG = new T.CylinderGeometry(r * 0.18, r * 0.24, tw + 0.05, 12);
+        axles.forEach(ax => [-1, 1].forEach(sd => [[tireG, M.rubber], [rimG, M.rim], [hubG, M.dark]].forEach(([geo, m]) => {
+          const w = new T.Mesh(geo, m); w.rotation.x = Math.PI / 2; w.position.set(ax, wy, sd * track); add(w);
+        })));
+      }
+      axles.slice(1).forEach(ax => [-1, 1].forEach(sd => {
+        const sp = span(axles.indexOf(ax)), f = new T.Mesh(new T.CylinderGeometry(r + 0.05, r + 0.05, sp.w + 0.08, 20, 1, true, Math.PI / 2, Math.PI), M.fender);
+        f.rotation.x = Math.PI / 2; f.position.set(ax, wy, sd * sp.z); add(f);
+      }));
+      const lastAx = axles[axles.length - 1], sl = span(axles.length - 1);
+      [-1, 1].forEach(sd => box(0.015, r * 1.1, sl.w, lastAx + r + 0.14, wy + r * 0.05, sd * sl.z, M.fender));
+      // задний свет и отбойник; в высоком качестве — фонарь заднего хода и номер
       [-1, 1].forEach(sd => rbox(0.05, 0.1, 0.22, L + 0.02, -0.17, sd * (W / 2 - 0.17), M.tail, 0.02, false));
       rbox(0.08, 0.08, W * 0.84, L - 0.03, wy + 0.06, 0, M.dark, 0.02);
+      if (HQ) {
+        [-1, 1].forEach(sd => rbox(0.05, 0.1, 0.07, L + 0.02, -0.17, sd * (W / 2 - 0.33), M.lens, 0.02, false));
+        const rp = new T.Mesh(new T.PlaneGeometry(0.52, 0.112), M.plate); rp.position.set(L + 0.045, wy + 0.17, 0); rp.rotation.y = Math.PI / 2; add(rp);
+      }
       if (B.flat) {
         // бортовой кузов: низкие борта, над ними — контур, до какой высоты уложен груз по объёму из «Тарифов»
         rbox(L, 0.1, W, L / 2, -0.05, 0, M.floor, 0.02);
@@ -500,6 +712,20 @@
         const ribs = Math.max(1, Math.round(L / 0.9));
         for (let i = 1; i < ribs; i++) [-1, 1].forEach(sd => box(0.03, H, 0.012, L * i / ribs, H / 2, sd * W / 2, M.frame, false));
         box(0.03, H, 0.03, L + 0.01, H / 2, 0, M.frame, false);
+        if (HQ) {
+          // двери фургона: петли, запорные штанги с упорами и ручками, верхние габариты; тонкая красная линия по низу борта
+          const xd = L + 0.035;
+          [-1, 1].forEach(sd => {
+            [0.15, 0.5, 0.85].forEach(t => box(0.035, 0.08, 0.06, xd - 0.005, H * t, sd * (W / 2 - 0.025), M.chrome, false));
+            [0.13, 0.36].forEach(zz => {
+              const bar = new T.Mesh(new T.CylinderGeometry(0.014, 0.014, H * 0.94, 10), M.chrome); bar.position.set(xd + 0.012, H / 2, sd * W * zz); add(bar);
+              [0.05, 0.95].forEach(t => box(0.03, 0.05, 0.05, xd + 0.006, H * t, sd * W * zz, M.chrome, false));
+              box(0.035, 0.14, 0.03, xd + 0.03, H * 0.42, sd * (W * zz + 0.045), M.chrome, false);
+            });
+            rbox(0.03, 0.045, 0.1, xd, H - 0.07, sd * (W / 2 - 0.1), M.tail, 0.01, false);
+            box(L - 0.1, 0.028, 0.004, L / 2, 0.075, sd * (W / 2 + 0.03), M.red, false);
+          });
+        }
       }
       // груз: коробки по пакинг-листу — своих размеров (точка без списка — полупрозрачный блок); без списка — кубики по объёму
       const hidden = p => o.step && p <= o.step;   // уже выгруженные точки
@@ -507,8 +733,9 @@
       lay.boxes.forEach(q => { const key = (q.over ? 'o' : 'i') + (q.approx ? 'a' : '') + '|' + q.sx.toFixed(3) + '|' + q.sy.toFixed(3) + '|' + q.sz.toFixed(3); if (!byGeo.has(key)) byGeo.set(key, []); byGeo.get(key).push(q); });
       byGeo.forEach(list => {
         const q0 = list[0], sz = lay.byBoxes ? [q0.sx, q0.sy, q0.sz].map(v => Math.max(0.02, v - 0.012)) : [q0.sx * 0.94, q0.sy * 0.94, q0.sz * 0.94];
-        const geo = o.labels ? new T.RoundedBoxGeometry(sz[0], sz[1], sz[2], 1, Math.min(sz[0], sz[1], sz[2]) * (lay.byBoxes ? 0.06 : 0.12))
-          : new T.BoxGeometry(sz[0], sz[1], sz[2]);   // в обзоре коробки мелкие — скругления не видны
+        const geo = o.labels || HQ ? new T.RoundedBoxGeometry(sz[0], sz[1], sz[2], 1, Math.min(sz[0], sz[1], sz[2]) * (lay.byBoxes ? 0.06 : 0.12))
+          : new T.BoxGeometry(sz[0], sz[1], sz[2]);   // в обзоре коробки мелкие — скругления не видны (кроме высокого качества)
+        if (HQ && !q0.approx) boxUV(geo);   // картон: скотч сверху и на торцах
         const im = new T.InstancedMesh(geo, q0.over ? M.cargoOut : q0.approx ? M.cargoApprox : M.cargo, list.length);
         im.frustumCulled = false;
         im.userData = { cells: list, pres: new Float32Array(list.length), drop: Math.min(1.2, Math.max(0.5, H * 0.6)), slide: Math.max(1.2, L * 0.35),
@@ -550,6 +777,7 @@
       }
       if (ground) { scene.remove(ground); ground.geometry.dispose(); ground = null; }
       if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); grid = null; }
+      if (bays) { scene.remove(bays); bays.children.forEach(m => m.geometry.dispose()); bays = null; }
       root = null; pick = []; hits = [];
     }
 
@@ -562,14 +790,14 @@
         const lay = it.lay, W = lay.body.w;
         const g = truck(lay, spec.mode === 'all' ? { title: it.title } : { labels: true, step: spec.step, sel: spec.sel });
         if (i) z += prevW / 2 + 1.6 + W / 2;
-        g.position.z = z; prevW = W; g.userData.idx = it.idx; g.updateMatrix();
+        g.position.z = -z; prevW = W; g.userData.idx = it.idx; g.updateMatrix();   // первый рейс — ближе к камере: дальние машины видны над ближними
         root.add(g); pick.push(g);
         minY = Math.min(minY, wheelY(lay.body.wheel) - lay.body.wheel);
         const b = g.userData.bounds, hb = new T.Mesh(new T.BoxGeometry(b.x1 - b.x0, b.y1 - b.y0, b.w), pickMat);
-        hb.position.set((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, z); hb.visible = false; hb.userData.idx = it.idx; root.add(hb); hits.push(hb);
+        hb.position.set((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, -z); hb.visible = false; hb.userData.idx = it.idx; root.add(hb); hits.push(hb);
       });
       mergeParts(pick);
-      root.position.z = -z / 2;
+      root.position.z = z / 2;
       root.updateMatrixWorld(true);
       renderer.shadowMap.needsUpdate = true;
       if (items.length) {
@@ -578,7 +806,21 @@
         ground = new T.Mesh(new T.CircleGeometry(size * 4, 72), M.ground);
         ground.rotation.x = -Math.PI / 2; ground.position.set(c.x, minY, c.z); ground.receiveShadow = true; scene.add(ground);
         grid = new T.GridHelper(size, size, C.grid1, C.grid2);
-        grid.material.transparent = true; grid.material.opacity = 0.6; grid.position.set(c.x, minY + 0.003, c.z); scene.add(grid);
+        grid.material.transparent = true; grid.material.opacity = HQ ? 0.35 : 0.6; grid.position.set(c.x, minY + 0.003, c.z); scene.add(grid);
+        if (HQ) {
+          // разметка стоянки под каждой машиной: тонкие линии по бокам и спереди. Тени в щелях — только на земле
+          // вокруг машин: у горизонта они дают тёмную полосу
+          bays = new T.Group();
+          ground.userData.noAO = true;
+          const near = new T.Mesh(new T.CircleGeometry(size * 0.8, 72), M.ground);
+          near.rotation.x = -Math.PI / 2; near.position.set(c.x, minY + 0.002, c.z); near.receiveShadow = true; bays.add(near);
+          const line = (sx, sz, x, zz) => { const m = new T.Mesh(new T.PlaneGeometry(sx, sz), M.bay); m.rotation.x = -Math.PI / 2; m.position.set(x, minY + 0.006, zz); m.receiveShadow = true; bays.add(m); };
+          pick.forEach(g => {
+            const b = g.userData.bounds, z0 = g.position.z + root.position.z, x0 = b.x0 - 0.45, x1 = b.x1 + 0.9, hw = b.w / 2 + 0.3;
+            [-1, 1].forEach(sd => line(x1 - x0, 0.06, (x0 + x1) / 2, z0 + sd * hw)); line(0.06, hw * 2 + 0.06, x0, z0);
+          });
+          scene.add(bays);
+        }
         // солнце почти сверху, чуть из-за машин: мягкие тени ложатся под машины и к зрителю
         sun.position.set(c.x - rad * 0.35, c.y + rad * 1.9, c.z - rad * 0.45); sun.target.position.copy(c); sun.target.updateMatrixWorld();
         fill.position.set(c.x + rad, c.y + rad * 0.8, c.z + rad * 1.2); fill.target.position.copy(c); fill.target.updateMatrixWorld();
@@ -623,9 +865,31 @@
     function fit(view, how) {
       if (!root) return;
       root.updateMatrixWorld(true);
-      const bb = new T.Box3().setFromObject(root), c = bb.getCenter(new T.Vector3()), r = Math.max(bb.getSize(new T.Vector3()).length() / 2, 0.8);
-      const fov = camera.fov * Math.PI / 180, dist = r / Math.sin(fov / 2) / Math.min(1, Math.max(camera.aspect, 0.55)) * 0.92;
-      const d = DIRS[view] || DIRS['3d'], dir = new T.Vector3(d[0], d[1], d[2]).normalize(), to = c.clone().addScaledVector(dir, dist);
+      // кадр — по каждой машине отдельно (её габарит и груз, в том числе за дверями) и верху подписей: рамка всей
+      // сцены у ряда машин по диагонали оставляет пустые углы, и машины выходят мелкими и смещёнными вниз
+      const d = DIRS[view] || DIRS['3d'], dir = new T.Vector3(d[0], d[1], d[2]).normalize();
+      const fwd = dir.clone().negate(), right = new T.Vector3().crossVectors(fwd, new T.Vector3(0, 1, 0)).normalize(), up = new T.Vector3().crossVectors(right, fwd);
+      const pts = [], ob3 = new T.Box3(), corners = (bx, m) => { for (let i = 0; i < 8; i++) pts.push(new T.Vector3(i & 1 ? bx.max.x : bx.min.x, i & 2 ? bx.max.y : bx.min.y, i & 4 ? bx.max.z : bx.min.z).applyMatrix4(m)); };
+      pick.forEach(g => {
+        const b = g.userData.bounds;
+        corners(ob3.set(new T.Vector3(b.x0, b.y0, -b.w / 2), new T.Vector3(b.x1, b.y1, b.w / 2)), g.matrixWorld);
+        g.userData.cargo.forEach(im => { im.computeBoundingBox(); if (!im.boundingBox.isEmpty()) corners(im.boundingBox, im.matrixWorld); });
+        g.traverse(ob => { if (ob.isSprite) { const pv = ob.getWorldPosition(new T.Vector3()).addScaledVector(up, ob.scale.y / 2); [-1, 1].forEach(k => pts.push(pv.clone().addScaledVector(right, k * ob.scale.x / 2))); } });   // подпись повёрнута к камере
+      });
+      if (!pts.length) return;
+      const tv = Math.tan(camera.fov * Math.PI / 360), th = tv * camera.aspect, rel = new T.Vector3();
+      const c = new T.Box3().setFromPoints(pts).getCenter(new T.Vector3());
+      // расстояние, при котором все точки в кадре; центр сдвигается к середине их проекции (три шага)
+      const need = () => pts.reduce((a, p) => { rel.subVectors(p, c); const z = rel.dot(fwd); return Math.max(a, Math.abs(rel.dot(right)) / th - z, Math.abs(rel.dot(up)) / tv - z); }, 1);
+      let dist = need();
+      for (let it = 0; it < 3; it++) {
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+        pts.forEach(p => { rel.subVectors(p, c); const k = dist + rel.dot(fwd), sx = rel.dot(right) / (k * th), sy = rel.dot(up) / (k * tv); x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy); });
+        c.addScaledVector(right, (x0 + x1) / 2 * dist * th).addScaledVector(up, (y0 + y1) / 2 * dist * tv);
+        dist = need();
+      }
+      dist *= pick.length > 1 ? 1.3 : 1.12;   // поле вокруг; у нескольких машин шире — ближняя не закрывает остальные
+      const to = c.clone().addScaledVector(dir, dist);
       if (how === 'jump' || still.matches) {
         tween = null; camera.position.copy(to); controls.target.copy(c); controls.update(); render(); return;
       }
@@ -660,6 +924,7 @@
     cv.addEventListener('pointerdown', onDown); cv.addEventListener('pointerup', onUp);
 
     return {
+      quality: HQ ? 'hq' : 'std',
       // sceneKey — какие машины на сцене; шаг разгрузки и выбранная точка меняются без пересборки
       show(spec) {
         if (disposed) return;
@@ -691,10 +956,11 @@
         if (ro) ro.disconnect(); else window.removeEventListener('resize', resize);
         cv.removeEventListener('pointerdown', onDown); cv.removeEventListener('pointerup', onUp);
         shared.forEach(m => m.dispose()); logoTex.forEach(t => t.dispose()); envTex.dispose();
+        if (composer) { composer.passes.forEach(ps => { if (ps.dispose) ps.dispose(); }); composer.dispose(); }
         controls.dispose(); renderer.dispose(); if (renderer.forceContextLoss) renderer.forceContextLoss(); cv.remove();
       }
     };
   }
 
-  window.LogiViz = { layout, packBoxes, bodyOf, colorOf, isLight: light, PALETTE, load, ready: () => !!T, createView };
+  window.LogiViz = { layout, packBoxes, bodyOf, colorOf, isLight: light, PALETTE, load, ready: () => !!T, createView, autoQuality };
 })();

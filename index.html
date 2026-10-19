@@ -1353,6 +1353,7 @@
           <div ref="{{ vizRef }}" style="position:absolute;inset:0"></div>
           <div class="viz-views" style="position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap">
             <sc-for list="{{ vizViews }}" as="o"><button sc-camel-on-click="{{ o.go }}" style="border:1px solid var(--color-divider);padding:6px 10px;font:inherit;font-size:13px;cursor:pointer;background:{{ o.bg }};color:{{ o.fg }}">{{ o.l }}</button></sc-for>
+            <button class="viz-q" sc-camel-on-click="{{ vizQGo }}" title="{{ vizQTip }}" aria-pressed="{{ vizQOn }}" style="border:1px solid var(--color-divider);padding:6px 10px;font:inherit;font-size:13px;cursor:pointer;background:var(--color-bg);color:var(--color-text);margin-left:6px">{{ vizQL }}</button>
           </div>
           <sc-if value="{{ vizHasMsg }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:14px;color:var(--color-neutral-800)">{{ vizMsg }}</div></sc-if>
           <div class="viz-hint" style="position:absolute;bottom:8px;left:12px;right:12px;font-size:11px;color:var(--color-neutral-700);pointer-events:none">{{ vizHint }}</div>
@@ -2031,6 +2032,7 @@ class Component extends DCLogic {
     mapDate: 'all', mapPlan: 'none', mapBase: (() => { try { return localStorage.getItem('logi-map-base') || 'yandex'; } catch (e) { return 'yandex'; } })(), planDate: '', planDate2: '', planKey: 'A', planC: (() => { try { return localStorage.getItem('logi-plan-c') === '1'; } catch (e) { return false; } })(), dialog: null,
     planEdits: (() => { try { const v = JSON.parse(localStorage.getItem('logi-plan-edits') || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } })(), planHi: null,
     vizTrip: 'all', vizStep: 0, vizSel: null, vizView: '3d', vizErr: '',
+    vizQ: (() => { try { const v = localStorage.getItem('logi-viz-quality'); return v === 'hq' || v === 'std' ? v : ''; } catch (e) { return ''; } })(),   // качество 3D: '' — само
     calc: { kind: 'gazel', nin: 3, nout: 0, kg: 1200, cbm: 8 },
     dvTab: 'day', dvDate: '', dvPeriod: '7', dvTruck: 'all', dvRes: 'all', dvMsg: null, dvBusy: false, dvSet: null, dvCarryTo: '',
     // вкладка и подвкладка — сразу (партии — в setReady, когда известны даты)
@@ -4221,6 +4223,7 @@ class Component extends DCLogic {
     if (!this.viz) {
       try {
         this.viz = V.createView(el, {
+          quality: st.vizQ || undefined,   // высокое или обычное; не выбрано — по устройству (LogiViz.autoQuality)
           onPickPoint: n => this.setState({ vizSel: n }),
           onPickTrip: i => this.setState({ vizTrip: i, vizStep: 0, vizSel: null })
         });
@@ -5366,6 +5369,16 @@ class Component extends DCLogic {
         return { l: 'План ' + k, go: () => this.setState({ planKey: k, vizTrip: 'all', vizStep: 0, vizSel: null }), bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)' }; });
       out.vizViews = [['3d', '3D'], ['side', 'Сбоку'], ['top', 'Сверху'], ['back', 'Сзади']].map(([k, l]) => ({ l, go: () => this.setState(s => ({ vizView: k, vizViewN: (s.vizViewN || 0) + 1 })),
         bg: st.vizView === k ? 'var(--color-accent)' : 'var(--color-bg)', fg: st.vizView === k ? 'var(--color-bg)' : 'var(--color-text)' }));
+      // качество 3D: переключение пересоздаёт сцену (сглаживание и эффекты задаются при создании)
+      const vq = this.viz ? this.viz.quality : st.vizQ || (V ? V.autoQuality() : 'std');
+      Object.assign(out, { vizQL: vq === 'hq' ? 'Качество: высокое' : 'Качество: обычное', vizQOn: vq === 'hq' ? 'true' : 'false',
+        vizQTip: 'Высокое — лак и хром, детали машин, картон коробок, мягкие тени и свечение фар (для мощного компьютера). Обычное — быстрее, для телефона',
+        vizQGo: () => {
+          const next = vq === 'hq' ? 'std' : 'hq';
+          try { localStorage.setItem('logi-viz-quality', next); } catch (e) {}
+          if (this.viz) { this.viz.dispose(); this.viz = null; this.vizEl = null; }
+          this.setState({ vizQ: next });
+        } });
       out.vizMsg = st.vizErr || (!V ? 'Загружаю 3D…' : !V.ready() ? 'Загружаю 3D…' : !M ? 'Нет партий' : !M.lays.length ? 'В этом плане нет рейсов: нет отгрузок с координатами' : '');
       out.vizHasMsg = !!out.vizMsg;
       if (M) {
