@@ -27,7 +27,8 @@ jobs:
       - name: Collect site files
         run: |
           mkdir _site
-          cp -r index.html driver.html manifest.webmanifest sw.js css js fonts icons data learn _site/
+          # всё, что service worker кладёт в кэш (SHELL в sw.js), должно попасть на сайт: проверяет tests/deploy.test.mjs
+          cp -r index.html driver.html manifest.webmanifest sw.js css js fonts icons img data learn _site/
           # логотипы из бренд-бука — только те, что нужны сайту
           mkdir -p _site/buraq-brand/logo
           cp buraq-brand/logo/*.svg _site/buraq-brand/logo/

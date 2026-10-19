@@ -68,10 +68,14 @@ const SHELL = [
   'icons/icon-maskable-512.png'
 ];
 
+// Страница, скрипты, стили и данные — обязательны: без любого из них новая сборка не ставится (иначе страница встретит
+// чужие скрипты). Картинки, шрифты и значки — нет: недостающая фотография не должна навсегда оставлять у всех старую
+// версию сайта (так было, пока фото автопарка не выкладывались).
+const REQUIRED = u => /\.(html|js|css|json|webmanifest)$/.test(u);
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE)
-      .then(cache => cache.addAll(SHELL.map(u => new Request(u, { cache: 'reload' }))))
+      .then(cache => Promise.all(SHELL.map(u => cache.add(new Request(u, { cache: 'reload' })).catch(e => { if (REQUIRED(u)) throw e; }))))
       .then(() => self.skipWaiting())
   );
 });

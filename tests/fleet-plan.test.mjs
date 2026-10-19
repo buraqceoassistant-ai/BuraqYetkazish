@@ -170,17 +170,18 @@ test('мелкий груз до 3 м³ — на Shineray, Gazel берёт то
   assert.equal(P3.A.smallAll, 0);
 });
 
-test('мелкого больше, чем Shineray успевает за день: самые полные рейсы — Shineray, остальное мелкое — на Gazel попутно', () => {
-  // четыре стороны света: в каждой 4 мелких по 1,5 м³ (24 м³ мелкого) и 3 больших по 5 м³; Shineray — 2 рейса по 7 м³
+test('мелкого больше, чем Shineray успевает за «Рейсов на машину в день»: дополнительные рейсы Shineray, Gazel мелкое не берёт', () => {
+  // четыре стороны света: в каждой 4 мелких по 1,5 м³ (24 м³ мелкого) и 3 больших по 5 м³; Shineray — 7 м³, 2 рейса в день
   const st = ['N', 'S', 'E', 'W'].flatMap((k, i) => { const [dy, dx] = [[0.07, 0], [-0.07, 0], [0, 0.09], [0, -0.09]][i]; return small(k + 'S', 4, 1.5, dy, dx).concat(cluster(k + 'B', 3, 5, dy + 0.004, dx + 0.004)); });
   const P = E.buildPlans(st, { ...OWN(), smallM3: 3 });
   for (const k of ['A', 'B']) {
     const sh = P[k].trips.filter(t => t.kind === 'changan');
-    assert.equal(sh.length, 2, k + ': Shineray делает оба рейса: ' + kindsOf(P, k));
-    assert.ok(sh.every(t => t.stops.length === 4 && t.stops.every(s => s.cbm < 3)), k + ': в рейсе Shineray — 4 мелкие отгрузки (6 м³ из 7): ' + kindsOf(P, k));
-    assert.equal(P[k].smallAll, 16); assert.equal(P[k].sum.smallOn, 8, k + ': 8 мелких — на Gazel попутно');
+    assert.equal(sh.length, 4, k + ': Shineray — 4 рейса (2 сверх нормы): ' + kindsOf(P, k));
+    assert.ok(sh.every(t => t.stops.length === 4 && t.stops.every(s => s.cbm < 3) && t.carName === 'Shineray'), k + ': в каждом рейсе Shineray — 4 мелкие отгрузки');
+    assert.deepEqual(sh.map(t => t.round).sort(), [1, 2, 3, 4], k + ': рейсы 1–4 одной машины, без «нет машины»');
+    assert.equal(P[k].smallAll, 16); assert.equal(P[k].sum.smallOn, 0, k + ': в Gazel мелкого нет');
+    assert.ok(P[k].trips.filter(t => t.kind === 'gazel').every(t => t.stops.every(s => s.cbm >= 3)), k + ': Gazel — только от 3 м³: ' + kindsOf(P, k));
     assert.ok(P[k].trips.every(t => !t.noVehicle && !t.over && t.cbm <= t.vehicle.m3 + 1e-6), k + ': все рейсы — в кузов своей машины');
-    assert.ok(P[k].trips.filter(t => t.kind === 'gazel').every(t => t.cbm >= 3), k + ': Gazel не едет с грузом меньше 3 м³');
   }
 });
 

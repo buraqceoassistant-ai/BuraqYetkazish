@@ -2631,8 +2631,8 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "размеры вне 1–500 см: строки {s} — проверьте единицы":"o‘lchamlar 1–500 sm dan tashqarida: {s}-qatorlar — birliklarni tekshiring",
 "шапка без названий столбцов — размеры и число коробок найдены по объёму":"sarlavhada ustun nomlari yo‘q — o‘lchamlar va qutilar soni hajm bo‘yicha topildi",
 "Мелкий груз — на Changan / Shineray, до":"Mayda yuk Changan / Shineray’da — chegara",
-"Отгрузку меньше этого объёма в планах A и B везёт Changan / Shineray, Gazel — от этого объёма.":"A va B rejalarda shu hajmdan kichik jo‘natmani Changan / Shineray olib boradi, Gazel — shu hajmdan boshlab.",
-"Не хватает рейсов маленькой машины — остальное мелкое едет на Gazel попутно.":"Kichik mashinaning reyslari yetmasa — qolgan mayda yuk Gazel’da yo‘l-yo‘lakay ketadi.",
+"Отгрузку меньше этого объёма в планах A и B везёт только Changan / Shineray, Gazel берёт груз от этого объёма.":"A va B rejalarda shu hajmdan kichik jo‘natmani faqat Changan / Shineray olib boradi, Gazel yukni shu hajmdan boshlab oladi.",
+"Мелкого больше, чем на «Рейсов на машину в день», — Shineray делает дополнительные рейсы.":"Mayda yuk «Mashinaga kuniga reyslar»dan ko‘p bo‘lsa — Shineray qo‘shimcha reyslar qiladi.",
 "0 — без правила":"0 — qoidasiz",
 "Мелкий груз (меньше {n} м³) — на {s}, Gazel — от {n2} м³.":"Mayda yuk ({n} m³ dan kichik) — {s}’da, Gazel — {n2} m³ dan boshlab.",
 "Мелкий груз (меньше {n} м³): {s} везёт {n2} из {n3} отгрузок.":"Mayda yuk ({n} m³ dan kichik): {n3} ta jo‘natmadan {n2} tasini {s} olib boradi.",
@@ -2650,4 +2650,10 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Пока мелкий груз (меньше {n} м³) везёт Gazel.":"Hozircha mayda yukni ({n} m³ dan kichik) Gazel olib boradi.",
 "Рейсов {s} нет: в партии нет мелких отгрузок (меньше {n} м³), которые помещаются в {s2}, а остальной груз дешевле везут Gazel.":"{s} reyslari yo‘q: partiyada {s2}’ga sig‘adigan mayda jo‘natmalar ({n} m³ dan kichik) yo‘q, qolgan yukni Gazel arzonroq olib boradi.",
 "Рейсов {s} нет: по тарифам дешевле везут Gazel.":"{s} reyslari yo‘q: tariflar bo‘yicha Gazel arzonroq olib boradi.",
-"Чтобы мелкое возил {s}, задайте «Мелкий груз — на Changan / Shineray, до» во вкладке «Тарифы» (например, {n} м³).":"Mayda yukni {s} olib borishi uchun «Tariflar» bo‘limida «Mayda yuk Changan / Shineray’da — chegara» ni belgilang (masalan, {n} m³)."};
+"Чтобы мелкое возил {s}, задайте «Мелкий груз — на Changan / Shineray, до» во вкладке «Тарифы» (например, {n} м³).":"Mayda yukni {s} olib borishi uchun «Tariflar» bo‘limida «Mayda yuk Changan / Shineray’da — chegara» ni belgilang (masalan, {n} m³).",
+"{s} — {n} рейс, больше «Рейсов на машину в день» ({n2}): мелкий груз (меньше {n3} м³) Gazel не берёт, его возит только {s2}.":"{s} — {n} reys, «Mashinaga kuniga reyslar»dan ({n2}) ko‘p: mayda yukni ({n3} m³ dan kichik) Gazel olmaydi, uni faqat {s2} olib boradi.",
+"{s} — {n} рейса, больше «Рейсов на машину в день» ({n2}): мелкий груз (меньше {n3} м³) Gazel не берёт, его возит только {s2}.":"{s} — {n} reys, «Mashinaga kuniga reyslar»dan ({n2}) ko‘p: mayda yukni ({n3} m³ dan kichik) Gazel olmaydi, uni faqat {s2} olib boradi.",
+"{s} — {n} рейсов, больше «Рейсов на машину в день» ({n2}): мелкий груз (меньше {n3} м³) Gazel не берёт, его возит только {s2}.":"{s} — {n} reys, «Mashinaga kuniga reyslar»dan ({n2}) ko‘p: mayda yukni ({n3} m³ dan kichik) Gazel olmaydi, uni faqat {s2} olib boradi.",
+"Поздно: {s} возвращается в {t}.":"Kech: {s} soat {t} da qaytadi.",
+"Поздно: {s} возвращается в {t} следующего дня.":"Kech: {s} ertasi kuni soat {t} da qaytadi.",
+"Разгрузка на точке — {n} мин, рейс из {n2} точ. — проверьте это число («Тарифы и планы» → «Правила планов»).":"Nuqtada tushirish — {n} daqiqa, reysda {n2} ta nuqta — bu sonni tekshiring («Tariflar va rejalar» → «Rejalar qoidalari»)."};
