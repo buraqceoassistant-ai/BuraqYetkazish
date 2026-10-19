@@ -662,7 +662,9 @@
   // ждут её второго рейса, если груз помещается в две маленькие. join = false (план X: район — одна машина) — в чужой
   // рейс не добавляем и не делим. С правилом мелкого груза (smallTo) Changan / Shineray сразу делает все свои рейсы, а рейсы
   // только с мелким грузом — все, даже сверх «Рейсов на машину в день»: мелкое возит он, а не Gazel. Два рейса одного класса
-  // можно слить в один рейс той же машины.
+  // можно слить в один рейс той же машины. С правилом мелкого груза раздача не кладёт в Gazel больше мелких отгрузок, чем
+  // было: мелкое не уходит с Changan к Gazel, которая везёт тяжёлую отгрузку меньше порога (штраф «Gazel меньше порога»
+  // такая Gazel платит и без мелкого), и не уходит, когда машин не хватает.
   const clsOf = v => v.cls || v.kind;
   function fitFleet(trips, fleet, per, maxStops, S, depot, join) {
     const rule = fleet.length && fleet[0].smallTo > 0, smallRuns = rule ? trips.filter(t => !t.over && smallCar(t.v) && t.stops.every(s => isSmall(s, fleet[0]))).length : 0;
@@ -681,17 +683,18 @@
         trips.forEach((t, i) => {
           if (t.over || !over.includes(clsOf(t.v))) return;
           const c1 = { ...c, [clsOf(t.v)]: c[clsOf(t.v)] - 1 }, free = freeOf(c1).filter(k => k !== clsOf(t.v));
+          const so = x => (x && x.smallOn) || 0, worse = (add, drop) => rule && add.reduce((a, x) => a + so(x), 0) > drop.reduce((a, x) => a + so(x), 0);
           const alt = free.length && ev(t.stops, free);
-          if (alt && (!best || alt.val - t.val < best.d - EPS)) best = { drop: [i], add: [alt], d: alt.val - t.val };
+          if (alt && !worse([alt], [t]) && (!best || alt.val - t.val < best.d - EPS)) best = { drop: [i], add: [alt], d: alt.val - t.val };
           if (!join) return;
           trips.forEach((u, j) => {
             if (j === i || u.over) return;
             const m = ev(u.stops.concat(t.stops), [...new Set([clsOf(u.v)].concat(free))]);
-            if (m && (clsOf(m.v) !== clsOf(t.v) || clsOf(u.v) === clsOf(t.v)) && m.val - u.val - t.val < (best ? best.d : Infinity) - EPS) best = { drop: [i, j], add: [m], d: m.val - u.val - t.val };
+            if (m && (clsOf(m.v) !== clsOf(t.v) || clsOf(u.v) === clsOf(t.v)) && !worse([m], [t, u]) && m.val - u.val - t.val < (best ? best.d : Infinity) - EPS) best = { drop: [i, j], add: [m], d: m.val - u.val - t.val };
           });
           // рейс не помещается ни в одну свободную машину целиком — делим на несколько рейсов свободных машин
           const parts = !alt && free.length && split(t.stops, free);
-          if (parts && within(c1, parts)) { const d = parts.reduce((a, p) => a + p.val, 0) - t.val; if (!best || d < best.d - EPS) best = { drop: [i], add: parts, d }; }
+          if (parts && within(c1, parts) && !worse(parts, [t])) { const d = parts.reduce((a, p) => a + p.val, 0) - t.val; if (!best || d < best.d - EPS) best = { drop: [i], add: parts, d }; }
         });
         if (!best) break;   // этот круг не разгрузить — разрешаем следующий
         trips = trips.filter((_, i) => !best.drop.includes(i)).concat(best.add);

@@ -185,6 +185,24 @@ test('мелкого больше, чем Shineray успевает за «Ре�
   }
 });
 
+test('мелкое не уходит с Shineray к тяжёлой отгрузке на Gazel, когда раздача машин освобождает Gazel', () => {
+  // 4,55 м³ / 1977 кг — меньше порога, но тяжелее Shineray: её везёт Gazel; два больших рейса сначала попали на одну
+  // Gazel, и раздача машин клала мелкую 1,46 м³ к 4,55 м³ (Gazel без штрафа «меньше порога»), снимая её с Shineray
+  const st = [{ id: 'a', bl: 'BL-A', cbm: 7.11, kg: 2942, places: 21, lat: 41.4677, lon: 69.4582, zone: 'out' },
+    { id: 'b', bl: 'BL-B', cbm: 4.55, kg: 1977, places: 14, lat: 41.1695, lon: 69.4960, zone: 'out' },
+    { id: 'c', bl: 'BL-C', cbm: 1.46, kg: 332, places: 4, lat: 41.2155, lon: 69.1993, zone: 'in' }];
+  const S1 = { ...S, depotLat: 41.383782, depotLon: 69.233623, tripsPerVehicle: 1, smallM3: 5, fillPct: 75, aMaxStops: 99, bcMaxStops: 8, gazelBase: 450000, gazelHeavy: null,
+    gazelPtIn: 100000, gazelPtOut: 150000, baseIncludesPts: 0, changanM3: 8, changanKg: 1500, changanBase: 250000, changanPt: 50000, changanBaseIncludesPts: 1, changanCount: 2, gazelCount: 4, cTrucks: 0,
+    vehicles: [veh('Gazel Umid', { m3: 18, kg: 3500 }), veh('Gazel Saidakmal', { m3: 23, kg: 3500 }), veh('Gazel Nuriddin', { m3: 17, kg: 3500 }), veh('Gazel Katta', { m3: 35, kg: 4000 }), veh('Shineray', { m3: 8, kg: 1500 })] };
+  const P = E.buildPlans(st, S1);
+  for (const k of ['A', 'B']) {
+    const at = id => P[k].trips.find(t => t.stops.some(s => s.id === id));
+    assert.equal(at('c').carName, 'Shineray', k + ': ' + kindsOf(P, k));
+    assert.equal(at('b').kind, 'gazel'); assert.equal(P[k].sum.smallOn, 0);
+    assert.ok(P[k].trips.every(t => !t.noVehicle && !t.over), k + ': без «нет машины»');
+  }
+});
+
 test('правило мелкого груза не действует: порог 0, у Shineray нет тарифа, Shineray нет; план X — районами, как раньше', () => {
   const st = small('NS', 3, 1, 0.06, 0).concat(cluster('NB', 4, 5, 0.065, 0.004));
   const base = E.buildPlans(JSON.parse(JSON.stringify(st)), OWN());
