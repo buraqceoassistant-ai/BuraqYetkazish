@@ -214,3 +214,20 @@ test('правило мелкого груза не действует: поро
   const X = E.buildPlans(JSON.parse(JSON.stringify(st)), { ...OWN(), smallM3: 3 }).X;
   assert.equal(X.smallTo, 0); assert.deepEqual(X.trips.map(t => t.kind), base.X.trips.map(t => t.kind));
 });
+
+test('рейс большой машины делится на две разные машины поменьше — большая свободна для груза, который возит только она', () => {
+  // Katta (35 м³ / 4000 кг) — одна, рейс в день один; 26 м³ везёт только она. 14 и 13 м³ рядом: вместе (27 м³) — тоже только
+  // Katta; раздача машин делит такой рейс на две Gazel поменьше — разные машины, а не две в одну
+  const st = [{ id: 'a', bl: 'BL-A', cbm: 26, kg: 2700, places: 10, lat: 41.36, lon: 69.20, zone: 'in' },
+    { id: 'b', bl: 'BL-B', cbm: 14, kg: 3000, places: 10, lat: 41.33, lon: 69.28, zone: 'in' },
+    { id: 'c', bl: 'BL-C', cbm: 13, kg: 600, places: 10, lat: 41.331, lon: 69.281, zone: 'in' }];
+  const S1 = { ...S, depotLat: 41.38, depotLon: 69.23, tripsPerVehicle: 1, fillPct: 88, gazelCount: 3, gazelBase: 450000, gazelHeavy: 500000, gazelHeavyKg: 1500,
+    vehicles: [veh('Gazel Nuriddin', { m3: 17, kg: 3500 }), veh('Gazel Umid', { m3: 18, kg: 3500 }), veh('Gazel Katta', { m3: 35, kg: 4000 })] };
+  const P = E.buildPlans(st, S1);
+  for (const k of ['A', 'B']) {
+    assert.ok(P[k].trips.every(t => !t.noVehicle), k + ': без «нет машины»: ' + P[k].trips.map(t => t.name + '[' + t.stops.map(s => s.id) + ']').join(' '));
+    const at = id => P[k].trips.find(t => t.stops.some(s => s.id === id)).carName;
+    assert.equal(at('a'), 'Gazel Katta', k);
+    assert.notEqual(at('b'), at('c'), k + ': 14 и 13 м³ — на разных машинах');
+  }
+});

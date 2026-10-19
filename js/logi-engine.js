@@ -251,7 +251,7 @@
   // finish), Gazel мелкое всё равно не берёт. Gazel (и Kamaz) с мелкой отгрузкой или с грузом меньше порога на весь рейс —
   // штраф SMALL_PEN в оценке рейса (не в цене), поэтому и раздача рейсов по машинам (fitFleet) не кладёт мелкое в Gazel.
   // Labo мелкое берёт без штрафа, как раньше — по тарифу (если Labo есть в автопарке).
-  const EPS = 1e-6, UNPRICED = 1e8, KM_COST = 1000, MAX_SPREAD = 120, SMALL_PEN = 2e6;
+  const EPS = 1e-6, UNPRICED = 1e8, KM_COST = 1000, MAX_SPREAD = 120, SMALL_PEN = 2e6, OURS = 0.6;
   const known = s => (s.cbm || 0) > 0 || (s.kg || 0) > 0;
   const small = v => v.kind === 'labo' || v.kind === 'changan';   // груз без объёма и веса на маленькую машину не ставим
   const smallCar = v => v.kind === 'changan' && v.priced && !v.onlyIfNeeded;   // машина правила мелкого груза: Changan / Shineray с тарифом
@@ -312,6 +312,15 @@
     for (let i = 1; i < a.length; i++) gap = Math.max(gap, a[i] - a[i - 1]);
     return 360 - gap <= S.maxSpread + 1e-9;
   }
+  // Цена рейса для сравнения планов. План A (S.ours) смотрит на расходы компании: то, что платят клиенты (меньше 1 м³,
+  // за кольцом, costSplit), идёт в сравнение с весом S.ours (OURS = 0,6). Так план A выбирает раскладку, где компания платит
+  // меньше, но не перекладывает расходы на клиентов лишними рейсами: клиент за кольцом поедет один (и по правилу
+  // оплатит весь рейс), только если от этого не растёт общая цена. Без S.ours — полная цена по тарифу (планы B, C, X)
+  function weigh(stops, price, S) {
+    if (S.ours == null) return price.total;
+    const cs = costSplit(stops, price, S);
+    return cs ? cs.paid + S.ours * cs.notPaid : price.total;
+  }
   function evalTrip(stops, fleet, maxStops, S, depot) {
     const l = load(stops);
     if (l.points > maxStops) return null;
@@ -329,7 +338,7 @@
       const price = priceTrip(ordered, v.kind, S);
       // мелкое на Gazel и Gazel с грузом меньше порога — штраф
       const smallOn = small(v) ? 0 : nSmall, under = !small(v) && T && l.cbm > 0 && l.cbm < T - EPS ? 1 : 0;
-      const cost = price.total != null ? price.total : UNPRICED, pen = (smallOn + under) * SMALL_PEN;
+      const cost = price.total != null ? weigh(ordered, price, S) : UNPRICED, pen = (smallOn + under) * SMALL_PEN;
       if (!best || cost + pen < best.cost + best.pen) best = { v, cost, pen, smallOn, under, price };
     });
     if (!best) return null;
@@ -692,8 +701,20 @@
             const m = ev(u.stops.concat(t.stops), [...new Set([clsOf(u.v)].concat(free))]);
             if (m && (clsOf(m.v) !== clsOf(t.v) || clsOf(u.v) === clsOf(t.v)) && !worse([m], [t, u]) && m.val - u.val - t.val < (best ? best.d : Infinity) - EPS) best = { drop: [i, j], add: [m], d: m.val - u.val - t.val };
           });
-          // рейс не помещается ни в одну свободную машину целиком — делим на несколько рейсов свободных машин
-          const parts = !alt && free.length && split(t.stops, free);
+          // рейс не помещается ни в одну свободную машину целиком — делим на несколько рейсов свободных машин. Части
+          // встали в один класс, а машин этого класса меньше, — раскладываем по разным свободным машинам, начиная с
+          // большой части (Katta 28 м³ → две Gazel поменьше, Katta свободна для груза, который возит только она)
+          let parts = !alt && free.length && split(t.stops, free);
+          if (parts && !within(c1, parts)) {
+            const d = { ...c1 }, out = [];
+            for (const p of parts.slice().sort((a, b) => b.l.cbm - a.l.cbm || b.l.kg - a.l.kg)) {
+              let e = null;
+              free.forEach(k => { if ((d[k] || 0) >= lim(k)) return; const x = ev(p.stops, [k]); if (x && (!e || x.val < e.val - EPS)) e = x; });
+              if (!e) { parts = null; break; }
+              d[clsOf(e.v)] = (d[clsOf(e.v)] || 0) + 1; out.push(e);
+            }
+            if (parts) parts = out;
+          }
           if (parts && within(c1, parts) && !worse(parts, [t])) { const d = parts.reduce((a, p) => a + p.val, 0) - t.val; if (!best || d < best.d - EPS) best = { drop: [i], add: parts, d }; }
         });
         if (!best) break;   // этот круг не разгрузить — разрешаем следующий
@@ -796,8 +817,8 @@
     // Машины вида одной вместимости — один вариант, как раньше
     const one = f => Object.fromEntries(Object.entries(CLASSES).map(([k, c]) => [k, c.length > 1 ? [{ m3: f(c.map(x => x.m3)), kg: f(c.map(x => x.kg)), nom: f(c.map(x => x.nom)), n: c.reduce((a, x) => a + x.n, 0) }] : c]));
     const VARIANTS = Object.values(CLASSES).some(c => c.length > 1) ? [CLASSES, one(a => Math.min(...a)), one(a => Math.max(...a))] : [CLASSES];
-    const score = trips => [trips.filter(t => t.noVehicle).length, trips.filter(t => !t.over && (t.cbm > t.vehicle.m3 + EPS || t.kg > t.vehicle.kg + EPS)).length,
-      trips.reduce((a, t) => a + (t.price.total != null ? t.price.total : UNPRICED) + KM_COST * t.real + (t.smallOn + t.under) * SMALL_PEN, 0)];
+    const score = (trips, S1) => [trips.filter(t => t.noVehicle).length, trips.filter(t => !t.over && (t.cbm > t.vehicle.m3 + EPS || t.kg > t.vehicle.kg + EPS)).length,
+      trips.reduce((a, t) => a + (t.price.total != null ? weigh(t.stops, t.price, S1) : UNPRICED) + KM_COST * t.real + (t.smallOn + t.under) * SMALL_PEN, 0)];
     const better = (a, b) => { for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > EPS) return a[i] < b[i]; return false; };
     // Правило мелкого груза (планы A и B, smallTo): сначала рейсы Changan / Shineray — только из мелких отгрузок, все мелкие:
     // самый дешёвый план для мелкого на Changan (сколько нужно рейсов; сверх «Рейсов на машину в день» — дополнительные
@@ -813,15 +834,17 @@
       const fleet2 = fleet.filter(v => !(clsOf(v) in room) || (c[clsOf(v)] || 0) < room[clsOf(v)]), rest = items.filter(s => !used.has(s));
       return runs.concat(rest.length ? build(rest, fleet2.length ? fleet2 : fleet) : []);
     };
+    // build — построитель рейсов или несколько (план A: поиск самого дешёвого и раскладка по районам): каждый — в каждом
+    // варианте машин, берётся лучший план
     const plan = (kinds, build, opt = {}) => {
       let best = null, shown = null;
       const vs = kinds.some(k => (CLASSES[k] || []).length > 1) ? VARIANTS : [CLASSES];   // в плане нет машин разной вместимости — один вариант
-      for (const classes of vs) {
+      for (const classes of vs) for (const bld of [].concat(build)) {
         const fleet = fleetOf(S, kinds, { ...opt, classes, avail: AVAIL }), splits = [];
         if (!shown) shown = fleet;   // в заметке «Машины: …» — машины по кузовам
         if (!fleet.length) return { trips: [], splits, noFleet: true };
-        const items = splitOversize(withC, fleet, splits), raw = fleet[0].smallTo && opt.fit ? smallFirst(items, fleet, build) : build(items, fleet);
-        const trips = finish(opt.fit ? fitFleet(raw, fleet, PER, opt.fit.maxStops, opt.fit.S || S, depot, opt.fit.join) : raw), sc = score(trips);
+        const items = splitOversize(withC, fleet, splits), raw = fleet[0].smallTo && opt.fit ? smallFirst(items, fleet, bld) : bld(items, fleet);
+        const trips = finish(opt.fit ? fitFleet(raw, fleet, PER, opt.fit.maxStops, opt.fit.S || S, depot, opt.fit.join) : raw), sc = score(trips, (opt.fit && opt.fit.S) || S);
         if (!best || better(sc, best.sc)) best = { trips, splits, sc, vi: vs.indexOf(classes) };
       }
       // smallTo — порог мелкого груза (0 — правила нет), smallAll — мелких отгрузок в плане
@@ -832,7 +855,13 @@
     const SD = { ...S, maxSpread: S.maxSpread != null ? +S.maxSpread : MAX_SPREAD };
     // мелкий груз (до S.smallM3 м³) в планах A и B — на Changan / Shineray, Gazel — от порога (план X — районами, C — Kamaz)
     const SMALL = +S.smallM3 > 0 ? +S.smallM3 : 0;
-    const A = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.aMaxStops || 99, SD, depot), { onlyIfNeeded: ['kamaz'], smallTo: SMALL, fit: { maxStops: S.aMaxStops || 99, join: true, S: SD } });   // строго по кузову
+    // план A — самый дешёвый для компании (weigh, OURS) строго по кузову. Кандидаты: поиск самого дешёвого плана по
+    // расходам компании и по полной цене (у поиска свои локальные минимумы — так план не хуже прежнего) и раскладка по
+    // районам (как в плане X, но с правилами плана A); берётся лучший по расходам компании
+    const SA = { ...SD, ours: OURS }, aMax = S.aMaxStops || 99;
+    const A = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), [(items, fleet) => cheapest(items, fleet, aMax, SA, depot), (items, fleet) => cheapest(items, fleet, aMax, SD, depot),
+      (items, fleet) => districtTrips(items, fleet, aMax, SA, depot, [])],
+      { onlyIfNeeded: ['kamaz'], smallTo: SMALL, fit: { maxStops: aMax, join: true, S: SA } });
     const B = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.bcMaxStops || 99, SD, depot),   // тот же поиск, свои правила; Changan/Shineray — тоже
       { onlyIfNeeded: ['kamaz'], smallTo: SMALL, tol: { gazel: { m3: S.bTolM3, kg: S.bTolKg } }, fit: { maxStops: S.bcMaxStops || 99, join: true, S: SD } });   // Gazel с допуском
     const C = plan(['kamaz'], (items, fleet) => kamazRuns(items, fleet, CARS.kamaz ? { ...S, cTrucks: CARS.kamaz.length } : S, depot));

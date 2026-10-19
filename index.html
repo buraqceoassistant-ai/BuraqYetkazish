@@ -1209,6 +1209,7 @@
               </div>
             </sc-if>
             <div style="font-size:12px;color:var(--color-neutral-700);min-height:16px">{{ p.diff }}</div>
+            <sc-if value="{{ p.why }}"><div class="plan-why" style="font-size:12px;color:var(--color-neutral-700);margin-top:-4px;text-wrap:pretty">{{ p.why }}</div></sc-if>
           </button>
         </sc-for>
       </div>
@@ -1927,7 +1928,7 @@ const okDate = d => /^(20\d\d)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(Stri
 const ST = { 'Rejada': 'В плане', 'Yolda': 'В пути', 'Yetkazildi': 'Доставлено', 'Qolib ketgan': 'Осталось', 'Mijoz ozi oldi': 'Клиент забрал сам', 'Bekor qilindi': 'Отменено' };
 const TR = { 'Belgilanmagan': 'Не назначена', 'Mijoz ozi oladi': 'Клиент заберёт' };
 const PLAN_INFO = {
-  A: { title: 'A — экономичный', desc: S => 'Самый дешёвый по тарифам без перегруза: как можно меньше рейсов, маршруты по направлениям. Labo, Changan, Gazel и Kamaz. Gazel строго до ' + f1(S.gazelM3, 1) + ' м³ / ' + f0(S.gazelKg) + ' кг, Kamaz — только если груз больше.' },
+  A: { title: 'A — экономичный', desc: S => 'Самый дешёвый для компании без перегруза: меньше рейсов и машин, маршруты по направлениям. Labo, Changan, Gazel и Kamaz. Gazel строго до ' + f1(S.gazelM3, 1) + ' м³ / ' + f0(S.gazelKg) + ' кг, Kamaz — только если груз больше.' },
   B: { title: 'B — Gazel и Labo', desc: S => 'Как можно меньше машин: Gazel, Labo и малый грузовик (Changan, Shineray). Gazel можно загрузить с допуском — до ' + f1((+S.gazelM3 || 0) + (+S.bTolM3 || 0), 1) + ' м³ / ' + f0((+S.gazelKg || 0) + (+S.bTolKg || 0)) + ' кг. Kamaz — только если груз больше.' },
   C: { title: 'C — только Kamaz', desc: () => 'Большие машины делают несколько рейсов, каждая на своей стороне города.' },
   // план X (пробный): один район — одна машина (districtTrips в js/logi-engine.js)
@@ -2214,7 +2215,7 @@ class Component extends DCLogic {
     if ((k !== 'A' && k !== 'B') || !P || !P[k] || !P[k].fleet) return PLAN_INFO[k].desc(S);
     const m = this.planKinds(P[k], P), np = m.noPrice.length ? ' ' + m.noPrice.join(', ') + ' — нет тарифа, в план не идёт (вкладка «Тарифы»).' : '';
     const T = P[k].smallTo, sm = T ? ' Мелкий груз (меньше ' + f1(T, 2) + ' м³) — на ' + this.smallLabels(P[k], P) + ', Gazel — от ' + f1(T, 2) + ' м³.' : '';
-    if (k === 'A') return 'Самый дешёвый по тарифам без перегруза: как можно меньше рейсов, маршруты по направлениям. Машины: ' + (m.on.join(', ') || '—') + '.' + np + sm + (m.big ? ' Каждая — строго по своему кузову, Kamaz — только если груз больше.' : ' Каждая — строго по своему кузову.');
+    if (k === 'A') return 'Самый дешёвый для компании без перегруза: меньше рейсов и машин, маршруты по направлениям. Машины: ' + (m.on.join(', ') || '—') + '.' + np + sm + (m.big ? ' Каждая — строго по своему кузову, Kamaz — только если груз больше.' : ' Каждая — строго по своему кузову.');
     return 'Как можно меньше машин: ' + (m.on.join(', ') || '—') + '.' + np + sm + (m.tol ? ' Gazel можно загрузить с допуском — +' + f1(m.tol.tolM3, 1) + ' м³ / +' + f0(m.tol.tolKg) + ' кг к полезному объёму каждой.' : '') + (m.big ? ' Kamaz — только если груз больше.' : '');
   }
   // машина правила мелкого груза — Changan / Shineray: подпись по маркам автопарка («Shineray»)
@@ -5224,13 +5225,22 @@ class Component extends DCLogic {
       // «выгоднее всех» — где меньше всех платит компания (остальное — с клиентов); поровну — где дешевле в целом
       const ourOf = k => costs[k].n ? Math.round(costs[k].ours) : PL(k).sum.price, minC = full.length ? Math.min(...full.map(ourOf)) : null;
       const best = full.filter(k => ourOf(k) === minC).sort((a, b) => PL(a).sum.price - PL(b).sum.price)[0];
+      // почему самый выгодный дешевле: B грузит Gazel с допуском (сверх того, что берёт A), X возит мелкий груз на Gazel
+      const tolN = k => PL(k).trips.filter(t => { const v = t.vehicle; return !t.over && (t.cbm > (v.useM3 ?? v.m3) + 1e-6 || t.kg > (v.nomKg ?? v.kg) + 1e-6); }).length;
+      const smallGz = k => { const T = (P.A || {}).smallTo || 0; return T ? PL(k).trips.filter(t => t.kind === 'gazel' && t.stops.some(x => x.cbm > 0 && x.cbm < T - 1e-9)).length : 0; };
+      const whyOf = k => {
+        if (!best || k === best || !full.includes(k) || !(ourOf(k) > minC)) return '';
+        if (tolN(best) && !tolN(k)) return 'План ' + best + ' грузит Gazel с допуском сверх кузова (рейсов: ' + tolN(best) + '), план ' + k + ' — строго по кузову';
+        if ((P[k] || {}).smallTo && smallGz(best) && !smallGz(k)) return 'План ' + best + ' возит мелкий груз на Gazel, план ' + k + ' — на ' + this.kindLabel(P, 'changan');
+        return '';
+      };
       out.planCards = shown.map(k => { const s = PL(k).sum, sel = planKey === k, noPrice = s.unpriced && !s.price, c = costs[k];
         return { title: this.planTitle(k, P), desc: this.planDesc(k, S, P), trips: s.trips, kinds: kindsOf(s), real: f0(s.real) + ' км', outside: s.outside + ' · ' + f1(s.outsideCbm, 1) + ' м³',
           price: PL(k).noFleet ? 'нет машин' : noPrice ? 'нет тарифа' : money(s.price) + (s.unpriced ? ' +' : ''),
           cheapest: full.length > 1 && k === best, manual: !!PL(k).manual,
           hasCost: !PL(k).noFleet && c.n > 0, cost: this.costRows(c, S, s.unpriced),
           diff: PL(k).noFleet ? 'Задайте объём и грузоподъёмность Kamaz во вкладке «Тарифы»' : s.unpriced ? '+ ' + s.unpriced + ' ' + reys(s.unpriced) + ' Kamaz без тарифа — заполните тариф во вкладке «Тарифы»' : (minP == null || minC == null || k === best || !full.includes(k) ? '' : ourOf(k) > minC ? '+' + f0(ourOf(k) - minC) + ' сум расходов компании к самому выгодному' : '+' + f0(s.price - PL(best).sum.price) + ' сум к самому выгодному'),
-          cls: sel ? 'plan-sel' : '', bg: sel ? 'var(--color-accent-100)' : 'transparent', border: sel ? 'var(--color-accent)' : 'var(--color-divider)', go: () => this.setState({ planKey: k, planHi: null }) }; });
+          why: whyOf(k), cls: sel ? 'plan-sel' : '', bg: sel ? 'var(--color-accent-100)' : 'transparent', border: sel ? 'var(--color-accent)' : 'var(--color-divider)', go: () => this.setState({ planKey: k, planHi: null }) }; });
       const cS = PL('C').sum;
       out.planCTitle = PLAN_INFO.C.title;
       out.planCInfo = st.planC ? '' : P.C.noFleet ? 'нет машин' : cS.trips + ' ' + reys(cS.trips) + (cS.unpriced && !cS.price ? ' · нет тарифа' : ' · ' + money(cS.price) + (cS.unpriced ? ' +' : '') + (costs.C.notPaid ? ' · компания ' + f0(costs.C.ours) : ''));
