@@ -173,7 +173,10 @@
   }
   function autoQuality() {
     const mm = q => !!(window.matchMedia && window.matchMedia(q).matches), nav = window.navigator || {};
-    if (Math.min(window.innerWidth, window.innerHeight) < 700 || (mm('(pointer: coarse)') && !mm('(any-pointer: fine)'))) return 'std';
+    // телефон — по размеру экрана, а не окна: у ноутбука с масштабом 125–150 % окно браузера ниже 700 px, и высокое
+    // качество не включалось на мощном компьютере
+    const scr = window.screen || {}, sMin = Math.min(scr.width || 9999, scr.height || 9999);
+    if (sMin < 600 || (mm('(pointer: coarse)') && !mm('(any-pointer: fine)'))) return 'std';
     if ((nav.deviceMemory && nav.deviceMemory < 4) || (nav.hardwareConcurrency && nav.hardwareConcurrency < 4)) return 'std';
     return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(gpuName()) ? 'std' : 'hq';
   }
