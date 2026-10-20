@@ -231,3 +231,35 @@ test('рейс большой машины делится на две разны
     assert.notEqual(at('b'), at('c'), k + ': 14 и 13 м³ — на разных машинах');
   }
 });
+
+test('как диспетчер: крупный клиент целиком в машину по кузову, второй крупный — на две свободные Gazel, тяжёлое мелкое — отдельно', () => {
+  // партия из переписки диспетчера (объёмы и веса настоящие, клиенты выдуманные): 31 и 30 м³ — по Gazel Katta (35 м³)
+  // каждому, 0,7 м³ / 2,6 т сырья (Shineray не возьмёт по весу), мелкие — на Shineray, средние — на Gazel. Пятая Gazel —
+  // наёмная. Диспетчер: 31 м³ — целиком в Katta, 30 м³ — на две свободные Gazel, а не вторым рейсом Katta; сырьё — одно
+  const B = [['M1', 1.7, 412, 61], ['M2', 2.7, 315, 18], ['M3', 0.46, 524, 1], ['M4', 0.25, 325, 1], ['M5', 0.334, 41.3, 2], ['M6', 0.04, 7.5, 1], ['M7', 0.04, 21, 21],
+    ['BIG1', 31.11, 3286.54, 312], ['BIG2', 30.1, 3783.5, 495], ['RAW', 0.684, 2621, 2], ['MID1', 5.8, 848.5, 60], ['MID2', 2.6, 366.5, 2], ['MID3', 2.55, 1815, 2]];
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const st = () => { seed = 7; return B.map(([bl, cbm, kg, places], i) => ({ id: 'h' + i, bl, cbm, kg, places, lat: 41.28 + rnd() * 0.12, lon: 69.17 + rnd() * 0.16, zone: 'in', client: { district: 'D' + (i % 4) } })); };
+  const S1 = { ...S, gazelBase: 300000, gazelHeavy: 400000, gazelHeavyKg: 3000, smallM3: 3, fillPct: 100, changanM3: 8, changanKg: 1500, changanBase: 200000, changanPt: 30000, changanBaseIncludesPts: 1,
+    changanCount: 1, cTrucks: 0, vehicles: [veh('Gazel Umid', { m3: 18, kg: 3500 }), veh('Gazel Saidakmal', { m3: 23, kg: 3500 }), veh('Gazel Nuriddin', { m3: 17, kg: 3500 }), veh('Gazel Katta', { m3: 35, kg: 4000 }), veh('Shineray', { m3: 8, kg: 1500 })] };
+  const show = P => P.A.trips.map(t => t.name + '[' + t.stops.map(s => s.bl + (s.part ? s.part + '/' + s.parts : '')).join(',') + ']').join(' ');
+  // своих Gazel четыре: второго рейса Katta не избежать, но крупные — целиком, сырьё — одно, рейсов не больше 6
+  const P4 = E.buildPlans(st(), { ...S1, gazelCount: 4 });
+  assert.ok(!P4.A.trips.some(t => t.stops.some(s => s.part)), 'крупные не режутся: ' + show(P4));
+  assert.ok(P4.A.trips.some(t => t.stops.length === 1 && t.stops[0].bl === 'RAW' && t.kind === 'gazel'), 'сырьё — отдельной Gazel: ' + show(P4));
+  assert.ok(P4.A.trips.length <= 6, show(P4));
+  // с наёмной пятой Gazel: все Gazel — первым рейсом; один крупный — целиком в Katta, другой — на две Gazel
+  const P5 = E.buildPlans(st(), { ...S1, gazelCount: 5 });
+  assert.ok(!P5.A.trips.some(t => t.kind === 'gazel' && t.round > 1), 'Gazel — без второго рейса: ' + show(P5));
+  const katta = P5.A.trips.find(t => t.carName === 'Gazel Katta');
+  assert.ok(katta && katta.stops.length === 1 && /^BIG/.test(katta.stops[0].bl) && !katta.stops[0].part, 'Katta — один крупный целиком: ' + show(P5));
+  const other = katta.stops[0].bl === 'BIG1' ? 'BIG2' : 'BIG1', parts = P5.A.trips.filter(t => t.stops.some(s => s.bl === other));
+  assert.equal(parts.length, 2, 'второй крупный — на двух машинах: ' + show(P5));
+  assert.ok(Math.abs(parts.reduce((a, t) => a + t.stops.filter(s => s.bl === other).reduce((x, s) => x + s.cbm, 0), 0) - B.find(b => b[0] === other)[1]) < 1e-6, 'части — вся отгрузка');
+  assert.ok(P5.A.trips.every(t => !t.noVehicle && !t.over && t.cbm <= t.vehicle.m3 + 1e-6 && t.kg <= t.vehicle.kg + 1e-6), 'всё по кузову: ' + show(P5));
+  // план X (районами) — так же: рейс района в чужой не добавляется, но крупная отгрузка делится на свободные Gazel
+  const showX = P => P.X.trips.map(t => t.name + '[' + t.stops.map(s => s.bl + (s.part ? s.part + '/' + s.parts : '')).join(',') + ']').join(' ');
+  assert.ok(!P5.X.trips.some(t => t.kind === 'gazel' && t.round > 1), 'X: Gazel — без второго рейса: ' + showX(P5));
+  assert.ok(P5.X.trips.some(t => t.carName === 'Gazel Katta' && t.stops.some(s => /^BIG/.test(s.bl) && !s.part)), 'X: Katta — крупный целиком: ' + showX(P5));
+  assert.ok(P5.X.trips.every(t => !t.noVehicle && t.cbm <= t.vehicle.m3 + 1e-6 && t.kg <= t.vehicle.kg + 1e-6), 'X: всё по кузову: ' + showX(P5));
+});

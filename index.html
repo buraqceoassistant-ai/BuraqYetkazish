@@ -1945,6 +1945,10 @@ const VEH_FULL = { ...VEH, changan: 'Changan / Shineray' };
 const BOX_CACHE = new Map();
 const boxesOf = s => { const t = String((s && s.boxes) || '').trim(); if (!t) return []; let v = BOX_CACHE.get(t); if (!v) { v = window.LogiEngine.parseBoxes(t).list || []; BOX_CACHE.set(t, v); } return v; };
 const boxN = s => boxesOf(s).reduce((a, x) => a + x.n, 0);
+// «часть 2/3» в примечании — строка большой отгрузки, разделённой при «Принять план»; partBase — примечание без пометки
+const PART_RE = /(?:^| · )часть \d+\/\d+$/;
+const partBase = note => String(note || '').replace(PART_RE, '');
+const partNo = note => { const m = String(note || '').match(/часть (\d+)\/\d+$/); return m ? +m[1] : 1; };
 // рейсы плана на картах («Карта», «Планы»): свой оттенок синего и штрих, номер рейса — как в списке
 const PLAN_SHADES = ['--plan-1', '--plan-2', '--plan-3', '--plan-4', '--plan-5', '--plan-6'];   // оттенки синего рейсов (design-system.css)
 const PLAN_DASHES = [null, '8 5', null, '2 5', '10 4 2 4', null];
@@ -2794,9 +2798,20 @@ class Component extends DCLogic {
   plansFor(date) {
     const { data } = this.state, D = this.derived(), E = window.LogiEngine, ds = String(date || '').split('+');
     const vehicles = this.fleetVehicles(data);
-    const stops = data.shipments.filter(s => ds.includes(s.date) && !E.NO_PLAN.includes(s.status) && s.truck !== PICK).map(s => {
-      const c = D.cmap[s.bl] || {}, p = D.ptOf(s);   // своя локация отгрузки — вместо адреса клиента
-      return { id: s.id, bl: s.bl, date: s.date, cbm: +s.cbm || 0, kg: +s.kg || 0, places: +s.places || 0, boxList: boxesOf(s), lat: p.lat, lon: p.lon, zone: p.z.zone, client: c, loc: p.own ? p.name : '' };
+    // Части одной отгрузки, записанные из плана («Принять план»: «часть 1/2», «часть 2/2»), в плане — снова одна отгрузка:
+    // план считает её, как до записи, и записанный план узнаёт себя (части отдельными отгрузками план разложил бы иначе).
+    // Отгрузка плана — первая часть (id исходной строки), rows — id всех частей
+    const groups = new Map(), list = [];
+    data.shipments.filter(s => ds.includes(s.date) && !E.NO_PLAN.includes(s.status) && s.truck !== PICK).forEach(s => {
+      if (!PART_RE.test(String(s.note || ''))) { list.push([s]); return; }
+      const k = [s.date, s.bl, s.loc || '', partBase(s.note)].join('|'), g = groups.get(k);
+      if (g) g.push(s); else { const ng = [s]; groups.set(k, ng); list.push(ng); }
+    });
+    const stops = list.map(g => {
+      g.sort((x, y) => partNo(x.note) - partNo(y.note));
+      const s = g[0], c = D.cmap[s.bl] || {}, p = D.ptOf(s), sum = f => g.reduce((a, x) => a + (+x[f] || 0), 0);   // своя локация отгрузки — вместо адреса клиента
+      return { id: s.id, bl: s.bl, date: s.date, cbm: sum('cbm'), kg: sum('kg'), places: sum('places'), boxList: boxesOf(s), lat: p.lat, lon: p.lon, zone: p.z.zone, client: c, loc: p.own ? p.name : '',
+        ...(g.length > 1 ? { rows: g.map(x => x.id) } : {}) };
     });
     // кэш по партии: ключ — её точки (с клиентами), настройки и машины. Правка другой партии или обновление из таблицы,
     // где эта партия не менялась, её планы не пересчитывают (оптимизатор тяжёлый: «Расходы» строят планы всех партий периода)
@@ -4853,6 +4868,8 @@ class Component extends DCLogic {
     if (list.includes(name)) return name;
     return n <= 1 && t.car === 1 && list.includes(label) ? label : name;   // одна машина вида — «Labo», «Changan»
   }
+  // отгрузки плана, собранные из частей прошлой записи: id отгрузки плана → id строк журнала (plansFor, rows)
+  planRows(P) { const o = {}; (P.all || []).forEach(s => { if (s.rows) o[s.id] = s.rows; }); return o; }
   planAssign(plan, data) {
     const S = data.settings, list = data.lists.trucks.slice(), parts = {};
     plan.trips.forEach(t => {
@@ -4877,11 +4894,18 @@ class Component extends DCLogic {
       .concat(P.noCoords.length ? ['Без координат ' + P.noCoords.length + ' — в план не вошли, их не трогаем.'] : [])
       .concat(['', 'Статусы не меняются. Отменить можно сразу после записи.']).join('\n');
     if (!confirm(msg)) return;
-    const prev = [], added = [], out = [], r3 = x => Math.round(x * 1000) / 1000, r1 = x => Math.round(x * 10) / 10;
-    data.shipments.forEach(s => {
+    const prev = [], added = [], removed = [], out = [], r3 = x => Math.round(x * 1000) / 1000, r1 = x => Math.round(x * 10) / 10;
+    // части прошлой записи (plansFor: в плане — одна отгрузка): первая строка становится отгрузкой целиком (сумма частей,
+    // примечание без «часть i/k») и делится заново по плану, остальные строки — убираются (их заменяют новые части)
+    const rowsOf = this.planRows(P), groupOf = {}, stopOf = new Map((P.all || []).map(x => [x.id, x]));
+    Object.entries(rowsOf).forEach(([id, rows]) => { if (parts[id]) rows.forEach(r => { groupOf[r] = id; }); });
+    data.shipments.forEach(s0 => {
+      const gid = groupOf[s0.id];
+      if (gid && gid !== s0.id) { removed.push(s0); return; }
+      const g = gid && stopOf.get(gid), s = g ? { ...s0, cbm: g.cbm, kg: g.kg, places: g.places, note: partBase(s0.note) } : s0;
       const a = parts[s.id];
-      if (!a) { out.push(s); return; }
-      prev.push(s);
+      if (!a) { out.push(s0); return; }
+      prev.push(s0);
       if (a.length === 1) { out.push({ ...s, truck: a[0].truck, route: a[0].route }); return; }
       a.sort((x, y) => x.part - y.part);
       let restC = +s.cbm || 0, restK = +s.kg || 0;
@@ -4898,7 +4922,7 @@ class Component extends DCLogic {
     this._tgHold = this.botReady() ? Date.now() + 600000 : 0;
     this.commit({ ...data, shipments: out, ...(grew ? { lists: { ...data.lists, trucks: list } } : {}) });
     if (grew && this.gsUrl && this.gsVersion >= 5) this.gsEnqueue([{ t: 'trucks', v: list }]);   // новые машины — в список таблицы
-    this.setState({ acceptInfo: { date, key, prev, added, n: ids.length, trips: plan.trips.length }, sendAsk: this.botReady() ? { date, key } : null, planMsg: null });
+    this.setState({ acceptInfo: { date, key, prev, added, removed, n: ids.length, trips: plan.trips.length }, sendAsk: this.botReady() ? { date, key } : null, planMsg: null });
   }
   undoAccept() {
     const a = this.state.acceptInfo;
@@ -4907,7 +4931,9 @@ class Component extends DCLogic {
     const data = this.state.data, back = new Map(a.prev.map(s => [s.id, s])), left = a.added.slice();
     const same = (x, s) => x.id === s.id || (x.bl === s.bl && x.date === s.date && (x.note || '') === (s.note || '') && x.truck === s.truck && +x.route === +s.route && Math.abs((+x.cbm || 0) - (+s.cbm || 0)) < 1e-6);
     const added = s => { const i = left.findIndex(x => same(x, s)); if (i < 0) return false; left.splice(i, 1); return true; };
-    this.commit({ ...data, shipments: data.shipments.filter(s => back.has(s.id) || !added(s)).map(s => back.get(s.id) || s) });
+    // убранные при записи части прошлой записи — обратно
+    const kept = data.shipments.filter(s => back.has(s.id) || !added(s)).map(s => back.get(s.id) || s), ids0 = new Set(kept.map(s => s.id));
+    this.commit({ ...data, shipments: kept.concat((a.removed || []).filter(s => !ids0.has(s.id))) });
     this._tgHold = 0;
     this.setState({ acceptInfo: null, sendAsk: null });
   }
@@ -5300,8 +5326,12 @@ class Component extends DCLogic {
         (x.big ? ', из них груз только для Kamaz — ' + x.big : '') + (x.neighbor != null ? '; остаток едет с машиной района ' + dnX(x.neighbor) : '') + '.'));
       out.planNotes = notes.map(text => ({ text })); out.planHasNotes = notes.length > 0;
       // «Принять план»: записан ли план в журнал — машины и номера рейсов совпадают
-      { const byId = new Map(data.shipments.map(s => [s.id, s])), { parts } = this.planAssign(plan, data), ids = Object.keys(parts);
-        const done = ids.length > 0 && ids.every(id => { const sh = byId.get(id), a = parts[id]; return sh && a.length === 1 && sh.truck === a[0].truck && (sh.route ?? null) === a[0].route; });
+      { const byId = new Map(data.shipments.map(s => [s.id, s])), { parts } = this.planAssign(plan, data), ids = Object.keys(parts), rowsOf = this.planRows(P);
+        const tr = (truck, route) => truck + '|' + (route == null || route === '' ? '' : +route);
+        const done = ids.length > 0 && ids.every(id => {
+          const a = parts[id], rows = rowsOf[id];
+          if (rows) return a.map(x => tr(x.truck, x.route)).sort().join() === rows.map(r => byId.get(r)).map(sh => sh ? tr(sh.truck, sh.route) : '?').sort().join();   // части — те же машины и рейсы
+          const sh = byId.get(id); return sh && a.length === 1 && sh.truck === a[0].truck && (sh.route ?? null) === a[0].route; });
         const acc = st.acceptInfo && st.acceptInfo.date === pd && st.acceptInfo.key === planKey ? st.acceptInfo : null;
         Object.assign(out, { planCanAccept: plan.trips.length > 0, acceptDone: done, acceptCanUndo: !!acc,
           acceptText: done ? '✓ План ' + planKey + ' записан в журнал за ' + dLongs(pd) + ': ' + plan.trips.length + ' ' + reys(plan.trips.length) + ', ' + ids.length + ' отгрузок — машины и номера рейсов.' + (acc ? ' Можно отменить.' : '')
