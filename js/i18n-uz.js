@@ -12,6 +12,8 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Только просмотр":"Faqat ko‘rish",
 "Аккаунт":"Akkaunt",
 "Смена пароля и выход":"Parolni almashtirish va chiqish",
+"Светлая / тёмная тема":"Yorug‘ / qorong‘i mavzu",
+"Тема сайта":"Sayt mavzusi",
 "Этот вход — только для просмотра: изменить ничего нельзя":"Bu kirish faqat ko‘rish uchun: hech narsani o‘zgartirib bo‘lmaydi",
 "Журнал":"Jurnal",
 "Импорт":"Import",

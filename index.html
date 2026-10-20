@@ -17,6 +17,9 @@
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/mobile.css">
 <link rel="stylesheet" href="css/glass.css">
+<link rel="stylesheet" href="css/glass-dark.css">
+<!-- тема (светлая / тёмная) — до первой отрисовки, чтобы страница не мигала белым -->
+<script src="js/theme.js"></script>
 <!-- язык сайта (русский / узбекский): словарь и перевод поверх страницы — до приложения, чтобы окна и первый экран были на выбранном языке -->
 <script>/* узбекский словарь (250 КБ) — сразу только если сайт по-узбекски или идёт проверка словаря; по-русски он
    загружается при нажатии «UZ» (js/i18n.js) — первый экран открывается быстрее */
@@ -45,7 +48,7 @@
 <noscript><div style="padding:40px;text-align:center">Для работы сайта нужен JavaScript.</div></noscript>
 <!-- Вход: данные расшифровываются только после правильного логина и пароля (js/auth.js) -->
 <div id="auth" class="auth" data-state="checking">
-  <div class="lang-switch lang-switch--auth" translate="no" role="group" aria-label="Til / Язык"><button type="button" data-lang-set="uz">UZ</button><button type="button" data-lang-set="ru">RU</button></div>
+  <div class="auth-tools"><div class="lang-switch lang-switch--auth" translate="no" role="group" aria-label="Til / Язык"><button type="button" data-lang-set="uz">UZ</button><button type="button" data-lang-set="ru">RU</button></div><button type="button" class="theme-btn" data-theme-toggle title="Светлая / тёмная тема" aria-label="Светлая / тёмная тема"></button></div>
   <form id="auth-form" class="auth-card" autocomplete="on" novalidate>
     <div class="auth-logo" role="img" aria-label="BURAQ logistics"></div>
     <h1 class="auth-title">Вход</h1>
@@ -68,11 +71,12 @@
       </div>
       <nav class="app-tabs" style="display:flex;align-items:stretch;gap:4px;margin-left:12px">
         <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
-          <button sc-camel-on-click="{{ t.go }}" style="background:none;border:0;border-bottom:2px solid {{ t.border }};padding:0 12px;font-family:var(--font-heading);font-weight:500;font-size:13px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;color:{{ t.color }};cursor:pointer" style-hover="color:var(--color-accent)">{{ t.label }}</button>
+          <button sc-camel-on-click="{{ t.go }}" style="background:none;border:0;border-bottom:2px solid {{ t.border }};padding:0 12px;font-family:var(--font-heading);font-weight:500;font-size:13px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;color:{{ t.color }};cursor:pointer" style-hover="color:var(--color-accent-text)">{{ t.label }}</button>
         </sc-for>
       </nav>
       <sc-if value="{{ readOnly }}"><span class="ro-badge" title="Этот вход — только для просмотра: изменить ничего нельзя">Только просмотр</span></sc-if>
       <div class="lang-switch" translate="no" role="group" aria-label="Til / Язык"><button type="button" data-lang-set="uz" title="O‘zbekcha">UZ</button><button type="button" data-lang-set="ru" title="Русский">RU</button></div>
+      <button type="button" class="theme-btn" data-theme-toggle title="Светлая / тёмная тема" aria-label="Светлая / тёмная тема"></button>
       <button class="app-account" sc-camel-on-click="{{ account }}" title="Смена пароля и выход">Аккаунт</button>
     </div>
     <sc-if value="{{ showStrip }}" hint-placeholder-val="{{ true }}">
@@ -185,7 +189,7 @@
                 </sc-if>
                 <sc-raw-td class="c2 o-1 c-end" style="white-space:nowrap">
                   <sc-if value="{{ r.zIn }}"><span class="tag tag-accent">Внутри</span></sc-if>
-                  <sc-if value="{{ r.zOut }}"><span class="tag" style="background:var(--color-accent-900);color:var(--color-bg)">Снаружи</span></sc-if>
+                  <sc-if value="{{ r.zOut }}"><span class="tag tag-out">Снаружи</span></sc-if>
                   <sc-if value="{{ r.zNone }}"><span class="tag tag-neutral">Нет коорд.</span></sc-if>
                   <sc-if value="{{ r.free }}"><span class="tag tag-outline" title="Доставку оплачивает клиент: груз меньше порога из «Тарифов» или точка за кольцом — доплата за заезд по тарифу точки, машина только к нему — вся цена рейса">{{ r.freeTag }}</span></sc-if>
                   <sc-if value="{{ r.border }}"><div style="font-size:11px;color:var(--color-neutral-700);margin-top:2px">у границы</div></sc-if>
@@ -250,7 +254,7 @@
                 </sc-raw-td>
                 <sc-raw-td class="o-1 c-end" style="white-space:nowrap">
                   <sc-if value="{{ r.zIn }}"><span class="tag tag-accent">Внутри</span></sc-if>
-                  <sc-if value="{{ r.zOut }}"><span class="tag" style="background:var(--color-accent-900);color:var(--color-bg)">Снаружи</span></sc-if>
+                  <sc-if value="{{ r.zOut }}"><span class="tag tag-out">Снаружи</span></sc-if>
                   <sc-if value="{{ r.zNone }}"><span class="tag tag-neutral">Нет коорд.</span></sc-if>
                   <div style="font-size:11px;color:var(--color-neutral-700);margin-top:2px;white-space:normal;max-width:120px">{{ r.zoneNote }}</div>
                 </sc-raw-td>
@@ -291,7 +295,7 @@
                   <sc-raw-td class="cw" data-label="Координаты" style="white-space:nowrap;font-variant-numeric:tabular-nums">{{ w.coord }}</sc-raw-td>
                   <sc-raw-td data-label="Зона">
                     <sc-if value="{{ w.zIn }}"><span class="tag tag-accent">Внутри</span></sc-if>
-                    <sc-if value="{{ w.zOut }}"><span class="tag" style="background:var(--color-accent-900);color:var(--color-bg)">Снаружи</span></sc-if>
+                    <sc-if value="{{ w.zOut }}"><span class="tag tag-out">Снаружи</span></sc-if>
                     <sc-if value="{{ w.zNone }}"><span class="tag tag-neutral">Нет коорд.</span></sc-if>
                   </sc-raw-td>
                   <sc-raw-td data-label="До кольца" style="text-align:right;white-space:nowrap">{{ w.dist }}</sc-raw-td>
@@ -420,7 +424,7 @@
             </div>
           </sc-for>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+        <div class="map-legend tok-light" style="display:flex;flex-direction:column;gap:8px;font-size:13px">
           <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:50%;border:2px solid var(--color-accent);background:var(--color-bg)"></span>Внутри кольцевой (ТКАД)</div>
           <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:50%;background:var(--color-accent-900)"></span>Снаружи кольцевой</div>
           <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border:2px solid var(--color-text);transform:rotate(45deg)"></span>Склад отправки</div>
@@ -456,7 +460,7 @@
       </aside>
       <div class="map-canvas" style="position:relative;min-height:400px">
         <div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--color-neutral-700);font-size:13px;background:var(--color-surface)">{{ mapLoadingText }}</div>
-        <div ref="{{ mapRef }}" style="position:absolute;inset:0"></div>
+        <div class="tok-light" ref="{{ mapRef }}" style="position:absolute;inset:0"></div>
       </div>
     </main>
   </sc-if>
@@ -601,7 +605,7 @@
                       <sc-raw-td class="c2" data-label="Прибытие">{{ s.eta }}</sc-raw-td>
                       <sc-raw-td class="c2 o-1 c-end">
                         <sc-if value="{{ s.zIn }}"><span class="tag tag-accent">Внутри</span></sc-if>
-                        <sc-if value="{{ s.zOut }}"><span class="tag" style="background:var(--color-accent-900);color:var(--color-bg)">Снаружи</span></sc-if>
+                        <sc-if value="{{ s.zOut }}"><span class="tag tag-out">Снаружи</span></sc-if>
                         <sc-if value="{{ s.free }}"><span class="tag tag-outline">{{ s.freeTag }}</span></sc-if>
                       </sc-raw-td>
                       <sc-raw-td class="c2" data-label="Доля, сум" style="text-align:right">{{ s.share }}</sc-raw-td>
@@ -1288,7 +1292,7 @@
                     <sc-raw-td class="c3" data-label="Прибытие" style="white-space:nowrap">{{ s.eta }}<div class="j-sub">{{ s.legL }}</div></sc-raw-td>
                     <sc-raw-td class="c2 o-1 c-end">
                       <sc-if value="{{ s.zIn }}"><span class="tag tag-accent">Внутри</span></sc-if>
-                      <sc-if value="{{ s.zOut }}"><span class="tag" style="background:var(--color-accent-900);color:var(--color-bg)">Снаружи</span></sc-if>
+                      <sc-if value="{{ s.zOut }}"><span class="tag tag-out">Снаружи</span></sc-if>
                       <sc-if value="{{ s.free }}"><span class="tag tag-outline" title="Доставку оплачивает клиент: груз меньше порога из «Тарифов» или точка за кольцом — доплата за заезд по тарифу точки, машина только к нему — вся цена рейса">{{ s.freeTag }}</span></sc-if>
                     </sc-raw-td>
                     <sc-raw-td class="c2" data-label="Цена адреса, сум" style="text-align:right;white-space:nowrap">{{ s.pt }}<div class="j-sub">{{ s.ptSub }}</div></sc-raw-td>
@@ -1311,7 +1315,7 @@
         </sc-if>
        </div>
        <aside class="plan-map-wrap">
-         <div class="plan-map"><div ref="{{ planMapRef }}" style="position:absolute;inset:0"></div><sc-if value="{{ planMapMsg }}"><div class="plan-map-msg">{{ planMapMsg }}</div></sc-if></div>
+         <div class="plan-map"><div class="tok-light" ref="{{ planMapRef }}" style="position:absolute;inset:0"></div><sc-if value="{{ planMapMsg }}"><div class="plan-map-msg">{{ planMapMsg }}</div></sc-if></div>
          <div class="plan-map-note">{{ planMapNote }}</div>
        </aside>
       </div>
@@ -1942,7 +1946,7 @@ const BOX_CACHE = new Map();
 const boxesOf = s => { const t = String((s && s.boxes) || '').trim(); if (!t) return []; let v = BOX_CACHE.get(t); if (!v) { v = window.LogiEngine.parseBoxes(t).list || []; BOX_CACHE.set(t, v); } return v; };
 const boxN = s => boxesOf(s).reduce((a, x) => a + x.n, 0);
 // рейсы плана на картах («Карта», «Планы»): свой оттенок синего и штрих, номер рейса — как в списке
-const PLAN_SHADES = ['--color-accent-500', '--color-accent-800', '--color-accent-600', '--color-accent-900', '--color-accent-400', '--color-accent-700'];
+const PLAN_SHADES = ['--plan-1', '--plan-2', '--plan-3', '--plan-4', '--plan-5', '--plan-6'];   // оттенки синего рейсов (design-system.css)
 const PLAN_DASHES = [null, '8 5', null, '2 5', '10 4 2 4', null];
 // Машины автопарка для журнала (Sozlamalar C24:C39). Госномера придут позже — тогда имена поменяются.
 const FLEET_TRUCKS = ['Gazel-1', 'Gazel-2', 'Gazel-3', 'Gazel-4', 'Gazel-5', 'Gazel-6', 'Gazel-7', 'Gazel-8', 'Gazel-9', 'Changan', 'Labo', 'Kamaz-1', 'Kamaz-2', 'Mijoz ozi oladi', 'Belgilanmagan'];
@@ -2072,6 +2076,8 @@ class Component extends DCLogic {
     fetch('data/fleet.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(j => { this.fleetFile = j && Array.isArray(j.vehicles) ? j.vehicles.filter(v => v && v.name && window.LogiEngine.vehicleKind(v.name)) : []; this.setState({}); }).catch(() => { this.fleetFile = []; });
     // смена языка (js/i18n.js): подписи на 3D-холсте рисуются заново
     if (window.I18N) window.I18N.onChange.push(() => this.forceUpdate());
+    // смена темы (js/theme.js): 3D-сцена собирается заново в цветах темы (карты — в светлых цветах всегда)
+    window.addEventListener('buraq-theme', () => { if (this.viz) { this.viz.dispose(); this.viz = null; this.vizEl = null; } this.forceUpdate(); });
     // Esc закрывает открытое окно (отгрузка, клиент, склад, настройки связи) — как «Отмена»
     window.addEventListener('keydown', e => { if (e.key === 'Escape' && this.state.dialog && this.state.dialog.type !== 'gs' && !e.defaultPrevented) this.setState({ dialog: null }); });
     const tick = async () => {
@@ -2316,6 +2322,12 @@ class Component extends DCLogic {
     }
   }
   componentWillUnmount() { if (this.map) this.map.remove(); if (this.viz) this.viz.dispose(); }
+  // цвета меток на картах — всегда из светлых токенов (.tok-light в design-system.css): подложка карты светлая и в тёмной теме
+  lightTok() {
+    if (!this._tokEl) { this._tokEl = document.createElement('i'); this._tokEl.className = 'tok-light'; this._tokEl.hidden = true; document.body.appendChild(this._tokEl); }
+    const css = getComputedStyle(this._tokEl);
+    return n => css.getPropertyValue(n).trim();
+  }
 
   // вход «только просмотр» (роль viewer в vault.json): данные не меняются и в таблицу ничего не пишется
   get readOnly() { return !!(window.LogiAuth && window.LogiAuth.role && window.LogiAuth.role() === 'viewer'); }
@@ -2909,7 +2921,7 @@ class Component extends DCLogic {
     });
     const own = window.LogiAuth ? window.LogiAuth.owner() : { state: 'none', config: {} }, mode = this.impModeGet();
     out.impModes = [['local', 'Без ИИ — бесплатно'], ['ai', 'Через ИИ']].map(([k, l]) => ({ l, go: () => this.impSetMode(k),
-      bg: mode === k ? 'var(--color-accent)' : 'transparent', fg: mode === k ? 'var(--color-bg)' : 'var(--color-text)' }));
+      bg: mode === k ? 'var(--color-accent)' : 'transparent', fg: mode === k ? 'var(--color-on-accent)' : 'var(--color-text)' }));
     out.impModeNote = mode === 'local' ? 'Строки Excel — прямо из ячеек, PDF — из текста страниц. Скан без ИИ не прочитать. Незнакомые маркировки сопоставляете вы — один раз: сайт запомнит их у клиента.' :
       'Claude разбирает любой формат, в том числе сканы, и предлагает клиентов для незнакомых маркировок. Нужен ключ Claude API — платно, центы за манифест.';
     out.impDropNote = mode === 'local' ? 'Excel (.xlsx, .xls) или PDF с текстом · до 10 МБ, PDF — до 30 страниц' : 'Excel (.xlsx, .xls) или PDF, в том числе скан · до 10 МБ, PDF — до 30 страниц';
@@ -3020,11 +3032,11 @@ class Component extends DCLogic {
     // документ
     out.impIsXlsx = !!c.book; out.impIsPdf = !!c.pdf; out.impPdfRef = this.impPdfRef;
     out.impPaneDoc = st.impPane === 'doc'; out.impPaneRows = st.impPane !== 'doc';
-    out.impPanes = [['rows', 'Строки и клиенты'], ['doc', 'Документ']].map(([k, l]) => ({ l, go: () => this.setState({ impPane: k }), bg: (st.impPane || 'rows') === k ? 'var(--color-accent)' : 'transparent', fg: (st.impPane || 'rows') === k ? 'var(--color-bg)' : 'var(--color-text)' }));
+    out.impPanes = [['rows', 'Строки и клиенты'], ['doc', 'Документ']].map(([k, l]) => ({ l, go: () => this.setState({ impPane: k }), bg: (st.impPane || 'rows') === k ? 'var(--color-accent)' : 'transparent', fg: (st.impPane || 'rows') === k ? 'var(--color-on-accent)' : 'var(--color-text)' }));
     out.impSplitCls = 'imp-split' + (st.impPane === 'doc' ? ' imp-show-doc' : ' imp-show-rows');
     if (c.book) {
       const si = Math.min(st.impSheet || 0, c.book.length - 1), sh = c.book[si], rs = L.rowNums(sh);
-      out.impSheets = c.book.length > 1 ? c.book.map((b, i) => ({ l: b.name + (b.hidden ? ' (скрыт)' : ''), go: () => this.setState({ impSheet: i }), bg: i === si ? 'var(--color-accent)' : 'transparent', fg: i === si ? 'var(--color-bg)' : 'var(--color-text)' })) : [];
+      out.impSheets = c.book.length > 1 ? c.book.map((b, i) => ({ l: b.name + (b.hidden ? ' (скрыт)' : ''), go: () => this.setState({ impSheet: i }), bg: i === si ? 'var(--color-accent)' : 'transparent', fg: i === si ? 'var(--color-on-accent)' : 'var(--color-text)' })) : [];
       out.impHasSheets = out.impSheets.length > 0;
       let maxC = 1; rs.forEach(r => Object.keys(sh.rows[r]).forEach(k => { maxC = Math.max(maxC, L.colNum(k)); })); maxC = Math.min(maxC, 30);
       const cols = Array.from({ length: maxC }, (_, i) => L.colName(i + 1)), selRow = d.rows.find(x => x.id === selId);
@@ -3408,7 +3420,7 @@ class Component extends DCLogic {
     }));
     const TABS = [['day', 'Кто что везёт'], ['deliv', 'Лента доставок']];
     Object.assign(out, {
-      dvTabs: TABS.map(([k, l]) => ({ l, go: () => set({ dvTab: k }), bg: st.dvTab === k ? 'var(--color-accent-2)' : 'transparent', fg: st.dvTab === k ? 'var(--color-on-brand)' : 'var(--color-text)' })),
+      dvTabs: TABS.map(([k, l]) => ({ l, go: () => set({ dvTab: k }), bg: st.dvTab === k ? 'var(--color-accent-2)' : 'transparent', fg: st.dvTab === k ? 'var(--color-on-accent-2)' : 'var(--color-text)' })),
       dvIsDay: st.dvTab !== 'deliv', dvIsDeliv: st.dvTab === 'deliv',
       dvCan: can, dvCanDrv: !ro && v9 && !!T, dvCanFleet: !ro, dvRo: ro, dvPlateRo: ro || (!!this.gsUrl && !v10), dvBusy: !!st.dvBusy,
       dvSub: 'Отправка груза водителям в Telegram, кто на линии и что везёт, доставки с фото. Бот, диспетчер и машины — «Настройки» → «Водители и автопарк».' + (ro ? ' Только просмотр.' : ''),
@@ -3693,7 +3705,7 @@ class Component extends DCLogic {
     if (!on) { if (this.plMap) { this.plMap.remove(); this.plMap = null; this.plMapEl = null; } return; }
     const el = this.planMapRef.current, L = window.L;
     if (!el || !L) return;
-    const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim(), S = this.state.data.settings;
+    const v = this.lightTok(), S = this.state.data.settings;
     if (!this.plMap || this.plMapEl !== el) {
       if (this.plMap) this.plMap.remove();
       this.plMap = L.map(el, { crs: L.CRS.EPSG3395, zoomControl: true }).setView([S.depotLat, S.depotLon], 11);
@@ -3740,7 +3752,7 @@ class Component extends DCLogic {
     if (!on) { if (this.dvMap) { this.dvMap.remove(); this.dvMap = null; this.dvMapEl = null; } return; }
     const el = this.dvMapRef.current, L = window.L, M = this._dvMap;
     if (!el || !L || !M) return;
-    const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim(), S = this.state.data.settings, E = window.LogiEngine, D = this.derived();
+    const v = this.lightTok(), S = this.state.data.settings, E = window.LogiEngine, D = this.derived();
     if (!this.dvMap || this.dvMapEl !== el) {
       if (this.dvMap) this.dvMap.remove();
       this.dvMap = L.map(el, { crs: L.CRS.EPSG3395, zoomControl: true }).setView([S.depotLat, S.depotLon], 11);
@@ -4243,7 +4255,7 @@ class Component extends DCLogic {
     if (this.state.tab !== 'map' || !this.state.ready) { if (this.map) { this.map.remove(); this.map = null; this.mapEl = null; } return; }
     const el = this.mapRef.current, L = window.L;
     if (!el || !L) return;
-    const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
+    const v = this.lightTok();
     const S = this.state.data.settings;
     const base = this.state.mapBase;
     if (!this.map || this.mapEl !== el || this.mapBaseCur !== base) {
@@ -5164,8 +5176,8 @@ class Component extends DCLogic {
       out.ringKelesMissing = st.ringEdit && !E.inside(E.KELES, this.ringDraft);
       out.ringReset = () => { if (confirm('Вернуть уточнённую границу ТКАД (по карте, с Keles)?')) { this.ringDraft = E.TKAD_V2.map(p => p.slice()); this.setState(s => ({ ringEditVer: (s.ringEditVer || 0) + 1 })); } };
       out.mapLoadingText = window.L ? '' : (st.mapError ? 'Не удалось загрузить библиотеку карты — проверьте интернет' : 'Загрузка карты…');
-      out.mapBaseOpts = [['yandex', 'Яндекс'], ['gis', '2ГИС'], ['ysat', 'Спутник'], ['esri', 'Esri']].map(([k, l]) => ({ l, go: () => { try { localStorage.setItem('logi-map-base', k); } catch (e) {} this.setState({ mapBase: k }); }, bg: st.mapBase === k ? 'var(--color-accent)' : 'transparent', fg: st.mapBase === k ? 'var(--color-bg)' : 'var(--color-text)' }));
-      out.mapPlanOpts = [['none', 'Без'], ['A', 'A'], ['B', 'B'], ['C', 'C'], ['X', 'X']].map(([k, l]) => ({ l, go: () => this.setState({ mapPlan: k }), bg: st.mapPlan === k ? 'var(--color-accent)' : 'transparent', fg: st.mapPlan === k ? 'var(--color-bg)' : 'var(--color-text)' }));
+      out.mapBaseOpts = [['yandex', 'Яндекс'], ['gis', '2ГИС'], ['ysat', 'Спутник'], ['esri', 'Esri']].map(([k, l]) => ({ l, go: () => { try { localStorage.setItem('logi-map-base', k); } catch (e) {} this.setState({ mapBase: k }); }, bg: st.mapBase === k ? 'var(--color-accent)' : 'transparent', fg: st.mapBase === k ? 'var(--color-on-accent)' : 'var(--color-text)' }));
+      out.mapPlanOpts = [['none', 'Без'], ['A', 'A'], ['B', 'B'], ['C', 'C'], ['X', 'X']].map(([k, l]) => ({ l, go: () => this.setState({ mapPlan: k }), bg: st.mapPlan === k ? 'var(--color-accent)' : 'transparent', fg: st.mapPlan === k ? 'var(--color-on-accent)' : 'var(--color-text)' }));
       if (st.mapDate === 'all') {
         const wc = data.clients.filter(c => c.lat != null);
         out.mapStats = [{ label: 'Клиентов', value: data.clients.length }, { label: 'На карте', value: wc.length }, { label: 'Снаружи', value: wc.filter(c => (D.zones[c.bl] || {}).zone === 'out').length }, { label: 'Без коорд.', value: data.clients.length - wc.length }];
@@ -5376,9 +5388,9 @@ class Component extends DCLogic {
         vizTripOpts: [], vizIsAll: false, vizIsOne: false, vizSummary: '', vizNote: '', vizTitle: '',
         vizHint: 'Вращать — пальцем или мышью · масштаб — щипком или колесом · нажмите на груз — покажет точку' });
       out.vizPlanOpts = ['A', 'B', 'C', 'X'].map(k => { const on = M ? M.key === k : st.planKey === k;
-        return { l: 'План ' + k, go: () => this.setState({ planKey: k, vizTrip: 'all', vizStep: 0, vizSel: null }), bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)' }; });
+        return { l: 'План ' + k, go: () => this.setState({ planKey: k, vizTrip: 'all', vizStep: 0, vizSel: null }), bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-on-accent)' : 'var(--color-text)' }; });
       out.vizViews = [['3d', '3D'], ['side', 'Сбоку'], ['top', 'Сверху'], ['back', 'Сзади']].map(([k, l]) => ({ l, go: () => this.setState(s => ({ vizView: k, vizViewN: (s.vizViewN || 0) + 1 })),
-        bg: st.vizView === k ? 'var(--color-accent)' : 'var(--color-bg)', fg: st.vizView === k ? 'var(--color-bg)' : 'var(--color-text)' }));
+        bg: st.vizView === k ? 'var(--color-accent)' : 'var(--color-bg)', fg: st.vizView === k ? 'var(--color-on-accent)' : 'var(--color-text)' }));
       // качество 3D: переключение пересоздаёт сцену (сглаживание и эффекты задаются при создании)
       const vq = this.viz ? this.viz.quality : st.vizQ || (V ? V.autoQuality() : 'std');
       Object.assign(out, { vizQL: vq === 'hq' ? 'Качество: высокое' : 'Качество: обычное', vizQOn: vq === 'hq' ? 'true' : 'false',

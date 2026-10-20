@@ -4,8 +4,12 @@
 
 ```
 buraq-brand/
+├── README.md                с чего начать, промпт для нейросети
 ├── BRAND.md                 этот файл
+├── DESIGN-GLASS.md          стеклянный стиль (glassmorphism)
 ├── tokens.css               цвета и шрифт в CSS-переменных
+├── glass.css                готовые классы стеклянного стиля
+├── brandbook.html           бренд-бук, открывается в браузере
 └── logo/
     ├── buraq-logo.svg        основной: синий + красный
     ├── buraq-logo-white.svg  белый
@@ -130,4 +134,5 @@ CSS-переменные лежат в `tokens.css`. Для Tailwind: `buraq: { 
 
 ```
 @buraq-brand/BRAND.md
+@buraq-brand/DESIGN-GLASS.md
 ```

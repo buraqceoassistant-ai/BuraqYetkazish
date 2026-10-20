@@ -218,7 +218,9 @@
     var login = get(LOGIN);
     var d = dialog('Аккаунт',
       '<div class="dialog-body">' + (login ? 'Вы вошли как <b>' + esc(login) + '</b>.' : 'Вход выполнен.') +
-        (role === 'viewer' ? '<br>Доступ: <b>только просмотр</b> — всё видно, изменить ничего нельзя. Пароль этого входа меняет руководитель.' : '') + '</div>',
+        (role === 'viewer' ? '<br>Доступ: <b>только просмотр</b> — всё видно, изменить ничего нельзя. Пароль этого входа меняет руководитель.' : '') + '</div>' +
+      // тема (js/theme.js) — здесь тоже: на телефоне кнопки темы в шапке нет, там места только для вкладок
+      '<div class="acc-theme"><span>Тема сайта</span><button type="button" class="btn btn-secondary" data-theme-toggle>Светлая / тёмная тема</button></div>',
       '<button class="btn btn-ghost" data-act="logout" style="margin-right:auto">Выйти</button>' +
       '<button class="btn btn-secondary" data-act="close">Закрыть</button>' +
       (role === 'viewer' ? '' : '<button class="btn btn-primary" data-act="passwd">Сменить пароль</button>'));

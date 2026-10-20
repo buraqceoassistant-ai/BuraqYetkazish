@@ -230,10 +230,21 @@
     let el = host;   // вкладку можно покинуть и вернуться: холст переносится в новый контейнер (attach/detach)
     const css = getComputedStyle(document.documentElement), tok = (name, d) => css.getPropertyValue(name).trim() || d;
     const font = tok('--font-heading', 'system-ui, sans-serif');
-    // цвета сцены — из токенов design-system.css, чтобы 3D менялся вместе с оформлением сайта
-    const C = { danger: tok('--color-danger', '#c0392b'), ink: tok('--color-accent-900', '#1d2d3d'), envelope: tok('--color-accent-500', '#749dc4'),
-      grid1: tok('--color-neutral-300', '#b7b7ba'), grid2: tok('--color-neutral-200', '#d4d4d7'), bg: tok('--color-surface', '#f3f6fa'),
-      navy: tok('--buraq-navy', '#0E2E54'), red: tok('--buraq-red', '#DE0441') };
+    // цвета сцены — из токенов design-system.css, чтобы 3D менялся вместе с оформлением сайта (и темой: в тёмной
+    // токены — смеси с прозрачностью, браузер считает их сам, прозрачные — накладываются на фон сцены)
+    const probe = document.createElement('i'); probe.style.display = 'none'; document.body.appendChild(probe);
+    const rgb = (name, d, under) => {
+      probe.style.color = ''; probe.style.color = 'var(' + name + ', ' + d + ')';
+      const c = getComputedStyle(probe).color, m = c.match(/-?[\d.]+(?:e-?\d+)?/g) || [], k = /^color\(/.test(c) ? 255 : 1;
+      if (m.length < 3) return d;
+      const a = m.length > 3 ? +m[3] : 1, ch = i => Math.round(+m[i] * k * a + (under ? under[i] : 255) * (1 - a));
+      return 'rgb(' + ch(0) + ',' + ch(1) + ',' + ch(2) + ')';
+    };
+    const bgRgb = rgb('--viz-bg', '#f3f6fa'), under = bgRgb.match(/\d+/g).map(Number);
+    const C = { danger: rgb('--color-danger', '#c0392b'), ink: rgb('--viz-ink', '#1d2d3d'), envelope: rgb('--color-accent-500', '#749dc4'),
+      grid1: rgb('--color-neutral-300', '#b7b7ba', under), grid2: rgb('--color-neutral-200', '#d4d4d7', under), bg: bgRgb,
+      navy: rgb('--buraq-navy', '#0E2E54'), red: rgb('--buraq-red', '#DE0441') };
+    probe.remove();
     const still = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };   // без анимаций
     const small = Math.min(window.innerWidth, window.innerHeight) < 700;
     const HQ = (h.quality === 'hq' || h.quality === 'std' ? h.quality : autoQuality()) === 'hq';

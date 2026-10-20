@@ -13,6 +13,8 @@ const SHELL = [
   'css/app.css',
   'css/mobile.css',
   'css/glass.css',
+  'css/glass-dark.css',
+  'js/theme.js',
   'js/i18n-uz.js',
   'js/i18n.js',
   'js/vendor/react.production.min.js',

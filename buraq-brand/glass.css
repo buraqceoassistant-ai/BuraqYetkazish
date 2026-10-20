@@ -1,0 +1,107 @@
+/* BURAQ Logistics — стеклянный стиль (glassmorphism).
+   Подключать после tokens.css. Описание — в DESIGN-GLASS.md. */
+
+:root {
+  --glass-bg:      rgba(255, 255, 255, .07);
+  --glass-bg-hover:rgba(255, 255, 255, .11);
+  --glass-edge:    rgba(255, 255, 255, .18);
+  --glass-edge-2:  rgba(255, 255, 255, .32);
+  --glass-line:    rgba(255, 255, 255, .14);
+  --glass-blur:    22px;
+  --glass-radius:  22px;
+  --glass-radius-s:14px;
+
+  --text:   var(--buraq-white);
+  --text-2: rgba(255, 255, 255, .72);
+  --text-3: rgba(255, 255, 255, .50);
+}
+
+/* Страница */
+.glass-page {
+  margin: 0;
+  background: var(--buraq-navy);
+  color: var(--text);
+  font-family: var(--buraq-font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Фон: радиальные подсветки + размытые пятна */
+.glass-sky {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  background:
+    radial-gradient(1200px 700px at 80% -10%, rgba(3, 76, 170, .55), transparent 60%),
+    radial-gradient(900px 600px at -10% 40%, rgba(3, 76, 170, .35), transparent 60%),
+    var(--buraq-navy);
+}
+.glass-blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .75; }
+.glass-blob.b1 { width: 60vw; height: 60vw; max-width: 820px; max-height: 820px; left: -15vw; top: -10vh; background: var(--buraq-blue); animation: glass-drift 26s ease-in-out infinite alternate; }
+.glass-blob.b2 { width: 38vw; height: 38vw; max-width: 520px; max-height: 520px; right: -8vw; top: 30vh; background: var(--buraq-red); opacity: .42; animation: glass-drift 32s ease-in-out infinite alternate-reverse; }
+.glass-blob.b3 { width: 50vw; height: 50vw; max-width: 700px; max-height: 700px; left: 30vw; bottom: -25vh; background: var(--buraq-blue); opacity: .5; animation: glass-drift 38s ease-in-out infinite alternate; }
+@keyframes glass-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(6vw, 4vh, 0) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .glass-blob { animation: none; } }
+
+.glass-grain {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .06;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.9'/></svg>");
+}
+
+/* Контент поверх фона */
+.glass-content { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 0 16px 80px; }
+
+/* Стеклянная панель */
+.glass {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--glass-radius);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .14) inset, 0 24px 60px -30px rgba(0, 0, 0, .6);
+}
+.glass::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .14), rgba(255, 255, 255, 0) 40%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, .06));
+}
+.glass > * { position: relative; }
+.glass-panel { padding: clamp(22px, 4vw, 44px); }
+.glass-card  { padding: 22px; border-radius: var(--glass-radius-s); }
+.glass-pill  { border-radius: 999px; }
+.glass:hover.glass-hover { background: var(--glass-bg-hover); }
+
+/* Типографика */
+.glass h1, .glass h2, .glass h3, .buraq-title {
+  font-family: var(--buraq-font); font-weight: 400; text-transform: uppercase;
+  letter-spacing: .02em; line-height: 1.05; margin: 0;
+}
+.glass h2 { font-size: clamp(26px, 3.6vw, 40px); }
+.glass h3 { font-size: clamp(17px, 2vw, 20px); letter-spacing: .06em; }
+.glass p  { margin: 0; max-width: 66ch; color: var(--text-2); }
+.glass-eyebrow { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--text-3); }
+.glass-rule { height: 1px; border: 0; background: var(--glass-line); margin: 24px 0; }
+
+/* Фирменные элементы */
+.buraq-arrow { color: var(--buraq-red); letter-spacing: -.08em; white-space: nowrap; }
+.buraq-rmark {
+  display: inline-grid; place-items: center; width: 30px; height: 30px;
+  border: 1px solid var(--buraq-red); border-radius: 50%; color: var(--buraq-red); font-size: 12px; line-height: 1;
+}
+.buraq-ladder { text-transform: uppercase; letter-spacing: .03em; line-height: 1.35; }
+.buraq-ladder > :nth-child(2) { padding-left: 1.2em; }
+.buraq-ladder > :nth-child(3) { padding-left: 2.4em; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+.buraq-pill {
+  display: inline-flex; align-items: center; gap: 8px; border-radius: var(--buraq-radius-pill);
+  padding: 9px 18px; font-size: 13px; letter-spacing: .02em; white-space: nowrap; color: var(--buraq-white); text-decoration: none;
+}
+.buraq-pill.red   { background: var(--buraq-red); }
+.buraq-pill.line  { border: 1px solid var(--buraq-white); }
+.buraq-pill.glass { border: 1px solid var(--glass-edge-2); background: var(--glass-bg-hover); }
+
+.buraq-redline { height: 1px; background: var(--buraq-red); }
+
+.buraq-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.buraq-list li { display: flex; gap: 12px; align-items: baseline; color: var(--text-2); }
+.buraq-list li::before { content: "————→"; color: var(--buraq-red); letter-spacing: -.1em; font-size: 12px; flex: none; }

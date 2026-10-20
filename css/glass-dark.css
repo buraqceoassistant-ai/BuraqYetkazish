@@ -1,0 +1,199 @@
+/* Тёмная тема — стекло по бренд-буку (buraq-brand/DESIGN-GLASS.md): фирменный тёмно-синий фон, за ним плывут
+   размытые пятна синего и красного, поверх — матовые панели из белого с прозрачностью 7–11 %, граница — белый 18 %,
+   блик по верхней кромке. Новых цветов нет: всё — белый с прозрачностью поверх синего, красный — только акценты.
+   Включается атрибутом <html data-theme="dark"> (js/theme.js), подключается после glass.css.
+   Токены design-system.css переопределены: текст — белый, вторичный — белый 72 %, разделители — белый 14 %.
+   .tok-light (карты, легенда карты) остаётся светлым: подложка карт светлая, метки — в светлых цветах.
+   Панели — без размытия фона, как в светлой теме (скорость прокрутки, см. glass.css); размытие — у шапки, подвкладок,
+   окон и экрана входа. Печать — всегда светлая (всё ниже — только для экрана). */
+@media screen {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-bg: color-mix(in srgb, var(--buraq-white) 7%, transparent);
+    --color-surface: color-mix(in srgb, var(--buraq-white) 4%, transparent);
+    --color-text: var(--buraq-white);
+    --color-accent-2: color-mix(in srgb, var(--buraq-white) 88%, transparent);
+    --color-on-accent-2: var(--buraq-navy);
+    --color-accent-text: var(--buraq-white);
+    --color-accent-line: color-mix(in srgb, var(--buraq-white) 85%, transparent);
+    --color-danger-ink: color-mix(in srgb, var(--buraq-red) 62%, var(--buraq-white));   /* красный текст читается на синем */
+
+    --color-neutral-100: color-mix(in srgb, var(--buraq-white) 5%, transparent);
+    --color-neutral-200: color-mix(in srgb, var(--buraq-white) 10%, transparent);
+    --color-neutral-300: color-mix(in srgb, var(--buraq-white) 18%, transparent);
+    --color-neutral-400: color-mix(in srgb, var(--buraq-white) 32%, transparent);
+    --color-neutral-500: color-mix(in srgb, var(--buraq-white) 45%, transparent);
+    --color-neutral-600: color-mix(in srgb, var(--buraq-white) 58%, transparent);
+    --color-neutral-700: color-mix(in srgb, var(--buraq-white) 72%, transparent);   /* вторичный текст */
+    --color-neutral-800: color-mix(in srgb, var(--buraq-white) 86%, transparent);
+    --color-neutral-900: color-mix(in srgb, var(--buraq-white) 94%, transparent);
+
+    /* выбранное — фирменный синий сквозь стекло; «тёмные» оттенки (текст, подписи) — белые */
+    --color-accent-100: color-mix(in srgb, var(--buraq-blue) 36%, transparent);
+    --color-accent-200: color-mix(in srgb, var(--buraq-blue) 55%, transparent);
+    --color-accent-300: color-mix(in srgb, var(--buraq-blue) 70%, transparent);
+    --color-accent-700: var(--buraq-white);
+    --color-accent-800: var(--buraq-white);
+    --color-accent-900: var(--buraq-white);
+    --color-accent-2-100: color-mix(in srgb, var(--buraq-white) 7%, transparent);
+    --color-accent-2-800: var(--buraq-white);
+
+    /* 3D: сцена — тёмно-синяя с фирменным синим, подписи — тёмно-синие «таблетки» */
+    --viz-bg: color-mix(in srgb, var(--buraq-blue) 12%, var(--buraq-navy));
+    --viz-ink: var(--buraq-navy);
+
+    --shadow-sm: 0 1px 2px color-mix(in srgb, black 30%, transparent);
+    --shadow-md: 0 6px 18px -6px color-mix(in srgb, black 45%, transparent);
+    --shadow-lg: 0 24px 60px -30px color-mix(in srgb, black 60%, transparent);
+
+    /* стекло (DESIGN-GLASS.md): белый 7 %, наведённое и плотное — 11 %, граница — 18 %, кнопки — 32 % */
+    --glass-bg: color-mix(in srgb, var(--buraq-white) 7%, transparent);
+    --glass-bg-strong: color-mix(in srgb, var(--buraq-white) 8%, transparent);
+    --glass-bg-hover: color-mix(in srgb, var(--buraq-white) 11%, transparent);
+    --glass-bg-solid: color-mix(in srgb, var(--buraq-white) 8%, var(--buraq-navy));       /* непрозрачное: телефон, липкие полосы */
+    --glass-rim: color-mix(in srgb, var(--buraq-white) 18%, transparent);
+    --glass-edge: color-mix(in srgb, var(--buraq-white) 18%, transparent);
+    --glass-edge-2: color-mix(in srgb, var(--buraq-white) 32%, transparent);
+    --glass-shadow: inset 0 1px 0 color-mix(in srgb, var(--buraq-white) 14%, transparent), 0 24px 60px -30px color-mix(in srgb, black 60%, transparent);
+    --glass-navy: color-mix(in srgb, var(--buraq-navy) 70%, transparent);
+    --glass-sheen: linear-gradient(135deg, color-mix(in srgb, var(--buraq-white) 14%, transparent), transparent 40%, transparent 70%, color-mix(in srgb, var(--buraq-white) 6%, transparent));
+    --color-divider: color-mix(in srgb, var(--buraq-white) 14%, transparent);
+  }
+  /* светлый островок внутри тёмной темы: карты (окна меток с полем «Перенести в рейс») и их легенда */
+  :root[data-theme="dark"] .tok-light {
+    color-scheme: light;
+    --glass-edge: color-mix(in srgb, var(--buraq-navy) 22%, transparent); --glass-edge-2: color-mix(in srgb, var(--buraq-navy) 35%, transparent);
+  }
+  :root[data-theme="dark"] .tok-light select option { background: var(--buraq-white); color: var(--buraq-navy); }
+  :root[data-theme="dark"] .tok-light :focus-visible { outline-color: var(--color-accent); }
+  :root[data-theme="dark"] .tok-light a:hover { color: var(--color-accent-900); }
+
+  /* ── фон: тёмно-синий, радиальные подсветки синим, пятна синего и красного (мягкие градиенты вместо blur — дёшево),
+       зерно 6 %. На рабочих экранах пятна стоят: любая анимация выносит фон в отдельный слой, и прокрутка журнала
+       и клиентов шла 27–30 мс на кадр вместо 16,7 (замер, даже с паузой анимации на время прокрутки). Плывут пятна
+       только на экране входа — там прокручивать нечего (кроме телефона и «уменьшить движение»). ── */
+  :root[data-theme="dark"] {
+    --sky-glow:
+      radial-gradient(1200px 700px at 80% -10%, color-mix(in srgb, var(--buraq-blue) 55%, transparent), transparent 60%),
+      radial-gradient(900px 600px at -10% 40%, color-mix(in srgb, var(--buraq-blue) 35%, transparent), transparent 60%);
+    --sky-blue:
+      radial-gradient(closest-side, color-mix(in srgb, var(--buraq-blue) 70%, transparent), color-mix(in srgb, var(--buraq-blue) 30%, transparent) 55%, transparent) -14vw -14vh / min(70vw, 900px) min(70vw, 900px) no-repeat,
+      radial-gradient(closest-side, color-mix(in srgb, var(--buraq-blue) 48%, transparent), color-mix(in srgb, var(--buraq-blue) 18%, transparent) 55%, transparent) 34vw calc(100% + 22vh) / min(60vw, 780px) min(60vw, 780px) no-repeat;
+    --sky-red:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.055'/></svg>"),
+      radial-gradient(closest-side, color-mix(in srgb, var(--buraq-red) 36%, transparent), color-mix(in srgb, var(--buraq-red) 11%, transparent) 55%, transparent) calc(100% + 8vw) 30vh / min(46vw, 620px) min(46vw, 620px) no-repeat;
+  }
+  html[data-theme="dark"] { background: var(--sky-glow), var(--buraq-navy); }
+  html[data-theme="dark"] body::before, html[data-theme="dark"] body::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+  html[data-theme="dark"] body::before { background: var(--sky-blue); }
+  html[data-theme="dark"] body::after { background: var(--sky-red); }
+  /* экран входа: те же пятна, медленно плывут туда-обратно (26 и 32 с) */
+  :root[data-theme="dark"] .auth::before, :root[data-theme="dark"] .auth::after { content: ""; position: fixed; inset: -12vh -12vw; z-index: -1; pointer-events: none; }
+  :root[data-theme="dark"] .auth::before { background: var(--sky-blue); animation: glass-drift 26s ease-in-out infinite alternate; }
+  :root[data-theme="dark"] .auth::after { background: var(--sky-red); animation: glass-drift 32s ease-in-out infinite alternate-reverse; }
+  @keyframes glass-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(6vw, 4vh, 0) scale(1.08); } }
+  @media (prefers-reduced-motion: reduce), (max-width: 760px), (hover: none) and (pointer: coarse) {
+    :root[data-theme="dark"] .auth::before, :root[data-theme="dark"] .auth::after { animation: none; }
+  }
+
+  /* ── шапка: стекло поверх тёмно-синего, красная линия снизу; полоса связи и подвкладки — стекло ── */
+  :root[data-theme="dark"] .app-header { box-shadow: 0 10px 30px -18px color-mix(in srgb, black 60%, transparent); }
+  :root[data-theme="dark"] .app-strip-wrap {
+    background: color-mix(in srgb, var(--buraq-white) 4%, transparent) !important;
+    border-top: 1px solid var(--glass-line, color-mix(in srgb, var(--buraq-white) 14%, transparent)) !important;
+  }
+  :root[data-theme="dark"] .subtabs { background: color-mix(in srgb, var(--buraq-navy) 55%, transparent) !important; border-bottom-color: var(--color-divider); }
+  :root[data-theme="dark"] .subtab { background: var(--glass-bg); border-color: var(--glass-edge); color: color-mix(in srgb, var(--buraq-white) 80%, transparent); }
+  :root[data-theme="dark"] .subtab:hover { background: var(--glass-bg-hover); border-color: var(--glass-edge-2); color: var(--buraq-white); }
+  :root[data-theme="dark"] .subtab.on { background: var(--buraq-white); border-color: var(--buraq-white); color: var(--buraq-navy); }
+  @media (max-width: 760px) { :root[data-theme="dark"] .app-bar { background: var(--buraq-navy); } }
+
+  /* ── панели: блик и мягкая тень по бренд-буку; таблицы и выбранный план ── */
+  :root[data-theme="dark"] .table thead th, :root[data-theme="dark"] .dv-table thead th { background: color-mix(in srgb, var(--buraq-white) 5%, transparent); }
+  :root[data-theme="dark"] .table tbody tr:hover, :root[data-theme="dark"] .dv-table tbody tr:hover { background: color-mix(in srgb, var(--buraq-white) 5%, transparent); }
+  :root[data-theme="dark"] .table td { border-bottom-color: color-mix(in srgb, var(--buraq-white) 9%, transparent); }
+  :root[data-theme="dark"] .plan-cards > button:hover { background: var(--glass-sheen), var(--glass-bg-hover) !important; }
+  :root[data-theme="dark"] .plan-cards > button.plan-sel { background: var(--glass-sheen), color-mix(in srgb, var(--buraq-blue) 42%, transparent) !important; border-color: var(--color-accent-line) !important; }
+  :root[data-theme="dark"] .imp-alert { border-left-color: var(--color-accent-line) !important; }
+  :root[data-theme="dark"] .imp-alert-err, :root[data-theme="dark"] .dv-send { border-left-color: var(--buraq-red) !important; }
+  /* «Снаружи» (за кольцом) — белая плашка с тёмно-синим текстом */
+  :root[data-theme="dark"] .tag-out { background: var(--buraq-white); color: var(--buraq-navy); }
+  :root[data-theme="dark"] .tag-draft { background: var(--glass-bg-hover); }
+  :root[data-theme="dark"] .radio input:checked + .dot { box-shadow: inset 0 0 0 4px var(--buraq-navy); }
+  :root[data-theme="dark"] .seg { border-color: var(--glass-edge); }
+  :root[data-theme="dark"] .seg-opt:has(input:checked) { background: var(--buraq-white); color: var(--buraq-navy); }
+  :root[data-theme="dark"] .dv-plate { border-color: color-mix(in srgb, var(--buraq-white) 60%, transparent); }
+  :root[data-theme="dark"] .fleet-nophoto { background: color-mix(in srgb, var(--buraq-white) 4%, transparent); }
+  /* легенда карты — светлая карточка, как сама карта */
+  :root[data-theme="dark"] .map-legend { background: var(--color-bg); color: var(--color-text); padding: 12px 14px; border-radius: var(--radius-lg); }
+  /* карты: подложка чуть приглушена, чтобы не слепила рядом с тёмными панелями */
+  :root[data-theme="dark"] .leaflet-tile-pane { filter: brightness(.86) saturate(.85); }
+  :root[data-theme="dark"] .plan-map, :root[data-theme="dark"] .viz-stage { border-color: var(--glass-edge) !important; }
+
+  /* ── липкие полосы поверх прокрутки — непрозрачные, чтобы строки под ними не просвечивали ── */
+  :root[data-theme="dark"] .imp-foot, :root[data-theme="dark"] .imp-grid thead th, :root[data-theme="dark"] .imp-grid tbody th,
+  :root[data-theme="dark"] .install-app { background: var(--glass-bg-solid); }
+  :root[data-theme="dark"] .dialog > .dialog-actions, :root[data-theme="dark"] .dialog .dialog-actions { background: var(--glass-bg-solid) !important; }
+
+  /* ── окна: тёмное стекло, фон за окном — затемнённый и размытый ── */
+  :root[data-theme="dark"] .dialog-backdrop { background: color-mix(in srgb, var(--buraq-navy) 62%, transparent) !important; }
+  :root[data-theme="dark"] .dialog {
+    background: var(--glass-sheen), color-mix(in srgb, var(--buraq-white) 6%, color-mix(in srgb, var(--buraq-navy) 88%, transparent)) !important;
+    border: 1px solid var(--glass-edge) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--buraq-white) 14%, transparent), 0 30px 70px -20px color-mix(in srgb, black 70%, transparent);
+  }
+
+  /* ── поля и кнопки: стеклянные «таблетки»; главная — красная ── */
+  :root[data-theme="dark"] .input { background: var(--color-bg); border-color: var(--glass-edge); color: var(--color-text); }
+  :root[data-theme="dark"] .input:hover { border-color: var(--glass-edge-2); }
+  :root[data-theme="dark"] .input:focus-visible { background: color-mix(in srgb, var(--color-text) 11%, transparent); border-color: var(--color-text); }
+  :root[data-theme="dark"] .input::placeholder { color: color-mix(in srgb, var(--color-text) 50%, transparent); }
+  :root[data-theme="dark"] select.input option, :root[data-theme="dark"] select option { background: var(--buraq-navy); color: var(--buraq-white); }
+  :root[data-theme="dark"] .btn-secondary { background: var(--glass-bg-hover); border-color: var(--glass-edge-2); color: var(--buraq-white); }
+  :root[data-theme="dark"] .btn-secondary:hover { background: color-mix(in srgb, var(--buraq-white) 16%, transparent); border-color: var(--buraq-white); }
+  :root[data-theme="dark"] .btn-ghost:hover { background: var(--glass-bg-hover); }
+  :root[data-theme="dark"] .btn-primary { box-shadow: 0 8px 20px -10px color-mix(in srgb, black 55%, transparent); }   /* тень — нейтральная, не красная: никаких свечений */
+  :root[data-theme="dark"] .ro-lock { background: var(--glass-bg) !important; }
+  :root[data-theme="dark"] :focus-visible { outline-color: var(--buraq-white); }
+  :root[data-theme="dark"] ::selection { background: color-mix(in srgb, var(--buraq-blue) 70%, transparent); color: var(--buraq-white); }
+  :root[data-theme="dark"] a:hover { color: color-mix(in srgb, var(--buraq-white) 80%, transparent); }
+
+  /* ── вход: тот же фон (пятна — выше), карточка — стекло, логотип — белый на синем (как в шапке) ── */
+  :root[data-theme="dark"] .auth { background: var(--sky-glow), var(--buraq-navy) !important; }
+  :root[data-theme="dark"] .auth-card {
+    background: var(--glass-sheen), var(--glass-bg) !important; border-color: var(--glass-edge);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--buraq-white) 14%, transparent), 0 24px 60px -30px color-mix(in srgb, black 60%, transparent);
+    -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
+  }
+  :root[data-theme="dark"] .auth-logo { background-color: transparent; }
+
+  /* ── телефон и планшет пальцем: панели — плотное тёмное стекло без размытия ── */
+  @media (max-width: 760px), (hover: none) and (pointer: coarse) {
+    :root[data-theme="dark"] .glass, :root[data-theme="dark"] .tbl-wrap, :root[data-theme="dark"] .kpi-strip, :root[data-theme="dark"] .dv-card,
+    :root[data-theme="dark"] .rep-cost, :root[data-theme="dark"] .trip, :root[data-theme="dark"] .imp-alert, :root[data-theme="dark"] .plan-accept,
+    :root[data-theme="dark"] .plan-send-ask, :root[data-theme="dark"] .dv-msg, :root[data-theme="dark"] .ai-box, :root[data-theme="dark"] .tg-box,
+    :root[data-theme="dark"] .cl-locs, :root[data-theme="dark"] .tg-client, :root[data-theme="dark"] .blueprint:not(.btn, .dialog),
+    :root[data-theme="dark"] .plan-cards > button, :root[data-theme="dark"] .imp-doc, :root[data-theme="dark"] .imp-check,
+    :root[data-theme="dark"] .plan-notes, :root[data-theme="dark"] .viz-side, :root[data-theme="dark"] .gs-help, :root[data-theme="dark"] .dv-send,
+    :root[data-theme="dark"] .subtabs, :root[data-theme="dark"] .glass:has(> table), :root[data-theme="dark"] .dv-card:has(table) {
+      background: var(--glass-sheen), color-mix(in srgb, var(--buraq-white) 6%, color-mix(in srgb, var(--buraq-navy) 70%, transparent)) !important;
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--buraq-white) 12%, transparent);
+    }
+    :root[data-theme="dark"] .plan-cards > button.plan-sel { background: color-mix(in srgb, var(--buraq-blue) 55%, var(--buraq-navy)) !important; }
+    :root[data-theme="dark"] .dialog { background: color-mix(in srgb, var(--buraq-white) 6%, var(--buraq-navy)) !important; }
+  }
+  /* браузер без размытия или «уменьшить прозрачность» — плотные тёмные панели */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root[data-theme="dark"] .subtabs, :root[data-theme="dark"] .dialog, :root[data-theme="dark"] .auth-card { background: var(--glass-bg-solid) !important; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root[data-theme="dark"] .glass, :root[data-theme="dark"] .tbl-wrap, :root[data-theme="dark"] .kpi-strip, :root[data-theme="dark"] .dv-card,
+    :root[data-theme="dark"] .rep-cost, :root[data-theme="dark"] .trip, :root[data-theme="dark"] .imp-alert, :root[data-theme="dark"] .plan-accept,
+    :root[data-theme="dark"] .plan-send-ask, :root[data-theme="dark"] .dv-msg, :root[data-theme="dark"] .ai-box, :root[data-theme="dark"] .tg-box,
+    :root[data-theme="dark"] .cl-locs, :root[data-theme="dark"] .tg-client, :root[data-theme="dark"] .blueprint:not(.btn, .dialog),
+    :root[data-theme="dark"] .plan-cards > button, :root[data-theme="dark"] .imp-doc, :root[data-theme="dark"] .imp-check,
+    :root[data-theme="dark"] .plan-notes, :root[data-theme="dark"] .viz-side, :root[data-theme="dark"] .gs-help, :root[data-theme="dark"] .dv-send,
+    :root[data-theme="dark"] .subtabs, :root[data-theme="dark"] .dialog, :root[data-theme="dark"] .auth-card { background: var(--glass-bg-solid) !important; }
+    html[data-theme="dark"] body::before, html[data-theme="dark"] body::after, :root[data-theme="dark"] .auth::before, :root[data-theme="dark"] .auth::after { display: none; }
+  }
+}

@@ -69,7 +69,8 @@
   .app-tabs > button { padding: 0 10px !important; font-size: 14px !important; }
   .app-account { margin: 0 max(10px, env(safe-area-inset-right)) 0 0; padding: 6px 8px; font-size: 12px; }
   .lang-switch:not(.lang-switch--auth) button { padding: 5px 7px; font-size: 11px; }
-  .lang-switch + .app-account { margin-left: 6px; }
+  .lang-switch + .app-account, .theme-btn + .app-account { margin-left: 6px; }
+  .app-bar .theme-btn { display: none; }   /* на телефоне тема — в окне «Аккаунт»: в шапке место для вкладок */
 
   .app-strip { padding: 8px max(12px, env(safe-area-inset-left)) 4px !important; gap: 6px 10px !important; }
   .app-strip-actions {
