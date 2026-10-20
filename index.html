@@ -5394,7 +5394,8 @@ class Component extends DCLogic {
       // качество 3D: переключение пересоздаёт сцену (сглаживание и эффекты задаются при создании)
       const vq = this.viz ? this.viz.quality : st.vizQ || (V ? V.autoQuality() : 'std');
       Object.assign(out, { vizQL: vq === 'hq' ? 'Качество: высокое' : 'Качество: обычное', vizQOn: vq === 'hq' ? 'true' : 'false',
-        vizQTip: 'Высокое — лак и хром, детали машин, картон коробок, мягкие тени и свечение фар (для мощного компьютера). Обычное — быстрее, для телефона',
+        vizQTip: 'Высокое — лак и хром, детали машин, картон коробок, мягкие тени и свечение фар (для мощного компьютера). Обычное — быстрее, для телефона' +
+          (vq === 'std' && !st.vizQ && V && V.qualityWhy && V.qualityWhy() ? '. Сейчас выбрано само: обычное — ' + V.qualityWhy() + '. Нажмите, чтобы включить высокое' : ''),
         vizQGo: () => {
           const next = vq === 'hq' ? 'std' : 'hq';
           try { localStorage.setItem('logi-viz-quality', next); } catch (e) {}

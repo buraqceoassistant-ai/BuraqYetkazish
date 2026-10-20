@@ -171,15 +171,17 @@
     } catch (e) { gpu = ''; }
     return gpu;
   }
-  function autoQuality() {
+  // качество по устройству и причина, если обычное (её показывает подсказка кнопки «Качество»)
+  function qualityWhy() {
     const mm = q => !!(window.matchMedia && window.matchMedia(q).matches), nav = window.navigator || {};
     // телефон — по размеру экрана, а не окна: у ноутбука с масштабом 125–150 % окно браузера ниже 700 px, и высокое
     // качество не включалось на мощном компьютере
     const scr = window.screen || {}, sMin = Math.min(scr.width || 9999, scr.height || 9999);
-    if (sMin < 600 || (mm('(pointer: coarse)') && !mm('(any-pointer: fine)'))) return 'std';
-    if ((nav.deviceMemory && nav.deviceMemory < 4) || (nav.hardwareConcurrency && nav.hardwareConcurrency < 4)) return 'std';
-    return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(gpuName()) ? 'std' : 'hq';
+    if (sMin < 600 || (mm('(pointer: coarse)') && !mm('(any-pointer: fine)'))) return 'похоже на телефон или планшет';
+    if ((nav.deviceMemory && nav.deviceMemory < 4) || (nav.hardwareConcurrency && nav.hardwareConcurrency < 4)) return 'мало памяти или ядер процессора';
+    return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(gpuName()) ? 'браузер рисует без видеокарты — включите «Аппаратное ускорение» в настройках браузера' : '';
   }
+  function autoQuality() { return qualityWhy() ? 'std' : 'hq'; }
 
   // тон NeutralToneMapping (как в three.js) и обратный к нему цвет: фон в высоком качестве проходит через тон
   const neutral = ([r, g, b]) => {
@@ -976,5 +978,5 @@
     };
   }
 
-  window.LogiViz = { layout, packBoxes, bodyOf, colorOf, isLight: light, PALETTE, load, ready: () => !!T, createView, autoQuality };
+  window.LogiViz = { layout, packBoxes, bodyOf, colorOf, isLight: light, PALETTE, load, ready: () => !!T, createView, autoQuality, qualityWhy };
 })();

@@ -646,6 +646,14 @@ Kamaz без тарифа — заполните тариф во вкладке 
 Качество: высокое	Sifat: yuqori
 Качество: обычное	Sifat: oddiy
 Высокое — лак и хром, детали машин, картон коробок, мягкие тени и свечение фар (для мощного компьютера). Обычное — быстрее, для телефона	Yuqori — lak va xrom, mashina detallari, quti kartoni, yumshoq soyalar va faralar nuri (kuchli kompyuter uchun). Oddiy — tezroq, telefon uchun
+# подсказка кнопки качества с причиной — длинная, переводится по предложениям
+Высокое — лак и хром, детали машин, картон коробок, мягкие тени и свечение фар (для мощного компьютера).	Yuqori — lak va xrom, mashina detallari, quti kartoni, yumshoq soyalar va faralar nuri (kuchli kompyuter uchun).
+Обычное — быстрее, для телефона.	Oddiy — tezroq, telefon uchun.
+Сейчас выбрано само: обычное — {s}.	Hozir o‘zi tanlangan: oddiy — {s}.
+Нажмите, чтобы включить высокое	Yuqorini yoqish uchun bosing
+похоже на телефон или планшет	telefon yoki planshetga o‘xshaydi
+мало памяти или ядер процессора	xotira yoki protsessor yadrolari kam
+браузер рисует без видеокарты — включите «Аппаратное ускорение» в настройках браузера	brauzer videokartasiz chizyapti — brauzer sozlamalarida «Apparat tezlatish»ni yoqing
 Сзади	Orqadan
 Загружаю 3D…	3D yuklayapman…
 Нет партий	Partiya yo‘q
