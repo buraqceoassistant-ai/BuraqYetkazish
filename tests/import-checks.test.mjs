@@ -112,6 +112,20 @@ test('маркировка без решения и строка без марк
   assert.equal(r.ok, true); assert.deepEqual(r.lists.unknown.items.map(x => x.mark).sort(), ['ALFA', 'BL-00']);
 });
 
+test('новый клиент: без BL — блокирует, с BL — в партию под этим BL и не «без клиента»', async () => {
+  const { book, draft } = await draftOf({ rows: [...ROWS, ['KARA CHICKEN', 4, 0.8, 120]] });
+  const d = clone(draft), k = L.key('KARA CHICKEN');
+  let r = C.check(d, { book, settings: S });
+  assert.ok(!codes(r.blocking).includes('total'));
+  assert.deepEqual(r.blocking.map(b => b.code), ['new-bl']); assert.match(r.blocking[0].text, /«KARA CHICKEN» — новый клиент: впишите его BL/);
+  assert.ok(r.lists.unknown.items.some(x => x.mark === 'KARA CHICKEN'));
+  d.marks[k] = { ...d.marks[k], client: 'BL-03' };
+  r = C.check(d, { book, settings: S });
+  assert.equal(r.ok, true); assert.ok(!r.lists.unknown.items.some(x => x.mark === 'KARA CHICKEN'));
+  const sh = C.shipmentsOf(d, '').find(x => x.bl === 'BL-03');
+  assert.deepEqual([sh.places, sh.cbm, sh.kg], [4, 0.8, 120]);
+});
+
 test('плотность вне пределов «Тарифов» — предупреждение и «тяжёлые»', async () => {
   const { book, draft } = await draftOf();
   const r = C.check(draft, { book, settings: { ...S, densityMin: 195, densityMax: 240 } });

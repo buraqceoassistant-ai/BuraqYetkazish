@@ -107,10 +107,11 @@
     const pts = [];
     stops.forEach((s, i) => {
       if (seen[s.bl] != null) { pts.push({ dup: seen[s.bl] }); return; }
-      const near = s.lat != null && s.lon != null ? places.find(q => km([q.lat, q.lon], [s.lat, s.lon]) <= PLACE_KM) : null;
+      // точка без координат (noLoc, в плане — у склада) — отдельное место: её адрес не известен
+      const near = s.lat != null && s.lon != null && !s.noLoc ? places.find(q => km([q.lat, q.lon], [s.lat, s.lon]) <= PLACE_KM) : null;
       if (near) { seen[s.bl] = near.i; pts.push({ dup: near.i, place: true }); return; }
       seen[s.bl] = i; idx++;
-      if (s.lat != null && s.lon != null) places.push({ i, lat: s.lat, lon: s.lon });
+      if (s.lat != null && s.lon != null && !s.noLoc) places.push({ i, lat: s.lat, lon: s.lon });
       const w = s.zone === 'out' ? ptOut : ptIn;
       pts.push({ tariff: idx <= inc ? 0 : w, weight: w, zone: s.zone });
     });
@@ -607,7 +608,8 @@
     const { ev } = evaluator(items, fleet, maxStops, S, depot);
     const mk = st => ev(st) || (st.length === 1 ? overTrip(st[0], fleet, S, depot) : null);
     const dOf = s => { const d = String((s.client || {}).district || '').trim(); return d && d !== 'Aniqlanmagan' ? d : ''; };
-    const center = st => [st.reduce((a, s) => a + s.lat, 0) / st.length, st.reduce((a, s) => a + s.lon, 0) / st.length];
+    // центр района — по точкам с координатами (точка без координат стоит у склада и сдвинула бы центр)
+    const center = st0 => { const g = st0.filter(s => !s.noLoc), st = g.length ? g : st0; return [st.reduce((a, s) => a + s.lat, 0) / st.length, st.reduce((a, s) => a + s.lon, 0) / st.length]; };
     const regular = fleet.filter(v => v.priced && !v.onlyIfNeeded);
     const needsBig = s => !regular.some(v => fitsIn(load([s]), v) && (!small(v) || known(s)));
     const byD = new Map();
@@ -766,8 +768,13 @@
   const stopKey = s => s.id + '#' + (s.part || 1);
   function buildPlans(stopsAll, S) {
     const depot = [S.depotLat, S.depotLon];
-    const withC = stopsAll.filter(s => s.lat != null), noC = stopsAll.filter(s => s.lat == null);
-    withC.forEach(s => { s.angle = bearing(depot, [s.lat, s.lon]); s.depotKm = km(depot, [s.lat, s.lon]); });
+    const located = stopsAll.filter(s => s.lat != null), noC = stopsAll.filter(s => s.lat == null);
+    located.forEach(s => { s.angle = bearing(depot, [s.lat, s.lon]); s.depotKm = km(depot, [s.lat, s.lon]); });
+    // Отгрузки без координат (у клиента нет точки на карте) — тоже в планах: точка у склада (без км и направления), зона не
+    // известна — тариф внутри кольца. Машина и место в кузове считаются; в рейсе — «без точки», на карте их нет (noLoc).
+    // Список noCoords — для заметки «уточните адрес». Склад без координат — как раньше, такие отгрузки вне планов
+    const depotOk = depot[0] != null && depot[1] != null && isFinite(+depot[0]) && isFinite(+depot[1]);
+    const withC = located.concat(depotOk ? noC.map(s => ({ ...s, lat: +depot[0], lon: +depot[1], noLoc: true, zone: s.zone || 'in', angle: 0, depotKm: 0 })) : []);
     // Trips go to the vehicles of the fleet (Gazel 9, Changan 1, Labo 1, Kamaz 2 — «Тарифы»): the longest trips first,
     // one per vehicle; the rest as a second trip of the vehicle that is back first (up to tripsPerVehicle a day).
     // Plans A, B and X first move trips beyond the count of a kind to free vehicles of other kinds (fitFleet), so a second

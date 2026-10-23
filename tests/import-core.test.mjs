@@ -96,6 +96,21 @@ test('маркировки → клиенты кодом: код, бренд, л
   assert.equal(amb.client, null); assert.equal(amb.by, 'ambiguous'); assert.deepEqual(amb.options.sort(), ['BL-904', 'BL-990']);
 });
 
+test('новый клиент: BL из маркировки или вписанный человеком; код внутри маркировки — клиент справочника', () => {
+  assert.deepEqual(['bl 03', 'BL03', ' bl-77 ', 'Bl_5', 'kara'].map(L.normBl), ['BL-03', 'BL-03', 'BL-77', 'BL-5', 'KARA']);
+  assert.deepEqual(['BL-03 KARA CHICKEN', 'Kara chicken bl03', 'KARA (BL-12)', 'KARA CHICKEN', 'TABLE 3', 'KG 100'].map(L.codeIn), ['BL-03', 'BL-03', 'BL-12', '', '', '']);
+  assert.deepEqual(L.newClientOf('BL-03 KARA CHICKEN'), { bl: 'BL-03', brand: 'KARA CHICKEN' });
+  assert.deepEqual(L.newClientOf('Kara chicken (bl-03)'), { bl: 'BL-03', brand: 'Kara chicken' });
+  assert.deepEqual(L.newClientOf('BLOOD GREY'), { bl: '', brand: 'BLOOD GREY' });
+  assert.deepEqual(L.newDecision('BLOOD GREY'), { decided: true, by: 'new', isNew: true, client: '', reason: '' });
+  assert.equal(L.newDecision('BL-03 KARA').client, 'BL-03');
+  const idx = L.clientIndex(CLIENTS), m = s => L.matchMark(s, idx);
+  assert.deepEqual([m('BL-901 NUR').client, m('BL-901 NUR').by], ['BL-901', 'code']);   // код в маркировке — клиент справочника
+  assert.equal(m('nova bl 0902').client, 'BL-902');
+  assert.equal(m('BL-00 KARA').by, 'unknown-owner');                                      // BL-00 — не новый клиент
+  assert.equal(m('BL-03 KARA CHICKEN'), null);                                             // кода нет в справочнике — решит analyze: новый
+});
+
 test('запрос сопоставления: только id, название и маркировки клиентов — без адресов и телефонов', () => {
   const r = L.matchRequest(['CBETA', 'NEWBRAND'], [{ bl: 'BL-1', brand: 'B', name: 'N', marks: 'X', tel1: '+998901234567', address: 'Toshkent, secret st.', lat: 41.3 }]);
   const t = r.content[0].text;

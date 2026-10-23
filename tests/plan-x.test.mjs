@@ -86,9 +86,22 @@ test('загрузка как в плане A: груз больше Gazel — K
   assert.equal(P.X.districts[0].big, 1, 'в заметке — груз только для Kamaz');
 });
 
-test('без координат — не в плане X, как в A', () => {
+test('без координат — в планах как точка у склада: «без точки», своя доплата за точку; список — для заметки', () => {
   const st = [pt('Chilonzor', C1, 0, 0, 5), { ...pt('Chilonzor', C1, 0, 0, 5), lat: null, lon: null }];
   const P = E.buildPlans(st, S);
-  assert.equal(P.X.trips.reduce((a, t) => a + t.stops.length, 0), 1);
+  for (const k of ['A', 'B', 'X']) {
+    const all = P[k].trips.flatMap(t => t.stops);
+    assert.equal(all.length, 2, k + ': обе отгрузки в плане');
+    const nl = all.find(x => x.noLoc);
+    assert.ok(nl && nl.lat === S.depotLat && nl.lon === S.depotLon && nl.zone === 'in', k + ': без точки — у склада, тариф внутри кольца');
+  }
   assert.equal(P.noCoords.length, 1);
+  assert.equal(st[1].lat, null, 'исходная отгрузка не меняется');
+  // две отгрузки без координат — два места (цена за каждую точку), а не «одно место» у склада
+  const two = [{ id: 'n1', bl: 'BL-N1', cbm: 1, kg: 100, lat: S.depotLat, lon: S.depotLon, noLoc: true, zone: 'in' }, { id: 'n2', bl: 'BL-N2', cbm: 1, kg: 100, lat: S.depotLat, lon: S.depotLon, noLoc: true, zone: 'in' }];
+  const near = two.map(x => ({ ...x, noLoc: false }));
+  assert.ok(E.priceTrip(two, 'gazel', S).total > E.priceTrip(near, 'gazel', S).total, 'без точки — каждая отгрузка своя точка');
+  // склад без координат — как раньше: без координат в планы не входят
+  const P0 = E.buildPlans([pt('Chilonzor', C1, 0, 0, 5), { ...pt('Chilonzor', C1, 0, 0, 5), lat: null, lon: null }], { ...S, depotLat: null, depotLon: null });
+  assert.ok(!P0.A.trips.some(t => t.stops.some(x => x.noLoc)));
 });

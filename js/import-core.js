@@ -211,6 +211,8 @@
         summary = r.result.summary || summary;
       }
     }
+    // маркировку не узнал ни код, ни ИИ — новый клиент (при подтверждении — в справочник): BL из маркировки или впишите сами
+    Object.values(marks).forEach(m => { if (!m.decided && !m.suggest && m.by !== 'ambiguous') Object.assign(m, newDecision(m.mark)); });
     const usage = calls.reduce((a, c) => { const u = c.usage || {}; return { in: a.in + (u.in || 0), cache: a.cache + (u.cache || 0), out: a.out + (u.out || 0) }; }, { in: 0, cache: 0, out: 0 });
     const d = merged.meta.date && /^\d{4}-\d{2}-\d{2}$/.test(merged.meta.date) ? merged.meta.date : today;
     return { meta: merged.meta, journalDate: d, rows, marks, notes: merged.notes, summary, calls, usage, model: (calls.find(c => c.model) || {}).model || '' };
@@ -250,6 +252,24 @@
     return [...out];
   }
   const isUnknownOwner = s => { const c = codeOf(s); return !!c && /-0$/.test(c); };   // BL-00: груз без известного владельца
+  // BL, вписанный человеком: «bl 03», «BL03», «bl-03» → BL-03 (нули как написаны); другой текст — заглавными, как есть
+  function normBl(s) {
+    const t = String(s || '').toUpperCase().replace(/\s+/g, ' ').trim(), m = t.match(/^([A-Z]{2,4})\s*[-_.№#]?\s*(\d{1,6})$/);
+    return m ? m[1] + '-' + m[2] : t;
+  }
+  // код BL внутри маркировки: «BL-03 KARA CHICKEN», «KARA CHICKEN BL03» → BL-03 (только с буквами BL — «KG 100» не код)
+  function codeIn(s) {
+    const m = String(s || '').toUpperCase().match(/(?:^|[^A-Z0-9])BL\s*[-_.№#]?\s*(\d{1,6})(?![0-9])/);
+    return m ? 'BL-' + m[1] : '';
+  }
+  // новый клиент из маркировки: BL — код из маркировки (или пусто — впишет человек), название — маркировка без кода
+  function newClientOf(mark) {
+    const t = String(mark || '').replace(/\s+/g, ' ').trim();
+    const brand = t.replace(/(?:^|[^A-Za-z0-9])bl\s*[-_.№#]?\s*\d{1,6}(?![0-9])/i, ' ').replace(/^[\s,;:/\-–—·()[\]]+|[\s,;:/\-–—·()[\]]+$/g, '').replace(/\s+/g, ' ').trim();
+    return { bl: codeIn(t), brand };
+  }
+  // решение «новый клиент»: при подтверждении — в справочник (BL, маркировка, название; остальное — потом)
+  const newDecision = mark => ({ decided: true, by: 'new', isNew: true, client: codeIn(mark), reason: '' });
   // Индекс справочника: код, маркировки клиента, бренд. Бренд, который есть у нескольких клиентов, неоднозначен.
   function clientIndex(clients) {
     const code = new Map(), mark = new Map(), brand = new Map();
@@ -268,6 +288,10 @@
     const one = (m, k) => { const s = m.get(k); return s && s.size === 1 ? [...s][0] : s && s.size > 1 ? [...s] : null; };
     const c = codeOf(mark);
     if (c) { const hit = one(idx.code, c); if (typeof hit === 'string') return { client: hit, by: 'code', reason: 'код ' + c }; }
+    // код внутри маркировки («BL-03 KARA CHICKEN») — клиент с этим кодом в справочнике
+    const ci = !c && codeIn(mark);
+    if (ci && isUnknownOwner(ci)) return { client: null, by: 'unknown-owner', reason: 'BL-00 в маркировке — груз без известного владельца' };
+    if (ci) { const hit = one(idx.code, codeOf(ci)); if (typeof hit === 'string') return { client: hit, by: 'code', reason: 'код ' + ci + ' в маркировке' }; }
     for (const [m, by, why] of [[idx.mark, 'mark', 'маркировка клиента'], [idx.brand, 'brand', 'бренд']]) {
       for (const v of variants(mark)) {
         const hit = one(m, v);
@@ -279,7 +303,8 @@
   }
 
   const API = { colNum, colName, cellOf, ownCell, LOCAL_MODEL, rowNums, rowLine, excelParts, excelText, scopes, requestFor, splitScope, extractRequests, matchRequest, mergeParts, analyze,
-    SYSTEM_EXTRACT, SYSTEM_MATCH, EXTRACT_SCHEMA, MATCH_SCHEMA, key, translit, codeOf, variants, isUnknownOwner, clientIndex, matchMark, EXCEL_CHUNK_ROWS };
+    SYSTEM_EXTRACT, SYSTEM_MATCH, EXTRACT_SCHEMA, MATCH_SCHEMA, key, translit, codeOf, variants, isUnknownOwner, clientIndex, matchMark, EXCEL_CHUNK_ROWS,
+    normBl, codeIn, newClientOf, newDecision };
   root.LogiImport = Object.assign(root.LogiImport || {}, API);
   if (typeof module === 'object' && module.exports) module.exports = API;
 })(typeof window !== 'undefined' ? window : globalThis);

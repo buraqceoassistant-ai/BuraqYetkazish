@@ -34,7 +34,18 @@ test('неизвестная маркировка — предложение И�
   assert.match(log[1].content[0].text, /<marks>\nNEWBRAND\nGHOST\n<\/marks>/);
   assert.deepEqual([d.marks.NEWBRAND.decided, d.marks.NEWBRAND.client, d.marks.NEWBRAND.suggest.client], [false, null, 'BL-907']);
   assert.equal(d.marks.GHOST.suggest, null);             // BL-777 нет в справочнике
+  assert.deepEqual([d.marks.GHOST.decided, d.marks.GHOST.isNew, d.marks.GHOST.client, d.marks.GHOST.by], [true, true, '', 'new']);   // не узнал никто — новый клиент, BL впишут
   assert.match(d.summary, /\{marks\}/);
+});
+
+test('без ИИ: незнакомая маркировка — новый клиент; BL из маркировки, если он там есть', async () => {
+  const rows = [...ROWS, ['BL-03 KARA CHICKEN', 4, 0.8, 120], ['BLOOD GREY', 2, 0.2, 30]];
+  const book = await X.readGrid(manifestXlsx({ rows }));
+  const d = await L.analyze(opts({ doc: { kind: 'xlsx', book }, ai: fakeAi({}) }));
+  const K = d.marks[L.key('BL-03 KARA CHICKEN')], B = d.marks[L.key('BLOOD GREY')];
+  assert.deepEqual([K.decided, K.isNew, K.client], [true, true, 'BL-03']);
+  assert.deepEqual([B.decided, B.isNew, B.client], [true, true, '']);
+  assert.equal(d.marks.ALFA.isNew, undefined);           // узнанные кодом — как раньше
 });
 
 test('ответ не поместился — часть делится пополам и разбирается заново; порядок строк сохраняется', async () => {

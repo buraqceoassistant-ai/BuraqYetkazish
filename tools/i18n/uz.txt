@@ -545,8 +545,6 @@ CBM по районам	Tumanlar bo‘yicha CBM
 точ.	man.
 км	km
 Точка, сум	Manzil, so‘m
-Без координат — распределить вручную	Koordinatasiz — qo‘lda taqsimlash
-Эти отгрузки не попали ни в один план и не входят в стоимость. Добавьте координаты клиенту.	Bu jo‘natmalar hech bir rejaga tushmadi va narxga kirmaydi. Mijozga koordinatalar qo‘shing.
 A — экономичный	A — tejamkor
 Самый дешёвый для компании без перегруза: меньше рейсов и машин, маршруты по направлениям. Labo, Changan, Gazel и Kamaz. Gazel строго до	Ortiqcha yuksiz kompaniya uchun eng arzoni: kamroq reys va mashina, yo‘nalishlar bo‘yicha marshrutlar. Labo, Changan, Gazel va Kamaz. Gazel qat’iy
 м³ /	m³ /
@@ -624,7 +622,6 @@ Kamaz без тарифа — заполните тариф во вкладке 
 отгрузок машина уже указана — заменится.	jo‘natmada mashina allaqachon ko‘rsatilgan — almashtiriladi.
 Большие отгрузки разделятся на части (строки в журнале):	Katta jo‘natmalar qismlarga bo‘linadi (jurnaldagi qatorlar):
 без машины — эти отгрузки останутся «Belgilanmagan».	mashinasiz — bu jo‘natmalar «Belgilanmagan» bo‘lib qoladi.
-— в план не вошли, их не трогаем.	— rejaga kirmadi, ularga tegmaymiz.
 Статусы не меняются. Отменить можно сразу после записи.	Holatlar o‘zgarmaydi. Yozgandan keyin darhol bekor qilish mumkin.
 часть	qism
 · часть	· qism
@@ -906,7 +903,6 @@ Excel (.xlsx, .xls) или PDF, в том числе скан · до 10 МБ, P
 Выберите клиента или «Без клиента»	Mijozni yoki «Mijozsiz»ni tanlang
 ИИ предлагает	SI taklif qiladi
 уверенность:	ishonch:
-отгр. без координат клиента — в планы не вошли.	jo‘n. mijoz koordinatasiz — rejalarga kirmadi.
 Отгрузок в партии:	Partiyadagi jo‘natmalar:
 (маркировки одного клиента — одна отгрузка).	(bitta mijoz markirovkalari — bitta jo‘natma).
 Строки и клиенты	Qatorlar va mijozlar
@@ -1698,7 +1694,6 @@ Telegram не принял фото: {s}	Telegram rasmni qabul qilmadi: {s}
 ИИ предлагает {s} — средняя уверенность: {s2}	SI taklif qiladi: {s} — ishonch o‘rta: {s2}
 ИИ предлагает {s} — низкая уверенность: {s2}	SI taklif qiladi: {s} — ishonch past: {s2}
 ИИ предлагает {s} — уверенность: {s2}	SI taklif qiladi: {s} — ishonch: {s2}
-{n} отгр. без координат клиента — в планы не вошли.	{n} jo‘n. mijoz koordinatasiz — rejalarga kirmadi.
 Отгрузок в партии: {n} (маркировки одного клиента — одна отгрузка).	Partiyadagi jo‘natmalar: {n} (bitta mijoz markirovkalari — bitta jo‘natma).
 Исправлено вручную: {n}	Qo‘lda tuzatilgan: {n}
 Исправлено вручную: {n} из {n2} ({n3} %)	Qo‘lda tuzatilgan: {n} / {n2} ({n3} %)
@@ -1765,7 +1760,6 @@ PDF · {n} стр.	PDF · {n} bet
 код ({s})	kod ({s})
 маркировка клиента ({s})	mijoz markirovkasi ({s})
 Большие отгрузки разделятся на части (строки в журнале): {s}	Katta jo‘natmalar qismlarga bo‘linadi (jurnaldagi qatorlar): {s}
-Без координат {n} — в план не вошли, их не трогаем.	Koordinatasiz {n} — rejaga kirmadi, ularga tegmaymiz.
 Без машины {n} — эти отгрузки останутся «Belgilanmagan».	Mashinasiz {n} — bu jo‘natmalar «Belgilanmagan» bo‘lib qoladi.
 {s}: {n} м³ / {n2} кг — больше самой большой машины ({w} {n3} м³ / {n4} кг), разделена на {n5} рейса: {s2}.	{s}: {n} m³ / {n2} kg — eng katta mashinadan katta ({w} {n3} m³ / {n4} kg), {n5} reysga bo‘lindi: {s2}.
 {s}: {n} м³ / {n2} кг — больше самой большой машины ({w} {n3} м³ / {n4} кг), разделена на {n5} рейсов: {s2}.	{s}: {n} m³ / {n2} kg — eng katta mashinadan katta ({w} {n3} m³ / {n4} kg), {n5} reysga bo‘lindi: {s2}.
@@ -1799,11 +1793,10 @@ PDF · {n} стр.	PDF · {n} bet
 {w} {n} м³	{w} {n} m³
 код {w}	kod {w}
 похоже на клиента {s}	{s} mijoziga o‘xshaydi
-{n} отгр. без координат клиента — в планы не вошли.	{n} jo‘n. mijoz koordinatasiz — rejalarga kirmadi.
 {s} (скрыт)	{s} (yashirin)
 Исправлено вручную: {n}[| из {n2} ({n3} %)][| — полей {n4}, строк добавлено {n5}, удалено {n6}, клиентов {n7}]	Qo‘lda tuzatilgan: {n}[| / {n2} ({n3} %)][| — maydon {n4}, qo‘shilgan qator {n5}, o‘chirilgan {n6}, mijoz {n7}]
 Кнопка станет активной, когда не останется блокирующих ошибок: {n}.	Bloklovchi xatolar qolmaganda tugma faollashadi: {n}.
-Партия создана {d}: {n} отгрузок[|, маркировки сохранены у {n2} клиентов].	Partiya yaratildi {d}: {n} jo‘natma[|, {n2} mijozda markirovkalar saqlandi].
+Партия создана {d}: {n} отгрузок[|, маркировки сохранены у {n2} клиентов][|, новых клиентов в справочнике {n3} ({s}) — заполните их данные в «Клиентах»].	Partiya yaratildi {d}: {n} jo‘natma[|, {n2} mijozda markirovkalar saqlandi][|, ma’lumotnomaga {n3} ta yangi mijoz qo‘shildi ({s}) — ularning ma’lumotlarini «Mijozlar»da to‘ldiring].
 Черновик отклонён: {s}.	Qoralama rad etildi: {s}.
 Черновик отклонён.	Qoralama rad etildi.
 {s} (ещё {n})	{s} (yana {n})
@@ -1844,7 +1837,6 @@ R{n} — [места|м³|кг]: в документе {n2}, в строке {n3
 У {n} отгрузок машина уже указана — заменится.	{n} ta jo‘natmada mashina allaqachon ko‘rsatilgan — almashtiriladi.
 Большие отгрузки разделятся на части (строки в журнале): {s}.	Katta jo‘natmalar qismlarga bo‘linadi (jurnaldagi qatorlar): {s}.
 {n} [рейс|рейса|рейсов] без машины — эти отгрузки останутся «Belgilanmagan».	{n} reys mashinasiz — bu jo‘natmalar «Belgilanmagan» bo‘lib qoladi.
-Без координат {n} — в план не вошли, их не трогаем.	Koordinatasiz {n} — rejaga kirmadi, ularga tegmaymiz.
 Статусы не меняются.	Holatlar o‘zgarmaydi.
 ✓ План {w} записан в журнал за {d}: {n} [рейс|рейса|рейсов], {n2} отгрузок — машины и номера рейсов.	✓ {w} reja {d} jurnaliga yozildi: {n} reys, {n2} jo‘natma — mashinalar va reys raqamlari.
 +{n} сум к самому дешёвому	eng arzonidan +{n} so‘m
@@ -2755,3 +2747,24 @@ Changan / Shineray нет в планах: не заполнены объём к
 Поздно: {s} возвращается в {t}.	Kech: {s} soat {t} da qaytadi.
 Поздно: {s} возвращается в {t} следующего дня.	Kech: {s} ertasi kuni soat {t} da qaytadi.
 Разгрузка на точке — {n} мин, рейс из {n2} точ. — проверьте это число («Тарифы и планы» → «Правила планов»).	Nuqtada tushirish — {n} daqiqa, reysda {n2} ta nuqta — bu sonni tekshiring («Tariflar va rejalar» → «Rejalar qoidalari»).
+# план: отгрузки без точки на карте — в плане у склада
+Без точки на карте — уточните адрес	Xaritada nuqtasi yo‘q — manzilni aniqlang
+Эти отгрузки в плане — как точка у склада: машина и место в кузове посчитаны, километров нет, тариф — внутри кольца. В рейсе — «📍 без точки». Добавьте координаты клиенту — план пересчитается.	Bu jo‘natmalar rejada ombor yonidagi nuqta sifatida: mashina va kuzovdagi joy hisoblangan, kilometr yo‘q, tarif — halqa ichida. Reysda — «📍 nuqtasiz». Mijozga koordinata qo‘shing — reja qayta hisoblanadi.
+📍 без точки — уточнить адрес	📍 nuqtasiz — manzilni aniqlash
+Без точки на карте {n} — в плане как точка у склада: уточните адрес.	Xaritada nuqtasi yo‘q {n} — rejada ombor yonidagi nuqta: manzilni aniqlang.
+{n} отгр. без координат клиента — в планах как точка у склада, уточните адрес.	{n} jo‘n. mijoz koordinatasiz — rejalarda ombor yonidagi nuqta, manzilni aniqlang.
++ Новый клиент (в справочник)	+ Yangi mijoz (ma’lumotnomaga)
+BL нового клиента	Yangi mijozning BL kodi
+Новый клиент {s}	Yangi mijoz {s}
+Новый клиент — без BL	Yangi mijoz — BL yo‘q
+Новый клиент без BL	Yangi mijoz BL siz
+Новый клиент: впишите BL (KARA CHICKEN → BL-03) или выберите клиента	Yangi mijoz: BL kodini yozing (KARA CHICKEN → BL-03) yoki mijozni tanlang
+Новый клиент: при подтверждении — в справочник (BL и маркировка), остальное заполните позже	Yangi mijoz: tasdiqlanganda ma’lumotnomaga qo‘shiladi (BL va markirovka), qolganini keyin to‘ldirasiz
+Новый клиент: добавлен в справочник	Yangi mijoz: ma’lumotnomaga qo‘shildi
+{s} уже есть в справочнике — отгрузки и маркировка пойдут клиенту {s2}	{s} ma’lumotnomada bor — jo‘natmalar va markirovka {s2} mijoziga o‘tadi
+Маркировка «{s}» — новый клиент: впишите его BL (или выберите клиента / «без клиента»)	Markirovka «{s}» — yangi mijoz: uning BL kodini yozing (yoki mijozni / «mijozsiz»ni tanlang)
+Новые клиенты — в справочник при подтверждении	Yangi mijozlar — tasdiqlanganda ma’lumotnomaga
+— {n} · без BL {n2}	— {n} · BL siz {n2}
+{n} маркировок · новых {n2}	{n} markirovka · yangi {n2}
+В манифесте {n} маркировок: {n2} клиентов из справочника, новых {n6}, {n3} мест, {n4} м³, {n5} кг.	Manifestda {n} ta markirovka: ma’lumotnomadan {n2} mijoz, yangi {n6}, {n3} joy, {n4} m³, {n5} kg.
+Новых клиентов в справочник: {n} ({s}) — адрес, телефоны и точку на карте заполните позже.	Ma’lumotnomaga yangi mijozlar: {n} ({s}) — manzil, telefonlar va xaritadagi nuqtani keyin to‘ldirasiz.

@@ -995,6 +995,7 @@
                   <sc-if value="{{ m.edit }}">
                     <sc-raw-select class="input" value="{{ m.value }}" sc-camel-on-change="{{ m.onPick }}" aria-label="Клиент"><sc-for list="{{ m.opts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select>
                   </sc-if>
+                  <sc-if value="{{ m.newEdit }}"><label class="imp-new-bl"><span>BL нового клиента</span><input class="input" value="{{ m.newBl }}" placeholder="BL-000" sc-camel-on-change="{{ m.onNewBl }}" aria-label="BL нового клиента"></label></sc-if>
                   <sc-if value="{{ m.view }}"><div style="font-size:14px">{{ m.chosen }}</div></sc-if>
                   <div style="font-size:12px;color:var(--color-neutral-700)">{{ m.how }}</div>
                   <sc-if value="{{ m.hasSuggest }}"><div class="imp-sugg"><span style="flex:1">{{ m.suggest }}</span><button class="btn btn-secondary" sc-camel-on-click="{{ m.accept }}">Принять</button></div></sc-if>
@@ -1305,7 +1306,7 @@
         </sc-for>
         <sc-if value="{{ planHasNoCoords }}">
           <section style="border:1px dashed var(--color-neutral-500)">
-            <div style="padding:14px 18px;border-bottom:1px solid var(--color-divider)"><div style="font-family:var(--font-heading);font-weight:500;font-size:20px">Без координат — распределить вручную</div><div style="font-size:12px;color:var(--color-neutral-700)">Эти отгрузки не попали ни в один план и не входят в стоимость. Добавьте координаты клиенту.</div></div>
+            <div style="padding:14px 18px;border-bottom:1px solid var(--color-divider)"><div style="font-family:var(--font-heading);font-weight:500;font-size:20px">Без точки на карте — уточните адрес</div><div style="font-size:12px;color:var(--color-neutral-700)">Эти отгрузки в плане — как точка у склада: машина и место в кузове посчитаны, километров нет, тариф — внутри кольца. В рейсе — «📍 без точки». Добавьте координаты клиенту — план пересчитается.</div></div>
             <sc-raw-table class="table tc"><sc-raw-tbody>
               <sc-for list="{{ planNoCoords }}" as="s">
                 <sc-raw-tr><sc-raw-td class="c2 c-strong" style="font-weight:500;width:120px">{{ s.bl }}</sc-raw-td><sc-raw-td class="c4">{{ s.name }}</sc-raw-td><sc-raw-td class="c2" style="text-align:right">{{ s.cbm }} м³</sc-raw-td><sc-raw-td class="c2" style="text-align:right">{{ s.kg }} кг</sc-raw-td><sc-raw-td class="c2 c-actions" style="width:120px"><button class="btn btn-ghost" sc-camel-on-click="{{ s.onEdit }}">Клиент</button></sc-raw-td></sc-raw-tr>
@@ -2978,20 +2979,24 @@ class Component extends DCLogic {
       impAi: 'Разобрал ' + (d.model || 'ИИ') + ' · вызовов ' + d.calls.length + ' · токенов ' + f0(d.usage.in + d.usage.cache) + ' → ' + f0(d.usage.out) + ' · ' + f1(d.calls.reduce((a, x) => a + (x.ms || 0), 0) / 1000, 0) + ' с',
       impNotes: (d.notes || []).map(text => ({ text })), impHasNotes: (d.notes || []).length > 0, impNotesTitle: d.model === window.LogiImport.LOCAL_MODEL ? 'Заметки разбора' : 'Заметки ИИ', impFileErr: c.fileError || '', impHasFileErr: !!c.fileError });
     const groups = chk.groups.filter(g => String(g.mark || '').trim()), t = chk.sum, doc = chk.doc;
-    const dec = new Set(groups.filter(g => g.decision && g.decision.decided && g.decision.client).map(g => g.decision.client));
+    // клиенты справочника и новые (BL нового, который уже есть в справочнике, — тот клиент)
+    const known = x => x && x.decided && x.client ? (x.isNew ? (this.impClientOf(x.client) || {}).bl : x.client) : null;
+    const dec = new Set(groups.map(g => known(g.decision)).filter(Boolean));
+    const freshG = groups.filter(g => g.decision && g.decision.decided && g.decision.isNew && !known(g.decision)), fresh = new Set(freshG.filter(g => g.decision.client).map(g => g.decision.client));
     out.impKpis = [
-      { label: 'Клиентов', value: f0(dec.size), sub: groups.length + ' маркировок' },
+      { label: 'Клиентов', value: f0(dec.size + fresh.size), sub: groups.length + ' маркировок' + (fresh.size ? ' · новых ' + fresh.size : '') },
       { label: 'Мест', value: f0(t.places), sub: doc && doc.places != null ? 'в итоге документа ' + f0(doc.places) : 'итога нет' },
       { label: 'Объём, м³', value: f1(t.cbm, 3), sub: doc && doc.cbm != null ? 'в итоге документа ' + f1(doc.cbm, 3) : '' },
       { label: 'Вес, кг', value: f1(t.kg, 1), sub: doc && doc.kg != null ? 'в итоге документа ' + f1(doc.kg, 1) : '' },
       { label: 'Мелкие', value: f0(chk.lists.small.n), sub: chk.lists.small.n ? f1(chk.lists.small.cbm, 2) + ' м³ · меньше ' + f1(S.freeOutM3, 2) + ' м³' : 'меньше ' + f1(S.freeOutM3, 2) + ' м³' },
       { label: 'Неизвестные', value: f0(chk.lists.unknown.n), sub: 'тяжёлых ' + chk.lists.heavy.n }];
     // текст сводки может написать ИИ, но числа в нём — только из кода: цифры ИИ убираются, метки {…} заполняет код
-    const nums = { marks: groups.length, clients: dec.size, places: f0(t.places), cbm: f1(t.cbm, 2), kg: f0(t.kg), unknown: chk.lists.unknown.n, small: chk.lists.small.n };
+    const nums = { marks: groups.length, clients: dec.size, fresh: fresh.size, places: f0(t.places), cbm: f1(t.cbm, 2), kg: f0(t.kg), unknown: chk.lists.unknown.n, small: chk.lists.small.n };
     // предложение, где ИИ всё-таки написал число, убирается целиком
     const aiText = d.summary ? String(d.summary).split(/(?<=[.!?])\s+/).filter(x => !/\d/.test(x)).join(' ').replace(/\{(\w+)\}/g, (m, k) => nums[k] != null ? nums[k] : '').trim() : '';
-    out.impSummary = aiText || ('В манифесте ' + nums.marks + ' маркировок: ' + nums.clients + ' клиентов из справочника, ' + nums.places + ' мест, ' + nums.cbm + ' м³, ' + nums.kg + ' кг.' + (nums.unknown ? ' Без клиента: ' + nums.unknown + '.' : ''));
+    out.impSummary = aiText || ('В манифесте ' + nums.marks + ' маркировок: ' + nums.clients + ' клиентов из справочника, ' + (nums.fresh ? 'новых ' + nums.fresh + ', ' : '') + nums.places + ' мест, ' + nums.cbm + ' м³, ' + nums.kg + ' кг.' + (nums.unknown ? ' Без клиента: ' + nums.unknown + '.' : ''));
     out.impLists = [
+      freshG.length ? { title: 'Новые клиенты — в справочник при подтверждении', text: freshG.map(g => g.mark + ' → ' + (g.decision.client || 'BL ?')).join(' · '), sum: fresh.size + (freshG.some(g => !g.decision.client) ? ' · без BL ' + freshG.filter(g => !g.decision.client).length : '') } : null,
       chk.lists.small.n ? { title: 'Мелкие (меньше ' + f1(S.freeOutM3, 2) + ' м³) — доставку оплачивает клиент', text: chk.lists.small.items.map(x => x.mark + ' ' + f1(x.cbm, 3) + ' м³').join(' · '), sum: chk.lists.small.n + ' · ' + f1(chk.lists.small.cbm, 3) + ' м³ · ' + f0(chk.lists.small.kg) + ' кг' } : null,
       chk.lists.unknown.n ? { title: 'Без клиента и BL-00', text: chk.lists.unknown.items.map(x => x.mark + ' ' + f1(x.cbm, 3) + ' м³').join(' · '), sum: chk.lists.unknown.n + ' · ' + f1(chk.lists.unknown.cbm, 3) + ' м³ · ' + f0(chk.lists.unknown.kg) + ' кг' } : null,
       chk.lists.heavy.n ? { title: 'Тяжёлые (плотность больше ' + f0(S.densityMax) + ' кг/м³)', text: chk.lists.heavy.items.map(x => x.mark).join(' · '), sum: chk.lists.heavy.n + ' · ' + f0(chk.lists.heavy.kg) + ' кг' } : null
@@ -3019,17 +3024,19 @@ class Component extends DCLogic {
     });
     out.impAddRow = () => this.impAddRow();
     // маркировки → клиенты
-    const opts = [{ v: '', l: '— выберите клиента —' }, { v: '__none', l: 'Без клиента' }].concat(data.clients.slice().sort((a, b) => ruCmp(a.bl, b.bl)).map(x => ({ v: x.bl, l: x.bl + (x.brand ? ' · ' + x.brand : '') + (x.name ? ' — ' + x.name : '') })));
+    const opts = [{ v: '', l: '— выберите клиента —' }, { v: '__new', l: '+ Новый клиент (в справочник)' }, { v: '__none', l: 'Без клиента' }].concat(data.clients.slice().sort((a, b) => ruCmp(a.bl, b.bl)).map(x => ({ v: x.bl, l: x.bl + (x.brand ? ' · ' + x.brand : '') + (x.name ? ' — ' + x.name : '') })));
     const BY = { code: 'по коду', mark: 'по маркировке клиента', brand: 'по бренду', 'unknown-owner': 'без владельца', ai: 'предложение ИИ принято', user: 'выбрано вручную' };
     const CONF = { high: 'высокая', medium: 'средняя', low: 'низкая' };
     out.impMarks = groups.map(g => { const m = g.decision || {};
       return { key: g.key, mark: g.mark, edit, view: !edit, rows: g.rowIds.length > 1 ? g.rowIds.length + ' строки' : '', nums: f0(g.places) + ' мест · ' + f1(g.cbm, 3) + ' м³ · ' + f0(g.kg) + ' кг' + (g.density ? ' · ' + g.density + ' кг/м³' : ''),
-        value: m.decided ? (m.client || '__none') : '', opts, cls: m.decided ? 'imp-mark' : 'imp-mark imp-mark-open',
-        chosen: m.decided ? (m.client ? cname(m.client) : 'Без клиента') : 'нет решения',
-        how: m.decided ? (BY[m.by] || '') + (m.reason && !['user', 'ai'].includes(m.by) ? ': ' + m.reason : '') : m.by === 'ambiguous' ? m.reason : 'Выберите клиента или «Без клиента»',
+        value: m.decided ? (m.isNew ? '__new' : m.client || '__none') : '', opts, cls: m.decided && !(m.isNew && !m.client) ? 'imp-mark' : 'imp-mark imp-mark-open',
+        chosen: m.decided ? (m.isNew ? 'Новый клиент ' + (m.client || '— без BL') : m.client ? cname(m.client) : 'Без клиента') : 'нет решения',
+        how: m.isNew && d.status === 'confirmed' ? 'Новый клиент: добавлен в справочник' : m.isNew ? (!m.client ? 'Новый клиент: впишите BL (KARA CHICKEN → BL-03) или выберите клиента' : (old => old ? m.client + ' уже есть в справочнике — отгрузки и маркировка пойдут клиенту ' + cname(old.bl) : 'Новый клиент: при подтверждении — в справочник (BL и маркировка), остальное заполните позже')(this.impClientOf(m.client)))
+          : m.decided ? (BY[m.by] || '') + (m.reason && !['user', 'ai'].includes(m.by) ? ': ' + m.reason : '') : m.by === 'ambiguous' ? m.reason : 'Выберите клиента или «Без клиента»',
+        newEdit: edit && !!m.isNew, newBl: m.blRaw != null ? m.blRaw : m.client || '', onNewBl: e => this.impNewBl(g.key, e.target.value),
         hasSuggest: !m.decided && !!m.suggest, suggest: m.suggest ? 'ИИ предлагает ' + cname(m.suggest.client) + ' — ' + (CONF[m.suggest.confidence] || '') + ' уверенность: ' + m.suggest.reason : '',
         accept: () => m.suggest && this.impDecide(g.key, m.suggest.client, 'suggest'), onPick: e => this.impDecide(g.key, e.target.value),
-        showRemember: edit && m.decided && !!m.client && ['ai', 'user'].includes(m.by) && !L.isUnknownOwner(g.mark), remember: m.remember !== false,
+        showRemember: edit && m.decided && !!m.client && !m.isNew && ['ai', 'user'].includes(m.by) && !L.isUnknownOwner(g.mark), remember: m.remember !== false,
         onRemember: e => { m.remember = e.target.checked; this.impTouch(); } }; });
     const sugg = groups.filter(g => g.decision && !g.decision.decided && g.decision.suggest);
     out.impHasSugg = edit && sugg.length > 1; out.impSuggN = sugg.length;
@@ -3043,7 +3050,7 @@ class Component extends DCLogic {
     const P = c.plans, kinds = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => this.kindLabel(P, k) + ' ' + s[k]).join(' · ');
     out.impPlans = ['A', 'B', 'C', 'X'].map(k => { const s = P[k].sum; return { k, title: this.planTitle(k, P), trips: s.trips + ' ' + reys(s.trips), kinds: kinds(s),
       price: P[k].noFleet ? 'нет машин' : s.unpriced && !s.price ? 'нет тарифа' : money(s.price) + (s.unpriced ? ' +' : '') }; });
-    out.impPlanNote = (P.noCoords.length ? P.noCoords.length + ' отгр. без координат клиента — в планы не вошли. ' : '') + 'Отгрузок в партии: ' + ships.length + ' (маркировки одного клиента — одна отгрузка).';
+    out.impPlanNote = (P.noCoords.length ? P.noCoords.length + ' отгр. без координат клиента — в планах как точка у склада, уточните адрес. ' : '') + 'Отгрузок в партии: ' + ships.length + ' (маркировки одного клиента — одна отгрузка).';
     // документ
     out.impIsXlsx = !!c.book; out.impIsPdf = !!c.pdf; out.impPdfRef = this.impPdfRef;
     out.impPaneDoc = st.impPane === 'doc'; out.impPaneRows = st.impPane !== 'doc';
@@ -3072,7 +3079,7 @@ class Component extends DCLogic {
     out.impConfirmHint = !edit ? '' : chk.ok ? 'Отгрузки запишутся в журнал и Google Таблицу обычной синхронизацией.' : 'Кнопка станет активной, когда не останется блокирующих ошибок: ' + chk.blocking.length + '.';
     out.impConfirm = () => { if (edit && chk.ok) this.impConfirm(); };
     out.impReject = () => this.impReject();
-    out.impDone = d.status === 'confirmed' ? 'Партия создана ' + dLong(d.confirmed.date) + ': ' + d.confirmed.shipments + ' отгрузок' + (d.confirmed.marksSaved ? ', маркировки сохранены у ' + d.confirmed.marksSaved + ' клиентов' : '') + '.' :
+    out.impDone = d.status === 'confirmed' ? 'Партия создана ' + dLong(d.confirmed.date) + ': ' + d.confirmed.shipments + ' отгрузок' + (d.confirmed.marksSaved ? ', маркировки сохранены у ' + d.confirmed.marksSaved + ' клиентов' : '') + ((d.confirmed.newClients || []).length ? ', новых клиентов в справочнике ' + d.confirmed.newClients.length + ' (' + d.confirmed.newClients.join(', ') + ') — заполните их данные в «Клиентах»' : '') + '.' :
       d.status === 'rejected' ? 'Черновик отклонён' + (d.rejected.reason ? ': ' + d.rejected.reason : '') + '.' : '';
     out.impHasDone = !!out.impDone; out.impIsConfirmed = d.status === 'confirmed';
     out.impGoJournal = () => { this.setState({ tab: 'journal', jDate: d.journalDate, jLimit: 60 }); this.maybeAskLoc(d.journalDate); };   // новая партия — «Какая локация?»
@@ -3736,9 +3743,11 @@ class Component extends DCLogic {
     L.marker(depot, { icon: L.divIcon({ className: '', html: '<div style="width:14px;height:14px;border:2px solid ' + v('--color-text') + ';background:' + v('--color-bg') + ';transform:rotate(45deg)"></div>', iconSize: [14, 14], iconAnchor: [7, 7] }) }).bindTooltip('Склад: ' + escHtml(S.depotName)).addTo(lay);
     M.plan.trips.forEach((t, i) => {
       const col = v(PLAN_SHADES[i % PLAN_SHADES.length]), lit = M.hi == null || M.hi === i;
-      L.polyline([depot].concat(t.stops.map(s => [s.lat, s.lon])), { color: col, weight: M.hi === i ? 5 : 3, opacity: lit ? 0.9 : 0.22, dashArray: PLAN_DASHES[i % PLAN_DASHES.length] })
+      // точки без координат (noLoc) на карте не рисуются — их место не известно
+      L.polyline([depot].concat(t.stops.filter(s => !s.noLoc).map(s => [s.lat, s.lon])), { color: col, weight: M.hi === i ? 5 : 3, opacity: lit ? 0.9 : 0.22, dashArray: PLAN_DASHES[i % PLAN_DASHES.length] })
         .bindTooltip(escHtml((i + 1) + ' · ' + t.name)).on('click', () => this.planFocus(i, true)).addTo(lay);
       t.stops.forEach((s, j) => {
+        if (s.noLoc) return;
         all.push([s.lat, s.lon]); if (M.hi === i) sel.push([s.lat, s.lon]);
         L.marker([s.lat, s.lon], { opacity: lit ? 1 : 0.35, zIndexOffset: M.hi === i ? 600 : 0, title: s.bl, icon: L.divIcon({ className: '', html: '<div style="font:500 11px Inter,sans-serif;color:' + v('--color-bg') + ';background:' + col + ';min-width:22px;height:18px;line-height:18px;text-align:center;padding:0 3px;border-radius:3px">' + (i + 1) + '.' + (j + 1) + '</div>', iconSize: [28, 18], iconAnchor: [14, 22] }) })
           .bindPopup(() => this.planPopup(M, t, i, s)).addTo(lay);
@@ -4332,8 +4341,8 @@ class Component extends DCLogic {
       const P = this.plansFor(this.state.mapDate), shades = PLAN_SHADES, dashes = PLAN_DASHES;
       if (this.state.mapPlan !== 'none') {
         this.planOf(P, this.state.mapDate, this.state.mapPlan).trips.forEach((t, i) => {
-          L.polyline([depot].concat(t.stops.map(s => [s.lat, s.lon])), { color: v(shades[i % 6]), weight: 3, opacity: 0.9, dashArray: dashes[i % 6] }).bindTooltip(escHtml(t.name)).addTo(lay);
-          t.stops.forEach((s, j) => L.marker([s.lat, s.lon], { icon: L.divIcon({ className: '', html: '<div style="font:500 11px Inter,sans-serif;color:' + v('--color-bg') + ';background:' + v(shades[i % 6]) + ';min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 3px">' + (i + 1) + '.' + (j + 1) + '</div>', iconSize: [24, 18], iconAnchor: [12, 22] }) }).addTo(lay));
+          L.polyline([depot].concat(t.stops.filter(s => !s.noLoc).map(s => [s.lat, s.lon])), { color: v(shades[i % 6]), weight: 3, opacity: 0.9, dashArray: dashes[i % 6] }).bindTooltip(escHtml(t.name)).addTo(lay);
+          t.stops.forEach((s, j) => !s.noLoc && L.marker([s.lat, s.lon], { icon: L.divIcon({ className: '', html: '<div style="font:500 11px Inter,sans-serif;color:' + v('--color-bg') + ';background:' + v(shades[i % 6]) + ';min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 3px">' + (i + 1) + '.' + (j + 1) + '</div>', iconSize: [24, 18], iconAnchor: [12, 22] }) }).addTo(lay));
         });
       }
       const seen = {};
@@ -4592,7 +4601,7 @@ class Component extends DCLogic {
     const L = window.LogiImport, d = this.impCur.draft, k = L.key(mark);
     if (!k || d.marks[k]) return;
     const m = L.matchMark(mark, L.clientIndex(this.state.data.clients));
-    d.marks[k] = { mark, client: m ? m.client : null, by: m ? m.by : null, reason: m ? m.reason : '', options: (m && m.options) || null, decided: !!m && m.by !== 'ambiguous', suggest: null };
+    d.marks[k] = { mark, client: m ? m.client : null, by: m ? m.by : null, reason: m ? m.reason : '', options: (m && m.options) || null, decided: !!m && m.by !== 'ambiguous', suggest: null, ...(m ? {} : L.newDecision(mark)) };
   }
   // маркировки, которых больше нет ни в одной строке (например, после правки по буквам), — убрать
   impPruneMarks() {
@@ -4613,13 +4622,28 @@ class Component extends DCLogic {
     if (r.src && r.src.sheet && r.src.row) (c.draft.skipped = c.draft.skipped || []).push(r.src.sheet + '!' + r.src.row);   // осознанно убранная строка документа — не «пропущена»
     this.impPruneMarks(); this.impTouch();
   }
-  // решение по маркировке: клиент из справочника, '__none' — «без клиента», '' — снять решение
+  // решение по маркировке: клиент из справочника, '__new' — новый клиент, '__none' — «без клиента», '' — снять решение
   impDecide(k, value, how) {
     const c = this.impCur, m = c && c.draft.marks[k]; if (!m || c.draft.status !== 'draft') return;
-    if (!m.byUser && !m.auto) m.auto = { client: m.decided ? m.client : null, by: m.by, decided: m.decided };
-    if (value === '') Object.assign(m, { decided: false, client: null, byUser: true, by: 'user' });
-    else Object.assign(m, { decided: true, client: value === '__none' ? null : value, byUser: how !== 'suggest', by: how === 'suggest' ? 'ai' : 'user' });
+    if (!m.byUser && !m.auto) m.auto = { client: m.decided ? m.client : null, by: m.by, decided: m.decided, isNew: !!m.isNew };
+    delete m.blRaw;
+    if (value === '') Object.assign(m, { decided: false, client: null, isNew: false, byUser: true, by: 'user' });
+    else if (value === '__new') { const bl = window.LogiImport.codeIn(m.mark); Object.assign(m, { decided: true, isNew: true, client: bl && !this.impClientOf(bl) ? bl : '', byUser: true, by: 'new' }); }
+    else Object.assign(m, { decided: true, isNew: false, client: value === '__none' ? null : value, byUser: how !== 'suggest', by: how === 'suggest' ? 'ai' : 'user' });
     if (m.remember == null) m.remember = true;
+    this.impTouch();
+  }
+  // клиент справочника с этим BL («BL-03» и «BL-3» — один код)
+  impClientOf(bl) {
+    const L = window.LogiImport, u = String(bl || '').trim().toUpperCase(), cu = L.codeOf(u);
+    return u ? this.state.data.clients.find(x => String(x.bl).trim().toUpperCase() === u || (cu && L.codeOf(x.bl) === cu)) || null : null;
+  }
+  // BL нового клиента, вписанный рядом с маркировкой (поле — как набрано, BL — «bl 03» → BL-03).
+  // BL, который уже есть в справочнике, — это тот клиент: при подтверждении отгрузки и маркировка — ему
+  impNewBl(k, v) {
+    const c = this.impCur, m = c && c.draft.marks[k]; if (!m || c.draft.status !== 'draft') return;
+    if (!m.byUser && !m.auto) m.auto = { client: m.decided ? m.client : null, by: m.by, decided: m.decided, isNew: !!m.isNew };
+    Object.assign(m, { decided: true, isNew: true, client: window.LogiImport.normBl(v), blRaw: String(v), byUser: true, by: 'new' });
     this.impTouch();
   }
   // подтверждение: черновик → обычные отгрузки журнала (тот же commit, что и «+ Добавить отгрузку») и маркировки клиентов
@@ -4627,11 +4651,28 @@ class Component extends DCLogic {
     const c = this.impCur; if (!c || this.readOnly || c.draft.status !== 'draft') return;
     const chk = this.impCheck(); if (!chk.ok) return;
     const L = window.LogiImport, d = c.draft, data = this.state.data, meta = d.meta || {};
+    // «новый» клиент, чей BL уже в справочнике, — тот клиент (маркировка запомнится у него);
+    // один код у двух новых маркировок («BL-03» и «bl 3») — один новый клиент, BL — как написан первым
+    const canon = {};
+    Object.values(d.marks).forEach(m => { if (!m.decided || !m.isNew || !m.client) return;
+      const cl = this.impClientOf(m.client); if (cl) { Object.assign(m, { client: cl.bl, isNew: false, by: 'user', remember: true }); delete m.blRaw; return; }
+      const k = L.codeOf(m.client) || m.client; m.client = canon[k] = canon[k] || m.client; });
     const ships = L.shipmentsOf(d, meta.consolidator || '');
     if (!ships.length) return;
     const sum = ships.reduce((a, x) => ({ p: a.p + x.places, c: a.c + x.cbm, k: a.k + x.kg }), { p: 0, c: 0, k: 0 });
-    if (!confirm('Создать партию за ' + dLong(d.journalDate) + '?\n\n' + ships.length + ' отгрузок · ' + f0(sum.p) + ' мест · ' + f1(sum.c, 2) + ' м³ · ' + f0(sum.k) + ' кг.\nСтатус — «В плане», машины — «Не назначена».\n\nОтгрузки запишутся в журнал и Google Таблицу.')) return;
-    const t0 = Date.now(), cmap = Object.fromEntries(data.clients.map(x => [x.bl, x]));
+    const cmap = Object.fromEntries(data.clients.map(x => [x.bl, x]));
+    // новые клиенты — в справочник: BL, маркировка и название из неё; адрес, телефоны и точку заполнят потом
+    const fresh = {};
+    Object.values(d.marks).forEach(m => {
+      if (!m.decided || !m.isNew || !m.client || cmap[m.client]) return;
+      const f = fresh[m.client] || (fresh[m.client] = { bl: m.client, brand: L.newClientOf(m.mark).brand, name: '', tel1: '', tel2: '', receiver: '', receiverTel: '', district: 'Aniqlanmagan', address: '', lat: null, lon: null, note: '', manualZone: '', link: '', marks: '', locs: '' });
+      if (normMarks(m.mark) !== normMarks(m.client)) f.marks = normMarks(f.marks + ', ' + m.mark);
+    });
+    const freshBl = Object.keys(fresh);
+    if (!confirm('Создать партию за ' + dLong(d.journalDate) + '?\n\n' + ships.length + ' отгрузок · ' + f0(sum.p) + ' мест · ' + f1(sum.c, 2) + ' м³ · ' + f0(sum.k) + ' кг.\nСтатус — «В плане», машины — «Не назначена».' +
+      (freshBl.length ? '\n\nНовых клиентов в справочник: ' + freshBl.length + ' (' + freshBl.join(', ') + ') — адрес, телефоны и точку на карте заполните позже.' : '') +
+      '\n\nОтгрузки запишутся в журнал и Google Таблицу.')) return;
+    const t0 = Date.now();
     const add = ships.map((x, i) => ({ id: 's' + t0 + '-' + i, date: x.date, bl: x.bl, cbm: x.cbm, kg: x.kg, places: x.places, truck: x.truck, route: null, status: x.status, note: x.note }));
     // маркировки, выбранные вручную или по предложению ИИ, — клиенту, чтобы в следующий раз узнать их без ИИ
     const upd = {};
@@ -4641,11 +4682,11 @@ class Component extends DCLogic {
       if (normMarks(cur).split(', ').includes(normMarks(m.mark))) return;
       upd[m.client] = normMarks(cur + ', ' + m.mark);
     });
-    const clients = data.clients.map(x => upd[x.bl] != null ? { ...x, marks: upd[x.bl] } : x);
+    const clients = data.clients.map(x => upd[x.bl] != null ? { ...x, marks: upd[x.bl] } : x).concat(freshBl.map(bl => fresh[bl]));
     this.commit({ ...data, shipments: [...data.shipments, ...add], clients });
     const stats = L.editStats(d);
     d.status = 'confirmed';
-    d.confirmed = { at: new Date().toISOString(), date: d.journalDate, shipments: add.length, bls: add.map(x => x.bl), marksSaved: Object.keys(upd).length, places: sum.p, cbm: +sum.c.toFixed(3), kg: +sum.k.toFixed(2) };
+    d.confirmed = { at: new Date().toISOString(), date: d.journalDate, shipments: add.length, bls: add.map(x => x.bl), marksSaved: Object.keys(upd).length, newClients: freshBl, places: sum.p, cbm: +sum.c.toFixed(3), kg: +sum.k.toFixed(2) };
     await this.impSaveNow(d);
     this.impLog(d, 'confirmed', stats);
     await this.impLoadList();
@@ -4891,7 +4932,7 @@ class Component extends DCLogic {
       .concat(split.length ? ['Большие отгрузки разделятся на части (строки в журнале): ' + split.map(id => byId.get(id).bl + ' → ' + parts[id].length).join(', ') + '.'] : [])
       .concat(noCar ? [noCar + ' ' + reys(noCar) + ' без машины — эти отгрузки останутся «Belgilanmagan».'] : [])
       .concat(plan.manual ? ['План изменён вручную — записываются рейсы, как вы их разложили.'] : [])
-      .concat(P.noCoords.length ? ['Без координат ' + P.noCoords.length + ' — в план не вошли, их не трогаем.'] : [])
+      .concat(P.noCoords.length ? ['Без точки на карте ' + P.noCoords.length + ' — в плане как точка у склада: уточните адрес.'] : [])
       .concat(['', 'Статусы не меняются. Отменить можно сразу после записи.']).join('\n');
     if (!confirm(msg)) return;
     const prev = [], added = [], removed = [], out = [], r3 = x => Math.round(x * 1000) / 1000, r1 = x => Math.round(x * 10) / 10;
@@ -5387,12 +5428,12 @@ class Component extends DCLogic {
           cbmPct: Math.min(100, t.cbm / nM3 * 100).toFixed(0) + '%', kgPct: Math.min(100, t.kg / nKg * 100).toFixed(0) + '%',
           cbmBar: upM3 || t.over ? 'var(--color-accent-900)' : 'var(--color-accent)', kgBar: upKg || t.over ? 'var(--color-accent-900)' : 'var(--color-accent)',
           km: f1(t.real, 1) + ' км (реальн.)', time: hhmm(t.start ?? S.dayStart * 1440) + '–' + hhmm(t.finish + t.back / S.speed * 60 * S.roadK), price: t.price.total != null ? money(t.price.total) : 'нет тарифа', formula: t.price.formula,
-          yHref: E.yRoute(depot, t.stops.map(s => [s.lat, s.lon])), open3d: () => this.setState({ tab: 'viz', planKey, vizTrip: ti, vizStep: 0, vizSel: null }),
+          yHref: E.yRoute(depot, t.stops.filter(s => !s.noLoc).map(s => [s.lat, s.lon])), open3d: () => this.setState({ tab: 'viz', planKey, vizTrip: ti, vizStep: 0, vizSel: null }),
           stops: t.stops.map((s, j) => { const c = s.client, leg = E.km(prev, [s.lat, s.lon]); prev = [s.lat, s.lon]; const my = moveOpts.filter(o => o.v !== String(ti));
             const addr = t.price.addr ? t.price.addr[j] : j, fee = t.price.fee ? t.price.fee[j] : null;   // цена адреса у перевозчика
-            return { n: j + 1, bl: s.bl + (s.parts ? ' · ' + s.part + '/' + s.parts : '') + (pair && s.date ? ' · ' + dShort(s.date) : ''), brand: c.brand || '—', name: c.name || '', district: s.loc ? '📍 ' + s.loc : distName(c.district), receiver: c.receiver || '', tel: c.receiverTel || c.tel1 || '', telHref: telHref(c.receiverTel || c.tel1), cbm: f1(s.cbm, 3), kg: f1(s.kg, 1), places: s.places || '—', leg: f1(leg, 1), eta: hhmm(t.arrivals[j]), zIn: s.zone !== 'out', zOut: s.zone === 'out', free: !!(tc && tc.why[j]), freeTag: this.chargeTag(tc && tc.why[j], tc && tc.charge[j], S), pointHref: E.yPoint(s.lat, s.lon), pt: t.price.total == null ? '—' : addr !== j ? '—' : f0(j === 0 ? t.price.base + (fee || 0) : fee || 0),
+            return { n: j + 1, bl: s.bl + (s.parts ? ' · ' + s.part + '/' + s.parts : '') + (pair && s.date ? ' · ' + dShort(s.date) : ''), brand: c.brand || '—', name: c.name || '', district: s.noLoc ? '📍 без точки — уточнить адрес' : s.loc ? '📍 ' + s.loc : distName(c.district), receiver: c.receiver || '', tel: c.receiverTel || c.tel1 || '', telHref: telHref(c.receiverTel || c.tel1), cbm: f1(s.cbm, 3), kg: f1(s.kg, 1), places: s.places || '—', leg: f1(leg, 1), eta: hhmm(t.arrivals[j]), zIn: s.zone !== 'out', zOut: s.zone === 'out', free: !!(tc && tc.why[j]), freeTag: this.chargeTag(tc && tc.why[j], tc && tc.charge[j], S), pointHref: E.yPoint(s.lat, s.lon), pt: t.price.total == null ? '—' : addr !== j ? '—' : f0(j === 0 ? t.price.base + (fee || 0) : fee || 0),
               ptSub: t.price.total == null ? '' : addr !== j ? 'тот же адрес, что №' + (addr + 1) : j === 0 ? (fee ? 'база + заезд' : 'база рейса') : !fee ? 'в базе' : s.zone === 'out' ? 'заезд за кольцом' : 'заезд',
-              cbmL: f1(s.cbm, 3) + ' м³', kgPl: f0(s.kg) + ' кг · ' + (s.places || 0) + ' мест', legL: f1(leg, 1) + ' км',
+              cbmL: f1(s.cbm, 3) + ' м³', kgPl: f0(s.kg) + ' кг · ' + (s.places || 0) + ' мест', legL: s.noLoc ? '—' : f1(leg, 1) + ' км',
               moveOpts: my, onMove: e => { const v = e.target.value; e.target.value = ''; if (v) this.planMove(pd, planKey, plan, E.stopKey(s), v); } }; }) };
       });
       out.planNoCoords = P.noCoords.map(s => ({ bl: s.bl, name: (s.client.brand || '') + ' ' + (s.client.name || ''), cbm: f1(s.cbm, 2), kg: f0(s.kg), onEdit: () => { const c = D.cmap[s.bl]; if (c) this.openClient(c); } }));
