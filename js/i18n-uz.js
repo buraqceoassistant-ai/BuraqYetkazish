@@ -2686,4 +2686,16 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "— {n} · без BL {n2}":"— {n} · BL siz {n2}",
 "{n} маркировок · новых {n2}":"{n} markirovka · yangi {n2}",
 "В манифесте {n} маркировок: {n2} клиентов из справочника, новых {n6}, {n3} мест, {n4} м³, {n5} кг.":"Manifestda {n} ta markirovka: ma’lumotnomadan {n2} mijoz, yangi {n6}, {n3} joy, {n4} m³, {n5} kg.",
-"Новых клиентов в справочник: {n} ({s}) — адрес, телефоны и точку на карте заполните позже.":"Ma’lumotnomaga yangi mijozlar: {n} ({s}) — manzil, telefonlar va xaritadagi nuqtani keyin to‘ldirasiz."};
+"Новых клиентов в справочник: {n} ({s}) — адрес, телефоны и точку на карте заполните позже.":"Ma’lumotnomaga yangi mijozlar: {n} ({s}) — manzil, telefonlar va xaritadagi nuqtani keyin to‘ldirasiz.",
+"Приложение":"Ilova",
+"✓ установлено":"✓ o‘rnatilgan",
+"BURAQ открыт как приложение.":"BURAQ ilova sifatida ochilgan.",
+"Значок BURAQ появится в Dock (на Mac), в меню «Пуск» или на экране телефона; сайт откроется отдельным окном, как программа.":"BURAQ belgisi Dock’da (Mac’da), «Start» menyusida yoki telefon ekranida paydo bo‘ladi; sayt dastur kabi alohida oynada ochiladi.",
+"Safari: «Поделиться» → «На экран „Домой“».":"Safari: «Ulashish» → «Bosh ekranga qo‘shish».",
+"Safari: меню «Файл» → «Добавить в Dock». Значок BURAQ появится в Dock и Launchpad, сайт откроется отдельным окном (macOS 14 Sonoma и новее; на старой macOS — через Chrome).":"Safari: «File» menyusi → «Add to Dock». BURAQ belgisi Dock va Launchpad’da paydo bo‘ladi, sayt alohida oynada ochiladi (macOS 14 Sonoma va yangisi; eski macOS’da — Chrome orqali).",
+"Firefox не ставит сайты как приложение — откройте сайт в Safari или Chrome.":"Firefox saytlarni ilova sifatida o‘rnatmaydi — saytni Safari yoki Chrome’da oching.",
+"Chrome: ⋮ → «Установить приложение».":"Chrome: ⋮ → «Ilovani o‘rnatish».",
+"Chrome / Edge: значок «Установить» в конце адресной строки или меню ⋮ → «Установить BURAQ…». Значок появится в Dock (на Mac) или в меню «Пуск».":"Chrome / Edge: manzil satri oxiridagi «O‘rnatish» belgisi yoki ⋮ menyusi → «BURAQ’ni o‘rnatish…». Belgi Dock’da (Mac’da) yoki «Start» menyusida paydo bo‘ladi.",
+"BURAQ — приложением на Mac: меню «Файл» → «Добавить в Dock»":"BURAQ — Mac’da ilova sifatida: «File» menyusi → «Add to Dock»",
+"Браузер устарел — часть сайта может не работать. Обновите Safari (macOS: «Системные настройки» → «Обновление ПО») или откройте сайт в Chrome.":"Brauzer eskirgan — saytning bir qismi ishlamasligi mumkin. Safari’ni yangilang (macOS: «System Settings» → «Software Update») yoki saytni Chrome’da oching.",
+"Браузер не умеет открывать файлы Excel — обновите Safari (macOS: «Системные настройки» → «Обновление ПО») или откройте сайт в Chrome":"Brauzer Excel fayllarini ocha olmaydi — Safari’ni yangilang (macOS: «System Settings» → «Software Update») yoki saytni Chrome’da oching"};

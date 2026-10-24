@@ -3,6 +3,8 @@
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const TD = new TextDecoder(), TE = new TextEncoder();
 
+  // распаковка Excel — средствами браузера (Safari 16.4+, Chrome 103+); в старом браузере — понятная ошибка
+  const OLD_BROWSER = 'Браузер не умеет открывать файлы Excel — обновите Safari (macOS: «Системные настройки» → «Обновление ПО») или откройте сайт в Chrome';
   async function pipe(u8, stream) { return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(stream)).arrayBuffer()); }
   async function readZip(ab) {
     const buf = new Uint8Array(ab), dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
@@ -15,6 +17,7 @@
       const name = TD.decode(buf.slice(off + 46, off + 46 + nl));
       const lnl = dv.getUint16(lho + 26, true), lel = dv.getUint16(lho + 28, true);
       const data = buf.slice(lho + 30 + lnl + lel, lho + 30 + lnl + lel + csize);
+      if (method !== 0 && typeof DecompressionStream === 'undefined') throw new Error(OLD_BROWSER);
       files[name] = method === 0 ? data : await pipe(data, new DecompressionStream('deflate-raw'));
       order.push(name); off += 46 + nl + el + cl;
     }
@@ -25,13 +28,14 @@
   async function writeZip(files, order) {
     const parts = [], cd = []; let off = 0;
     for (const nm of order) {
-      const raw = files[nm], name = TE.encode(nm), crc = crc32(raw), comp = await pipe(raw, new CompressionStream('deflate-raw'));
+      // без CompressionStream (старый браузер) — файл кладётся без сжатия (метод 0): Excel открывает и такой
+      const raw = files[nm], name = TE.encode(nm), crc = crc32(raw), zip = typeof CompressionStream !== 'undefined', comp = zip ? await pipe(raw, new CompressionStream('deflate-raw')) : raw;
       const h = new DataView(new ArrayBuffer(30));
-      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 8, true); h.setUint16(12, 0x21, true);
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, zip ? 8 : 0, true); h.setUint16(12, 0x21, true);
       h.setUint32(14, crc, true); h.setUint32(18, comp.length, true); h.setUint32(22, raw.length, true); h.setUint16(26, name.length, true);
       parts.push(new Uint8Array(h.buffer), name, comp);
       const c = new DataView(new ArrayBuffer(46));
-      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 8, true); c.setUint16(14, 0x21, true);
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, zip ? 8 : 0, true); c.setUint16(14, 0x21, true);
       c.setUint32(16, crc, true); c.setUint32(20, comp.length, true); c.setUint32(24, raw.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
       cd.push(new Uint8Array(c.buffer), name);
       off += 30 + name.length + comp.length;
@@ -184,7 +188,8 @@
   }
   const sOf = x => { const m = x && x.match(/\bs="(\d+)"/); return m ? m[1] : null; };
   const fOf = x => { const m = x && x.match(/<f\b[^>]*?(?:\/>|>[\s\S]*?<\/f>)/); return m ? m[0] : null; };
-  const shiftF = (f, from, to) => from === to ? f : f.replace(new RegExp('(?<![A-Za-z_0-9.])(\\$?[A-Z]{1,3})' + from + '(?![0-9])', 'g'), (m, c) => c + to);
+  // ссылка на строку: перед буквами столбца — не буква/цифра/точка (без lookbehind: его нет в Safari до 16.4)
+  const shiftF = (f, from, to) => from === to ? f : f.replace(new RegExp('(^|[^A-Za-z_0-9.])(\\$?[A-Z]{1,3})' + from + '(?![0-9])', 'g'), (m, p, c) => p + c + to);
   function vCell(ref, s, val) {
     const sa = s != null ? ' s="' + s + '"' : '';
     if (val == null || val === '') return '<c r="' + ref + '"' + sa + '/>';
@@ -357,5 +362,5 @@
   }
 
   function b64ToBuf(b64) { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u.buffer; }
-  window.XlsxIO = { parse, write, readZip, readGrid, b64ToBuf, fromSheets, SET_ROWS };
+  window.XlsxIO = { parse, write, readZip, writeZip, readGrid, b64ToBuf, fromSheets, SET_ROWS };
 })();

@@ -35,6 +35,25 @@
   .table.tc td.c-actions > div { flex-direction: column; align-items: flex-end; gap: 0 !important; }
   .table.tc td.o1[data-label="Адрес склада"] { min-width: 140px !important; }
 }
+/* Ноутбук (MacBook 13–16″ и т. п.): экран невысокий — заголовок страницы, фильтры и итоги плотнее, таблице больше места */
+@media screen and (min-width: 1101px) and (max-height: 960px) {
+  .page { padding-top: 18px !important; }
+  .page h1 { font-size: 32px !important; }
+  .page-head { margin-bottom: 14px !important; }
+  .page-tools { gap: 8px !important; }
+  .kpi-strip { margin-bottom: 14px !important; }
+  .kpi-strip > div { padding: 10px 14px !important; }
+  .kpi-strip > div > div:nth-child(2) { font-size: 22px !important; }   /* цифра */
+}
+/* Ноутбук и шире: шапка таблицы (журнал, клиенты, склады) видна при прокрутке — липнет под шапкой сайта
+   (--sticky-top, js/app-shell.js). Рамка таблицы обрезает через clip: с hidden/auto она сама «прокручиваемая»,
+   и шапка липла бы к ней, а не к окну. С 1280 px таблицы помещаются без прокрутки вбок (клиенты — от 1200 px). */
+@supports (overflow: clip) {
+  @media screen and (min-width: 1280px) {
+    .tbl-wrap { overflow: clip !important; }
+    .tbl-wrap > .table > thead > tr > th { position: sticky; top: var(--sticky-top, 0px); z-index: 3; background: var(--color-sticky) !important; box-shadow: inset 0 -1px 0 var(--color-divider); }
+  }
+}
 
 @media screen and (max-width: 1100px) {
   .kpi-strip { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; overflow: hidden; }

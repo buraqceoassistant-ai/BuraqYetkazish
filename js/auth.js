@@ -214,19 +214,30 @@
     return bg;
   }
 
+  // приложение на компьютере / телефоне: как поставить в этом браузере (js/app-shell.js, LogiInstall)
+  function appRow() {
+    var h = window.LogiInstall && window.LogiInstall.how();
+    if (!h) return '';
+    return '<div class="acc-app"><div class="acc-theme"><span>Приложение</span>' +
+      (h.kind === 'prompt' ? '<button type="button" class="btn btn-secondary" data-act="install">Установить приложение</button>' : h.kind === 'installed' ? '<span class="acc-app-ok">✓ установлено</span>' : '') +
+      '</div><div class="acc-hint">' + esc(h.text) + '</div></div>';
+  }
+
   function openAccount() {
     var login = get(LOGIN);
     var d = dialog('Аккаунт',
       '<div class="dialog-body">' + (login ? 'Вы вошли как <b>' + esc(login) + '</b>.' : 'Вход выполнен.') +
         (role === 'viewer' ? '<br>Доступ: <b>только просмотр</b> — всё видно, изменить ничего нельзя. Пароль этого входа меняет руководитель.' : '') + '</div>' +
       // тема (js/theme.js) — здесь тоже: на телефоне кнопки темы в шапке нет, там места только для вкладок
-      '<div class="acc-theme"><span>Тема сайта</span><button type="button" class="btn btn-secondary" data-theme-toggle>Светлая / тёмная тема</button></div>',
+      '<div class="acc-theme"><span>Тема сайта</span><button type="button" class="btn btn-secondary" data-theme-toggle>Светлая / тёмная тема</button></div>' +
+      appRow(),
       '<button class="btn btn-ghost" data-act="logout" style="margin-right:auto">Выйти</button>' +
       '<button class="btn btn-secondary" data-act="close">Закрыть</button>' +
       (role === 'viewer' ? '' : '<button class="btn btn-primary" data-act="passwd">Сменить пароль</button>'));
     d.addEventListener('click', function (e) {
       var a = e.target.closest('[data-act]'); if (!a) return;
       if (a.dataset.act === 'close') closeDialog();
+      else if (a.dataset.act === 'install') { if (window.LogiInstall && window.LogiInstall.prompt()) closeDialog(); }
       else if (a.dataset.act === 'logout') { closeDialog(); logout(); }
       else openPasswd();
     });

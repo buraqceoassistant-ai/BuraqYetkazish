@@ -542,7 +542,7 @@
         <div class="page-tools no-print" style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
           <sc-if value="{{ repIsBatch }}">
             <sc-raw-select class="input" style="width:190px" value="{{ repDate }}" sc-camel-on-change="{{ onRepDate }}"><sc-for list="{{ repDateOpts }}" as="o"><option value="{{ o.v }}">Партия {{ o.l }}</option></sc-for></sc-raw-select>
-            <sc-if value="{{ repIsBatch }}"><sc-raw-select class="input rep-date2" style="min-width:170px" value="{{ repDate2 }}" sc-camel-on-change="{{ onRepDate2 }}" title="Две партии вместе, как в «Планах»" aria-label="Вторая партия">
+            <sc-if value="{{ repIsBatch }}"><sc-raw-select class="input rep-date2" style="width:190px" value="{{ repDate2 }}" sc-camel-on-change="{{ onRepDate2 }}" title="Две партии вместе, как в «Планах»" aria-label="Вторая партия">
             <option value="">+ вторая партия</option>
             <sc-for list="{{ repDate2Opts }}" as="o"><option value="{{ o.v }}">+ партия {{ o.l }}</option></sc-for>
           </sc-raw-select></sc-if>
@@ -1964,7 +1964,13 @@ const TAB_GROUP = { import: 'journal', dash: 'reports', reports: 'reports', tari
 // только эта вкладка браузера; новое окно и новый запуск приложения открываются, как раньше, с «Журнала»)
 const NAV_KEY = 'logi-nav', NAV_TABS = ['journal', 'import', 'clients', 'map', 'dash', 'reports', 'plans', 'drivers', 'viz', 'tariffs', 'fleetset', 'link', 'check'];
 const navLoad = () => { try { const v = JSON.parse(sessionStorage.getItem(NAV_KEY) || 'null'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } };
-const NAV0 = navLoad();
+// ярлык приложения (manifest «shortcuts» — меню значка в Dock / на панели задач): ?tab=plans — сразу на вкладку;
+// параметр убирается из адреса, чтобы обновление страницы возвращало туда, где пользователь, а не к ярлыку
+const NAV0 = (() => {
+  const v = navLoad(); let t = null;
+  try { const u = new URL(location.href); t = u.searchParams.get('tab'); if (t != null) { u.searchParams.delete('tab'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } } catch (e) { /* старый браузер */ }
+  return NAV_TABS.includes(t) ? { ...v, tab: t } : v;
+})();
 const f0 = n => (n == null || isNaN(n)) ? '—' : Math.round(n).toLocaleString('ru-RU');
 const f1 = (n, d = 1) => (n == null || isNaN(n)) ? '—' : (+n).toLocaleString('ru-RU', { maximumFractionDigits: d });
 const money = n => n == null ? '—' : Math.round(n).toLocaleString('ru-RU') + ' сум';
@@ -2993,7 +2999,8 @@ class Component extends DCLogic {
     // текст сводки может написать ИИ, но числа в нём — только из кода: цифры ИИ убираются, метки {…} заполняет код
     const nums = { marks: groups.length, clients: dec.size, fresh: fresh.size, places: f0(t.places), cbm: f1(t.cbm, 2), kg: f0(t.kg), unknown: chk.lists.unknown.n, small: chk.lists.small.n };
     // предложение, где ИИ всё-таки написал число, убирается целиком
-    const aiText = d.summary ? String(d.summary).split(/(?<=[.!?])\s+/).filter(x => !/\d/.test(x)).join(' ').replace(/\{(\w+)\}/g, (m, k) => nums[k] != null ? nums[k] : '').trim() : '';
+    // по предложениям — без lookbehind в RegExp: Safari до 16.4 (Mac на старой macOS) из-за него не открыл бы сайт вовсе
+    const aiText = d.summary ? String(d.summary).replace(/([.!?])\s+/g, '$1\u0000').split('\u0000').filter(x => !/\d/.test(x)).join(' ').replace(/\{(\w+)\}/g, (m, k) => nums[k] != null ? nums[k] : '').trim() : '';
     out.impSummary = aiText || ('В манифесте ' + nums.marks + ' маркировок: ' + nums.clients + ' клиентов из справочника, ' + (nums.fresh ? 'новых ' + nums.fresh + ', ' : '') + nums.places + ' мест, ' + nums.cbm + ' м³, ' + nums.kg + ' кг.' + (nums.unknown ? ' Без клиента: ' + nums.unknown + '.' : ''));
     out.impLists = [
       freshG.length ? { title: 'Новые клиенты — в справочник при подтверждении', text: freshG.map(g => g.mark + ' → ' + (g.decision.client || 'BL ?')).join(' · '), sum: fresh.size + (freshG.some(g => !g.decision.client) ? ' · без BL ' + freshG.filter(g => !g.decision.client).length : '') } : null,

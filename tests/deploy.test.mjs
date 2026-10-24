@@ -31,3 +31,20 @@ test('недостающая картинка не мешает поставит
   assert.match(sw, /cache\.add\(new Request\(u, \{ cache: 'reload' \}\)\)\.catch\(e => \{ if \(REQUIRED\(u\)\) throw e; \}\)/);
   assert.ok(!/cache\.addAll\(/.test(sw), 'addAll падает целиком из-за одного файла');
 });
+
+test('manifest: иконки есть в репозитории и в кэше; иконка для Mac — с прозрачным полем; ярлыки ведут на вкладки сайта', () => {
+  const m = JSON.parse(read('manifest.webmanifest'));
+  const srcs = [...m.icons, ...(m.shortcuts || []).flatMap(s => s.icons || [])].map(i => i.src);
+  assert.deepEqual(srcs.filter(f => !fs.existsSync(new URL(f, root))), []);
+  assert.deepEqual(srcs.filter(f => !shell.includes(f)), [], 'иконки — в кэше service worker (офлайн)');
+  // PNG: размер как в manifest, цвет с альфа-каналом (тип 6) — у иконки «any» прозрачные углы и поле, как у программ macOS
+  m.icons.filter(i => i.purpose === 'any').forEach(i => {
+    const b = fs.readFileSync(new URL(i.src, root)), w = b.readUInt32BE(16), h = b.readUInt32BE(20);
+    assert.equal(w + 'x' + h, i.sizes, i.src); assert.equal(b[25], 6, i.src + ': нужен альфа-канал');
+  });
+  assert.ok(m.icons.some(i => i.purpose === 'maskable'), 'Android — своя иконка на всю площадь');
+  const tabs = read('index.html').match(/NAV_TABS = \[([^\]]+)\]/)[1].match(/'(\w+)'/g).map(x => x.slice(1, -1));
+  assert.ok(m.shortcuts.length >= 3);
+  m.shortcuts.forEach(s => { const t = new URL(s.url, 'https://x/').searchParams.get('tab'); assert.ok(tabs.includes(t), s.url); });
+  assert.deepEqual(m.launch_handler, { client_mode: ['focus-existing', 'auto'] });
+});

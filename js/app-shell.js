@@ -1,5 +1,6 @@
 /* Обвязка сайта вокруг приложения: service worker (офлайн и установка на телефон),
-   кнопка «Установить приложение» и прокрутка вкладок к активной на узком экране.
+   кнопка «Установить приложение», подсказка «Добавить в Dock» для Safari на Mac, плашка «браузер устарел»,
+   высота липкой шапки (--sticky-top) и прокрутка вкладок к активной на узком экране.
    Само приложение (разметка и логика) — в index.html. */
 (function () {
   'use strict';
@@ -74,6 +75,89 @@
     showInstall();
   });
   window.addEventListener('appinstalled', function () { deferred = null; removeInstall(); });
+
+  // ── Приложение на компьютере и телефоне: как поставить в этом браузере (окно «Аккаунт», js/auth.js) ──
+  var ua = navigator.userAgent || '';
+  var touchMac = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;   // iPad пишет «Macintosh», но с касаниями
+  var isMac = /Macintosh/.test(ua) && !touchMac, isIOS = /iPhone|iPad|iPod/.test(ua) || touchMac, isAndroid = /Android/.test(ua);
+  var isSafari = /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS|YaBrowser/.test(ua), isFirefox = /Firefox|FxiOS/.test(ua);
+  function standalone() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  }
+  window.LogiInstall = {
+    how: function () {
+      if (standalone()) return { kind: 'installed', text: 'BURAQ открыт как приложение.' };
+      if (deferred) return { kind: 'prompt', text: 'Значок BURAQ появится в Dock (на Mac), в меню «Пуск» или на экране телефона; сайт откроется отдельным окном, как программа.' };
+      if (isIOS) return { kind: 'ios', text: 'Safari: «Поделиться» → «На экран „Домой“».' };
+      if (isMac && isSafari) return { kind: 'mac-safari', text: 'Safari: меню «Файл» → «Добавить в Dock». Значок BURAQ появится в Dock и Launchpad, сайт откроется отдельным окном (macOS 14 Sonoma и новее; на старой macOS — через Chrome).' };
+      if (isFirefox) return { kind: 'firefox', text: 'Firefox не ставит сайты как приложение — откройте сайт в Safari или Chrome.' };
+      if (isAndroid) return { kind: 'android', text: 'Chrome: ⋮ → «Установить приложение».' };
+      return { kind: 'desktop', text: 'Chrome / Edge: значок «Установить» в конце адресной строки или меню ⋮ → «Установить BURAQ…». Значок появится в Dock (на Mac) или в меню «Пуск».' };
+    },
+    prompt: function () {
+      if (!deferred) return false;
+      deferred.prompt();
+      deferred.userChoice.finally(function () { deferred = null; removeInstall(); });
+      return true;
+    }
+  };
+  // Safari на Mac не показывает кнопку установки сам — один раз подсказка внизу (✕ — больше не показывать)
+  var MAC_KEY = 'logi-mac-dock-hint';
+  function macHint() {
+    if (!(isMac && isSafari) || standalone() || document.getElementById('auth') || document.getElementById('mac-dock')) return;
+    try { if (localStorage.getItem(MAC_KEY) === '1') return; } catch (e) { return; }
+    var box = document.createElement('div');
+    box.id = 'mac-dock';
+    box.className = 'install-app mac-dock';
+    box.innerHTML = '<span class="mac-dock-text">BURAQ — приложением на Mac: меню «Файл» → «Добавить в Dock»</span>' +
+      '<button type="button" class="btn btn-ghost" data-act="close" aria-label="Скрыть">✕</button>';
+    box.addEventListener('click', function (e) {
+      if (!e.target.closest('[data-act="close"]')) return;
+      try { localStorage.setItem(MAC_KEY, '1'); } catch (err) { /* закрытый режим */ }
+      box.remove();
+    });
+    document.body.appendChild(box);
+  }
+  // после входа (экран входа #auth к этому времени закрыт)
+  window.addEventListener('load', function () { setTimeout(macHint, 6000); setTimeout(macHint, 30000); });
+
+  // ── Браузер устарел (Safari до 16.4 на старой macOS): цвета сайта и чтение Excel не работают — сказать, что делать ──
+  function oldBrowser() {
+    var css = window.CSS && CSS.supports && CSS.supports('color', 'color-mix(in srgb, red, blue)');
+    return !css || typeof DecompressionStream === 'undefined';
+  }
+  function oldHint() {
+    if (!oldBrowser() || document.getElementById('old-browser')) return;
+    try { if (sessionStorage.getItem('logi-old-browser') === '1') return; } catch (e) { /* закрытый режим */ }
+    var box = document.createElement('div');
+    box.id = 'old-browser';
+    box.className = 'install-app old-browser';
+    box.setAttribute('role', 'alert');
+    box.innerHTML = '<span class="old-browser-text">Браузер устарел — часть сайта может не работать. Обновите Safari (macOS: «Системные настройки» → «Обновление ПО») или откройте сайт в Chrome.</span>' +
+      '<button type="button" class="btn btn-ghost" data-act="close" aria-label="Скрыть">✕</button>';
+    box.addEventListener('click', function (e) {
+      if (!e.target.closest('[data-act="close"]')) return;
+      try { sessionStorage.setItem('logi-old-browser', '1'); } catch (err) { /* закрытый режим */ }
+      box.remove();
+    });
+    document.body.appendChild(box);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', oldHint); else oldHint();
+
+  // ── Высота липкой шапки сайта: шапки таблиц на ноутбуке липнут под ней (css/mobile.css, --sticky-top) ──
+  var hdrObs = window.ResizeObserver ? new ResizeObserver(function () { syncStickyTop(); }) : null, hdrEl = null;
+  function syncStickyTop() {
+    var h = document.querySelector('.app-header');
+    if (!h) return false;
+    if (hdrObs && h !== hdrEl) { if (hdrEl) hdrObs.unobserve(hdrEl); hdrEl = h; hdrObs.observe(h); }   // шапка появляется после входа
+    var v = Math.round(h.getBoundingClientRect().height) + 'px', root = document.documentElement;
+    if (root.style.getPropertyValue('--sticky-top') !== v) root.style.setProperty('--sticky-top', v);
+    return true;
+  }
+  // шапки нет, пока открыт экран входа: ждём её появления (дальше высоту следит ResizeObserver, без него — клики и resize)
+  var waitHdr = setInterval(function () { if (syncStickyTop()) clearInterval(waitHdr); }, 500);
+  document.addEventListener('click', function () { setTimeout(syncStickyTop, 0); }, true);
+  window.addEventListener('resize', syncStickyTop);
 
   // ── Активная вкладка всегда видна в прокручиваемой строке вкладок ──
   function syncTabs() {

@@ -11,6 +11,7 @@
     color-scheme: dark;
     --color-bg: color-mix(in srgb, var(--buraq-white) 7%, transparent);
     --color-surface: color-mix(in srgb, var(--buraq-white) 4%, transparent);
+    --color-sticky: color-mix(in srgb, var(--buraq-white) 13%, var(--buraq-navy));
     --color-text: var(--buraq-white);
     --color-accent-2: color-mix(in srgb, var(--buraq-white) 88%, transparent);
     --color-on-accent-2: var(--buraq-navy);

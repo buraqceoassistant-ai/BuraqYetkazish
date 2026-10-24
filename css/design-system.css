@@ -51,6 +51,7 @@
 
   --color-bg: #FFFFFF;
   --color-surface: #F3F6FA;
+  --color-sticky: color-mix(in srgb, var(--buraq-white) 95%, var(--buraq-navy));   /* непрозрачный фон липкой шапки таблицы */
   --color-text: #0E2E54;
   --color-accent: #034CAA;
   --color-accent-2: #0E2E54;

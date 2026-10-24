@@ -121,6 +121,8 @@ html.locked, html.locked body { overflow: hidden; }
 .acc-ok { font-size: 14px; color: var(--color-accent-800); }
 .acc-ok:empty { display: none; }
 .acc-theme { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 14px; }
+.acc-app { display: flex; flex-direction: column; gap: 6px; }
+.acc-app-ok { font-size: 13px; color: var(--color-accent-800); }
 
 /* ── Плашка «Установить приложение» ── */
 .install-app {
@@ -134,6 +136,13 @@ html.locked, html.locked body { overflow: hidden; }
 .new-version { z-index: 5100; right: auto; left: max(16px, env(safe-area-inset-left)); padding: 6px 6px 6px 14px; gap: 8px; }   /* поверх окна входа (5000) */
 .new-version-text { font-size: 13px; }
 @media screen and (max-width: 520px) { .new-version { right: max(16px, env(safe-area-inset-right)); } .new-version-text { flex: 1; } }
+/* Safari на Mac: «Файл → Добавить в Dock» (кнопки установки, как в Chrome, у Safari нет) */
+.mac-dock { padding: 6px 6px 6px 14px; gap: 8px; }
+.mac-dock-text, .old-browser-text { font-size: 13px; line-height: 1.4; }
+/* «Браузер устарел» — сверху по центру, поверх окна входа: на старом Safari может не работать и вход */
+.old-browser { z-index: 5100; top: max(16px, env(safe-area-inset-top)); bottom: auto; left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right));
+  max-width: 720px; margin: 0 auto; padding: 8px 6px 8px 14px; gap: 8px; border-left: 3px solid var(--color-red); }
+.old-browser-text { flex: 1; }
 
 /* ── Плавность: переходы кнопок, появление вкладок и окон, полоски заполнения ──
    Анимируются только прозрачность и сдвиг (их рисует видеокарта, без подтормаживаний).

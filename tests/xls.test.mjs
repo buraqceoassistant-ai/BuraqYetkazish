@@ -34,3 +34,22 @@ test('XlsxIO.readGrid распознаёт .xls по сигнатуре; не-Ex
   assert.equal(r.ok, true, r.error);
   assert.deepEqual([r.unit, r.n, r.m3, r.bl, r.text, r.marks], ['cm', 67, 17.144, 'BL-901', '103×50×50×66; 120×49,5×25×1', ['BL-901']]);
 });
+
+test('zip без CompressionStream / DecompressionStream (Safari до 16.4): запись без сжатия читается, распаковка — понятная ошибка', async () => {
+  const X = win.XlsxIO, TE = new TextEncoder(), TD = new TextDecoder();
+  const files = { 'a.xml': TE.encode('<a>привет</a>'.repeat(50)), 'b.txt': TE.encode('BURAQ') }, order = ['a.xml', 'b.txt'];
+  const back = async blob => { const z = await X.readZip(await blob.arrayBuffer()); return order.map(n => TD.decode(z.files[n])); };
+  const packed = await X.writeZip(files, order);
+  const CS = globalThis.CompressionStream, DS = globalThis.DecompressionStream;
+  try {
+    delete globalThis.CompressionStream;
+    const plain = await X.writeZip(files, order);
+    assert.ok(plain.size > packed.size);                       // без сжатия — больше, но это обычный zip
+    globalThis.CompressionStream = CS;
+    assert.deepEqual(await back(plain), order.map(n => TD.decode(files[n])));
+    delete globalThis.DecompressionStream;
+    assert.deepEqual(await back(plain), order.map(n => TD.decode(files[n])));   // несжатый читается и без распаковки
+    await assert.rejects(back(packed), /обновите Safari/);
+  } finally { globalThis.CompressionStream = CS; globalThis.DecompressionStream = DS; }
+  assert.deepEqual(await back(packed), order.map(n => TD.decode(files[n])));
+});
