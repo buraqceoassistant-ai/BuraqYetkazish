@@ -26,6 +26,7 @@ const SHELL = [
   'js/xls-biff.js',
   'js/xlsx-io.js',
   'js/packing.js',
+  'js/car-calc.js',
   'js/import-core.js',
   'js/import-checks.js',
   'js/import-local.js',

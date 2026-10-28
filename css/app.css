@@ -551,3 +551,13 @@ input.set-input[type="text"] { text-align: left !important; }
 .photo-bar { display: flex; align-items: center; gap: 6px; color: var(--buraq-white); font-size: 13px; }
 .photo-title { flex: 1; }
 .photo-bar .btn-ghost { color: var(--buraq-white); font-size: 22px; line-height: 1; padding: 2px 12px; }
+
+/* «Отчёты» → «Новая машина»: исходные цифры расчёта — карточки по темам (машина, расходы, кредит, лизинг) */
+.car-hint { font-size: 12px; line-height: 1.45; color: var(--color-neutral-700); max-width: 900px; margin-bottom: 12px; text-wrap: pretty; }
+.car-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.car-group { border: 1px solid var(--color-divider); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.car-group-title { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--color-neutral-700); }
+.car-field { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.car-field .input { font-variant-numeric: tabular-nums; }
+.car-field small { font-size: 11px; line-height: 1.35; color: var(--color-neutral-700); }
+.car-field small:empty { display: none; }
