@@ -705,6 +705,15 @@
       </sc-if>
 
       <sc-if value="{{ repIsNewcar }}">
+        <section class="rep-block car-verdict glass" style="border-left-color:{{ carVerdictColor }}">
+          <div class="eyebrow" style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-neutral-700)">Итог</div>
+          <div class="car-verdict-title" style="color:{{ carVerdictColor }}">{{ carVerdict }}</div>
+          <div class="car-verdict-sub"><sc-for list="{{ carVerdictSub }}" as="x"><span>{{ x.text }}</span></sc-for></div>
+          <div class="car-why">
+            <div><h4>Почему</h4><ol><sc-for list="{{ carWhy }}" as="n"><li>{{ n.text }}</li></sc-for></ol></div>
+            <div><h4>Что нужно, чтобы окупилась</h4><ul><sc-for list="{{ carNeed }}" as="n"><li>{{ n.text }}</li></sc-for></ul></div>
+          </div>
+        </section>
         <section class="rep-block car-calc">
           <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 6px"><h3 style="margin:0">Машина и расходы</h3><button class="btn btn-ghost no-print" sc-camel-on-click="{{ carReset }}">Вернуть примерные цифры</button></div>
           <div class="car-hint">{{ carHint }}</div>
@@ -744,6 +753,12 @@
           <ul class="rep-notes" style="margin:12px 0 0;padding:0 0 0 18px;display:flex;flex-direction:column;gap:4px;font-size:13px">
             <sc-for list="{{ carNotes }}" as="n"><li>{{ n.text }}</li></sc-for>
           </ul>
+        </section>
+        <section class="rep-block">
+          <h3 style="margin:0 0 4px">Окупаемость по месяцам</h3>
+          <div class="car-hint">Накопленный итог: экономия минус всё, что заплачено за машину. Линия пересекает ноль — машина окупилась.</div>
+          <div class="car-legend"><span><i style="background:var(--chart-1)"></i>Наличными</span><span><i style="background:var(--chart-2)"></i>Лизинг</span></div>
+          <div class="car-chart glass" aria-label="График окупаемости по месяцам" role="img"></div>
         </section>
       </sc-if>
 
@@ -2345,7 +2360,7 @@ class Component extends DCLogic {
       if (j !== this._navSaved) { this._navSaved = j; try { sessionStorage.setItem(NAV_KEY, j); } catch (e) {} }
     }
     if (this.state.ready && !this._autoNameT && this.canLoc && (!this.gsUrl || (this.state.gsAt && this.state.gsStatus !== 'loading'))) { this._autoNameT = true; setTimeout(() => this.autoNamePoints(), 3000); }
-    this.syncMap(); this.syncDvMap(); this.syncPlanMap(); this.syncViz(); this.syncSmooth(); this.syncImport();
+    this.syncMap(); this.syncDvMap(); this.syncPlanMap(); this.syncViz(); this.syncSmooth(); this.syncImport(); this.syncCarChart();
     // страница «Связь» открыта — черновик есть; ушли с неё — черновик убираем (Esc, кнопки вкладок)
     { const st = this.state, gs = st.dialog && st.dialog.type === 'gs';
       if (st.tab === 'link' && !st.dialog) this.setState({ dialog: this.gsDraft() });
@@ -3997,6 +4012,30 @@ class Component extends DCLogic {
         else if (M.net <= 0) notes.push('Своя машина обходится дороже, чем платим за эти рейсы сейчас, на ' + money(-M.net) + ' в месяц — не окупится. Помогут больше рейсов на машину, меньше зарплата и расходы или ниже цена.');
         notes.push('Месяц — ' + f1(M.perMonth, 1) + ' парт. (' + (p.perMonth ? 'вписано' : 'по данным периода') + '). Остаточная стоимость машины через ' + res.years + ' лет и налоги в расчёт не входят.');
         out.carNotes = notes.map(text => ({ text }));
+        // вывод сверху: окупится (лучший способ) или нет — и почему, на цифрах периода
+        const best = V.filter(x => x.payback != null).sort((a, c) => a.payback - c.payback)[0], other = best && V.find(x => x !== best);
+        const B = res.B, mln = v => f1(v / 1e6, 1) + ' млн сум', okC = 'var(--color-accent-text)', badC = 'var(--color-danger-ink)';
+        out.carVerdict = best ? 'Окупится через ' + term(best.payback) : 'Не окупится';
+        out.carVerdictColor = best ? okC : badC;
+        const how = x => x.key === 'cash' ? 'наличными' : 'в лизинг';
+        out.carVerdictSub = (best ? [how(best)].concat(other ? [how(other) + ' — ' + (other.payback != null ? 'через ' + term(other.payback) : 'не окупится')] : [], ['экономия ' + mln(M.net) + ' в месяц'])
+          : [!CT.all ? 'в этом периоде нет рейсов с тарифом' : 'своя машина обходится дороже наёмных рейсов на ' + mln(Math.max(0, -M.net)) + ' в месяц']).map(text => ({ text }));
+        out.carWhy = [
+          'Машина ездит только в дни партий: ' + f1(B.days, 1) + ' в месяц × до ' + res.per + ' рейсов в день × машин ' + p.count + ' = до ' + f0(B.cap) + ' рейсов. По кузову (' + f1(res.capM3, 1) + ' м³, ' + f0(p.kg) + ' кг) подходит ' + f1(B.fitMonth, 1) + ' в месяц — возьмёт ' + f1(M.trips, 1) + '.',
+          'За эти рейсы сейчас платим ' + mln(M.saved) + ' в месяц' + (B.perTrip ? ' — в среднем ' + money(B.perTrip) + ' за рейс.' : '.'),
+          'Своя машина в месяц: водитель ' + mln(M.salary) + ' + ТО и страховка ' + mln(M.upkeep) + ' + электричество ' + mln(M.energy) + ' = ' + mln(M.opex) + '.',
+          M.net > 0 ? 'Экономия ' + mln(M.net) + ' в месяц — из неё машина и окупается.' : 'Расходы больше экономии на ' + mln(-M.net) + ' в месяц — поэтому не окупится.'].map(text => ({ text }));
+        const need = [];
+        if (B.tripsEven != null) {
+          need.push('Хотя бы ' + f1(B.tripsEven, 1) + ' рейсов в месяц, чтобы покрыть расходы (сейчас ' + f1(M.trips, 1) + ').');
+          need.push(f1(B.tripsIn3y, 1) + ' рейсов в месяц — чтобы окупилась за 3 года наличными.');
+          if (B.tripsEven > B.cap) need.push('Столько рейсов машина не успевает в дни партий (до ' + f0(B.cap) + '): нужно возить и между партиями или больше рейсов в день («Рейсов на машину в день» в «Тарифах»).');
+          else if (B.tripsEven > B.fitMonth) need.push('Подходящих по кузову рейсов меньше (' + f1(B.fitMonth, 1) + ' в месяц): нужен кузов больше.');
+        } else need.push('Нет рейсов, которые помещаются в кузов, — выберите другой период или машину с кузовом больше.');
+        need.push(B.maxSalary > 0 ? 'Или зарплата водителя не больше ' + mln(B.maxSalary) + ' в месяц.' : 'Даже без зарплаты водителя расходы не покрываются.');
+        if (B.maxPrice3y > 0) need.push('Окупится за 3 года наличными, если машина стоит не больше ' + mln(B.maxPrice3y) + '.');
+        out.carNeed = need.map(text => ({ text }));
+        this._carChart = { series: V.map((x, i) => ({ name: x.name, curve: x.curve, payback: x.payback, color: 'var(--chart-' + (i + 1) + ')' })) };
         out.carHint = 'Цифры по умолчанию — примерные (октябрь 2026): цена — объявления BYD T5 EV на OLX.uz, электричество — тариф для юрлиц, ставки — средние по банкам. Впишите свои из предложения дилера и банка: расчёт пересчитается сразу и запомнится на этом устройстве.';
         Object.assign(out, { repTitle: 'Новая машина: сколько обойдётся', repPrintTitle: 'Новая машина · ' + p.name + ' · ' + (plabel ? plabel + ' · ' : '') + range, repNote: srcNote + volNote });
         out.repKpis = [
@@ -4068,6 +4107,41 @@ class Component extends DCLogic {
     if (kind === 'batch') this._repX = { kind, out };
     out.repHasNote = !!out.repNote;
     return out;
+  }
+  // «Новая машина»: график окупаемости — накопленный итог по месяцам (экономия минус всё заплаченное за машину),
+  // линии наличными и лизинг, ноль — окупилась; наведение — месяц и итог обоих способов
+  syncCarChart() {
+    const el = document.querySelector('.car-chart'), d = this._carChart;
+    if (!el || !d || this.state.tab !== 'reports' || this.state.repKind !== 'newcar') return;
+    const w = Math.max(280, Math.round(el.clientWidth)), root = document.documentElement, key = JSON.stringify([d.series.map(s => s.curve.map(Math.round)), w, root.dataset.theme, root.lang]);
+    if (!el._ro && window.ResizeObserver) { el._ro = new ResizeObserver(() => this.syncCarChart()); el._ro.observe(el); }   // ширина окна поменялась — перерисовать
+    if (el.dataset.key === key) return;
+    el.dataset.key = key;
+    const tr = x => window.I18N && window.I18N.t ? window.I18N.t(x) : x, H = 240, P = { l: 70, r: 28, t: 14, b: 30 }, n = d.series[0].curve.length - 1;
+    const all = d.series.flatMap(s => s.curve).concat(0), lo = Math.min(...all), hi = Math.max(...all), raw = (hi - lo) / 4 || 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw))), step = [1, 2, 2.5, 5, 10].map(k => k * mag).find(x => x >= raw), y0 = Math.floor(lo / step) * step, y1 = Math.ceil(hi / step) * step;
+    const X = m => P.l + (w - P.l - P.r) * m / n, Y = v => P.t + (H - P.t - P.b) * (y1 - v) / (y1 - y0 || 1);
+    const mln = v => f1(v / 1e6, Math.abs(v) < 1e7 ? 1 : 0) + ' млн', yr = m => m < 12 ? m + ' мес.' : Math.floor(m / 12) + ' г.' + (m % 12 ? ' ' + (m % 12) + ' мес.' : '');
+    let g = '';
+    for (let v = y0; v <= y1 + step / 2; v += step) g += '<line x1="' + P.l + '" x2="' + (w - P.r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" class="' + (Math.abs(v) < step / 2 ? 'cc-zero' : 'cc-grid') + '"/><text x="' + (P.l - 8) + '" y="' + (Y(v) + 4) + '" class="cc-tick" text-anchor="end">' + tr(mln(Math.abs(v) < step / 2 ? 0 : v)) + '</text>';
+    for (let m = 0; m <= n; m += 12) g += '<text x="' + X(m) + '" y="' + (H - 8) + '" class="cc-tick" text-anchor="middle">' + tr(m ? yr(m) : '0') + '</text>';
+    d.series.forEach(s => {
+      g += '<path d="' + s.curve.map((v, m) => (m ? 'L' : 'M') + X(m).toFixed(1) + ' ' + Y(v).toFixed(1)).join('') + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      if (s.payback != null && s.payback <= n) g += '<circle cx="' + X(s.payback) + '" cy="' + Y(s.curve[s.payback]) + '" r="5" fill="' + s.color + '" class="cc-ring"/>';
+    });
+    el.innerHTML = '<svg width="' + w + '" height="' + H + '" viewBox="0 0 ' + w + ' ' + H + '">' + g + '<line class="cc-cross" y1="' + P.t + '" y2="' + (H - P.b) + '" x1="-9" x2="-9"/>'
+      + '<rect class="cc-hit" x="' + P.l + '" y="0" width="' + (w - P.l - P.r) + '" height="' + H + '" fill="transparent"/></svg><div class="cc-tip" hidden></div>';
+    const svg = el.querySelector('svg'), cross = el.querySelector('.cc-cross'), tip = el.querySelector('.cc-tip');
+    const show = ev => {
+      const r = svg.getBoundingClientRect(), m = Math.max(0, Math.min(n, Math.round((ev.clientX - r.left - P.l) / (w - P.l - P.r) * n)));
+      cross.setAttribute('x1', X(m)); cross.setAttribute('x2', X(m));
+      tip.hidden = false; tip.textContent = '';
+      const head = document.createElement('b'); head.textContent = tr(m ? 'Через ' + yr(m) : 'Сразу после покупки'); tip.appendChild(head);
+      d.series.forEach(s => { const row = document.createElement('div'), dot = document.createElement('i'); dot.style.background = s.color; row.appendChild(dot); row.appendChild(document.createTextNode(tr(s.name) + ': ' + tr(money(s.curve[m])))); tip.appendChild(row); });
+      tip.style.left = Math.min(w - 210, Math.max(0, X(m) + 12)) + 'px';
+    };
+    const hide = () => { tip.hidden = true; cross.setAttribute('x1', -9); cross.setAttribute('x2', -9); };
+    const hit = el.querySelector('.cc-hit'); hit.addEventListener('pointermove', show); hit.addEventListener('pointerdown', show); hit.addEventListener('pointerleave', hide);
   }
   // печать и PDF: печатается только отчёт (css/app.css, @media print); имя PDF — из заголовка страницы
   reportPrint() {

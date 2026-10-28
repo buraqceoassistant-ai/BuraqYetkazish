@@ -2848,3 +2848,40 @@ BURAQ — приложением на Mac: меню «Файл» → «Доба�
 Раздел	Bo‘lim
 Экономия в месяц, пока платим	To‘lov davrida oylik tejash
 Покупка: наличными или в лизинг	Xarid: naqd pulga yoki lizingga
+Почему	Nega
+Что нужно, чтобы окупилась	O‘zini oqlashi uchun nima kerak
+Окупаемость по месяцам	Oylar bo‘yicha o‘zini oqlash
+Накопленный итог: экономия минус всё, что заплачено за машину. Линия пересекает ноль — машина окупилась.	Yig‘ilgan natija: tejash minus mashina uchun to‘langan hamma narsa. Chiziq noldan o‘tdi — mashina o‘zini oqladi.
+График окупаемости по месяцам	Oylar bo‘yicha o‘zini oqlash grafigi
+Окупится через {n} мес.	{n} oyda o‘zini oqlaydi
+Окупится через {n} г.	{n} yilda o‘zini oqlaydi
+Окупится через {n} г. {n2} мес.	{n} yil {n2} oyda o‘zini oqlaydi
+Не окупится	O‘zini oqlamaydi
+наличными	naqd pulga
+в лизинг	lizingga
+[наличными|в лизинг] — через {n} мес.	[naqd pulga|lizingga] — {n} oyda
+[наличными|в лизинг] — через {n} г.	[naqd pulga|lizingga] — {n} yilda
+[наличными|в лизинг] — через {n} г. {n2} мес.	[naqd pulga|lizingga] — {n} yil {n2} oyda
+[наличными|в лизинг] — не окупится	[naqd pulga|lizingga] — o‘zini oqlamaydi
+экономия {n} млн сум в месяц	tejash oyiga {n} mln so‘m
+в этом периоде нет рейсов с тарифом	bu davrda tarifli reyslar yo‘q
+своя машина обходится дороже наёмных рейсов на {n} млн сум в месяц	o‘z mashinamiz yollangan reyslardan oyiga {n} mln so‘m qimmatroq
+Машина ездит только в дни партий: {n} в месяц × до {n2} рейсов в день × машин {n3} = до {n4} рейсов. По кузову ({n5} м³, {n6} кг) подходит {n7} в месяц — возьмёт {n8}.	Mashina faqat partiya kunlari yuradi: oyiga {n} × kuniga {n2} tagacha reys × {n3} mashina = {n4} tagacha reys. Kuzovga ({n5} m³, {n6} kg) oyiga {n7} ta mos keladi — {n8} tasini oladi.
+За эти рейсы сейчас платим {n} млн сум в месяц[| — в среднем {n2} сум за рейс].	Bu reyslar uchun hozir oyiga {n} mln so‘m to‘laymiz[| — o‘rtacha reysiga {n2} so‘m].
+Своя машина в месяц: водитель {n} млн сум + ТО и страховка {n2} млн сум + электричество {n3} млн сум = {n4} млн сум.	O‘z mashinamiz oyiga: haydovchi {n} mln so‘m + texxizmat va sug‘urta {n2} mln so‘m + elektr {n3} mln so‘m = {n4} mln so‘m.
+Экономия {n} млн сум в месяц — из неё машина и окупается.	Tejash oyiga {n} mln so‘m — mashina shundan o‘zini oqlaydi.
+Расходы больше экономии на {n} млн сум в месяц — поэтому не окупится.	Xarajatlar tejashdan oyiga {n} mln so‘m ko‘p — shuning uchun o‘zini oqlamaydi.
+Хотя бы {n} рейсов в месяц, чтобы покрыть расходы (сейчас {n2}).	Xarajatlarni qoplash uchun oyiga kamida {n} reys (hozir {n2}).
+{n} рейсов в месяц — чтобы окупилась за {n2} года наличными.	Naqd pulga {n2} yilda o‘zini oqlashi uchun oyiga {n} reys.
+Столько рейсов машина не успевает в дни партий (до {n}): нужно возить и между партиями или больше рейсов в день («Рейсов на машину в день» в «Тарифах»).	Partiya kunlarida mashina buncha reysga ulgurmaydi ({n} tagacha): partiyalar orasida ham tashish yoki kuniga ko‘proq reys kerak («Tariflar»dagi «Mashinaga kuniga reyslar»).
+Подходящих по кузову рейсов меньше ({n} в месяц): нужен кузов больше.	Kuzovga mos reyslar kamroq (oyiga {n}): kattaroq kuzov kerak.
+Нет рейсов, которые помещаются в кузов, — выберите другой период или машину с кузовом больше.	Kuzovga sig‘adigan reyslar yo‘q — boshqa davrni yoki kattaroq kuzovli mashinani tanlang.
+Или зарплата водителя не больше {n} млн сум в месяц.	Yoki haydovchi maoshi oyiga {n} mln so‘mdan oshmasin.
+Даже без зарплаты водителя расходы не покрываются.	Haydovchi maoshisiz ham xarajatlar qoplanmaydi.
+Окупится за {n} года наличными, если машина стоит не больше {n2} млн сум.	Mashina {n2} mln so‘mdan qimmat bo‘lmasa, naqd pulga {n} yilda o‘zini oqlaydi.
+{n} млн	{n} mln
+-{n} млн	-{n} mln
+Через {n} мес.	{n} oydan keyin
+Через {n} г.	{n} yildan keyin
+Сразу после покупки	Xariddan darhol keyin
+Через {n} г. {n2} мес.	{n} yil {n2} oydan keyin

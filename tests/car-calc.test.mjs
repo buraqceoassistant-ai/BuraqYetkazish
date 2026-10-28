@@ -48,3 +48,26 @@ test('ввод: пустое и неверное — по умолчанию, «
   assert.deepEqual([p.price, p.m3, p.count, p.perMonth, p.kwhPrice, p.name], [350000000, C.DEFAULTS.m3, 1, null, 1250.5, C.DEFAULTS.name]);
   assert.equal(C.calc([], {}).M.saved, 0);
 });
+
+test('что нужно, чтобы окупилась: рейсов в месяц, зарплата, цена; кривая окупаемости по месяцам', () => {
+  // 3 партии в месяц (6 за 61 день), в каждой — 1 рейс 2 млн, 0 км; водитель 3 млн, ТО 0
+  const b = ['2026-08-01', '2026-08-11', '2026-08-21', '2026-09-01', '2026-09-15', '2026-09-30'].map(date => ({ date, trips: [trip(2000000, 0, 10, 500)] }));
+  const r = C.calc(b, { price: 60000000, salary: 3000000, upkeepYear: 0, perMonth: 3, leaseAdv: 100 }, { fill: 1, perDay: 2 });
+  near(r.M.net, 3000000);                          // 3 рейса × 2 млн − 3 млн
+  assert.equal(r.B.perTrip, 2000000); assert.equal(r.B.tripsEven, 1.5);   // 3 млн / 2 млн
+  near(r.B.tripsIn3y, (3000000 + 60000000 / 36) / 2000000, 0.001);
+  near(r.B.maxSalary, 6000000); near(r.B.maxPrice3y, 3000000 * 36);
+  assert.equal(r.B.cap, 2 * 3); assert.equal(r.B.fitMonth, 3);
+  const cash = r.V[0];
+  assert.equal(cash.curve.length, 61); assert.equal(cash.curve[0], -60000000); near(cash.curve[20], 0); assert.equal(cash.payback, 20);
+});
+
+test('лизинг: окупилась — только когда итог больше не уходит в минус (платежи идут и после первого «плюса»)', () => {
+  // аванс 0, экономия 1 млн в месяц, платёж лизинга больше экономии — итог в минусе весь срок, после выплаты растёт
+  const b = [{ date: '2026-10-01', trips: [trip(1000000, 0, 5, 100)] }];
+  const r = C.calc(b, { price: 24000000, salary: 0, upkeepYear: 0, perMonth: 1, leaseAdv: 0, leaseRate: 0, leaseMonths: 12 }, { fill: 1, perDay: 2 });
+  const lease = r.V[1];
+  near(lease.pay, 2000000); assert.ok(lease.curve[12] < 0);
+  assert.equal(lease.payback, 24);                 // −12 млн за год лизинга, потом +1 млн в месяц → ноль на 24-м
+  assert.equal(r.V[0].payback, 24);                // наличными: 24 млн / 1 млн
+});

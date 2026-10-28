@@ -561,3 +561,26 @@ input.set-input[type="text"] { text-align: left !important; }
 .car-field .input { font-variant-numeric: tabular-nums; }
 .car-field small { font-size: 11px; line-height: 1.35; color: var(--color-neutral-700); }
 .car-field small:empty { display: none; }
+/* вывод сверху: «Окупится через …» / «Не окупится», почему и что нужно */
+.car-verdict { border: 1px solid var(--color-divider); border-left: 3px solid; border-radius: 14px; padding: 18px 22px; display: flex; flex-direction: column; gap: 6px; }
+.car-verdict-title { font-family: var(--font-heading); font-weight: 400; font-size: 34px; line-height: 1.05; text-transform: uppercase; letter-spacing: .02em; }
+.car-verdict-sub { font-size: 14px; color: var(--color-neutral-700); }
+.car-verdict-sub span + span::before { content: " · "; }
+.car-why { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 28px; margin-top: 10px; font-size: 13px; line-height: 1.5; }
+.car-why h4 { margin: 0 0 4px; font-size: 11px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--color-neutral-700); }
+.car-why ol, .car-why ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+/* график окупаемости: линии — токены --chart-1/2, сетка — разделители, подписи — цвет текста */
+.car-legend { display: flex; gap: 18px; font-size: 13px; margin: 8px 0; }
+.car-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.car-legend i, .cc-tip i { display: inline-block; width: 14px; height: 2px; border-radius: 1px; }
+.car-chart { position: relative; border: 1px solid var(--color-divider); border-radius: 14px; padding: 8px 4px; min-height: 240px; }
+.car-chart svg { display: block; touch-action: pan-y; }
+.car-chart .cc-grid { stroke: var(--color-divider); stroke-width: 1; }
+.car-chart .cc-zero { stroke: var(--color-neutral-500); stroke-width: 1; }
+.car-chart .cc-tick { fill: var(--color-neutral-700); font: 11px var(--font-numeric, Inter, sans-serif); }
+.car-chart .cc-cross { stroke: var(--color-neutral-500); stroke-width: 1; }
+.car-chart .cc-ring { stroke: var(--color-bg); stroke-width: 2; }
+.cc-tip { position: absolute; top: 10px; min-width: 190px; padding: 8px 10px; font-size: 12px; line-height: 1.5; background: var(--color-bg); border: 1px solid var(--color-divider); border-radius: 10px; box-shadow: var(--shadow-md); pointer-events: none; }
+.cc-tip b { display: block; font-weight: 500; margin-bottom: 2px; }
+.cc-tip div { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+@media screen and (max-width: 760px) { .car-verdict-title { font-size: 26px; } .car-why { grid-template-columns: minmax(0, 1fr); } }

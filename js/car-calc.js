@@ -70,13 +70,24 @@
     const variant = (key, name, downPct, rate, months) => {
       const upfront = key === 'cash' ? price : price * Math.min(100, downPct) / 100, loan = price - upfront;
       const n = key === 'cash' || !(loan > 0) ? 0 : Math.max(1, Math.round(months)), pay = n ? annuity(loan, rate, n) : 0, total = upfront + pay * n;
-      // окупится: месяц, когда экономия покрыла всё заплаченное за машину (до 20 лет); итог — за 5 лет
-      let cum = -upfront, payback = null, five = 0;
-      for (let m = 1; m <= 240; m++) { cum += M.net - (m <= n ? pay : 0); if (payback == null && cum >= 0) payback = m; if (m === YEARS * 12) five = cum; }
-      return { key, name, upfront, loan, pay, months: n, rate: key === 'cash' ? 0 : rate, total, overpay: total - price, netDuring: M.net - pay, netAfter: M.net, payback, five };
+      // окупится: месяц, с которого накопленный итог (экономия минус всё заплаченное за машину) больше не уходит
+      // в минус — при лизинге платежи идут и после первого «плюса» (считаем до 20 лет); итог — за 5 лет;
+      // curve — накопленный итог по месяцам (0 … 5 лет) для графика
+      let cum = -upfront, lastNeg = cum < 0 ? 0 : -1, five = 0; const curve = [cum];
+      for (let m = 1; m <= 240; m++) { cum += M.net - (m <= n ? pay : 0); if (cum < 0) lastNeg = m; if (m <= YEARS * 12) curve.push(cum); if (m === YEARS * 12) five = cum; }
+      const payback = cum >= 0 ? Math.max(1, lastNeg + 1) : null;
+      return { key, name, upfront, loan, pay, months: n, rate: key === 'cash' ? 0 : rate, total, overpay: total - price, netDuring: M.net - pay, netAfter: M.net, payback, five, curve };
     };
     const V = [variant('cash', 'Наличными'), variant('lease', 'Лизинг', p.leaseAdv, p.leaseRate, p.leaseMonths)];
-    return { p, fill, per, capM3, T, M, V, price, years: YEARS };
+    // что нужно, чтобы окупилась: рейсов в месяц (по средней цене рейса этой машины), зарплата, цена машины
+    const fitPrices = []; batches.forEach(b => (b.trips || []).forEach(t => { if (t.price > 0 && (+t.cbm || 0) <= capM3 + 1e-9 && (+t.kg || 0) <= p.kg + 1e-9) fitPrices.push(t); }));
+    const base = T.taken ? { price: T.saved / T.taken, km: T.km / T.taken } : fitPrices.length ? { price: fitPrices.reduce((a, t) => a + t.price, 0) / fitPrices.length, km: fitPrices.reduce((a, t) => a + (+t.km || 0), 0) / fitPrices.length } : null;
+    const perTrip = base ? base.price : null, netPerTrip = base ? base.price - base.km * p.kwh100 / 100 * p.kwhPrice : null, fixed = M.salary + M.upkeep;
+    const need = n => netPerTrip > 0 ? n / netPerTrip : null;
+    const B = { perTrip, netPerTrip, fixed, cap: per * p.count * perMonth, fitMonth: T.fit * k, trips: M.trips, days: perMonth,
+      tripsEven: need(fixed), tripsIn3y: need(fixed + price / 36),
+      maxSalary: (M.saved - M.energy - M.upkeep) / p.count, maxPrice3y: M.net > 0 ? M.net * 36 / p.count : 0 };
+    return { p, fill, per, capM3, T, M, V, B, price, years: YEARS };
   }
 
   const API = { DEFAULTS, params, annuity, calc, YEARS };

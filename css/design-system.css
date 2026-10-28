@@ -52,6 +52,10 @@
   --color-bg: #FFFFFF;
   --color-surface: #F3F6FA;
   --color-sticky: color-mix(in srgb, var(--buraq-white) 95%, var(--buraq-navy));   /* непрозрачный фон липкой шапки таблицы */
+  /* линии графиков (окупаемость в «Новой машине»): фирменные синий и красный; проверено на различимость при
+     нарушениях цветового зрения и контраст с фоном (в тёмной теме — светлее, см. glass-dark.css) */
+  --chart-1: var(--buraq-blue);
+  --chart-2: var(--buraq-red);
   --color-text: #0E2E54;
   --color-accent: #034CAA;
   --color-accent-2: #0E2E54;

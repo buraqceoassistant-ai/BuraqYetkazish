@@ -12,6 +12,8 @@
     --color-bg: color-mix(in srgb, var(--buraq-white) 7%, transparent);
     --color-surface: color-mix(in srgb, var(--buraq-white) 4%, transparent);
     --color-sticky: color-mix(in srgb, var(--buraq-white) 13%, var(--buraq-navy));
+    --chart-1: color-mix(in srgb, var(--buraq-blue) 65%, var(--buraq-white));
+    --chart-2: color-mix(in srgb, var(--buraq-red) 68%, var(--buraq-white));
     --color-text: var(--buraq-white);
     --color-accent-2: color-mix(in srgb, var(--buraq-white) 88%, transparent);
     --color-on-accent-2: var(--buraq-navy);
@@ -135,7 +137,7 @@
 
   /* ── липкие полосы поверх прокрутки — непрозрачные, чтобы строки под ними не просвечивали ── */
   :root[data-theme="dark"] .imp-foot, :root[data-theme="dark"] .imp-grid thead th, :root[data-theme="dark"] .imp-grid tbody th,
-  :root[data-theme="dark"] .install-app { background: var(--glass-bg-solid); }
+  :root[data-theme="dark"] .install-app, :root[data-theme="dark"] .cc-tip { background: var(--glass-bg-solid); }
   :root[data-theme="dark"] .dialog > .dialog-actions, :root[data-theme="dark"] .dialog .dialog-actions { background: var(--glass-bg-solid) !important; }
 
   /* ── окна: тёмное стекло, фон за окном — затемнённый и размытый ── */
