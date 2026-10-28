@@ -2784,9 +2784,7 @@ BURAQ — приложением на Mac: меню «Файл» → «Доба�
 Новая машина · {s}	Yangi mashina · {s}
 Машина и расходы	Mashina va xarajatlar
 Вернуть примерные цифры	Taxminiy raqamlarni qaytarish
-Покупка: наличными, в кредит, в лизинг	Xarid: naqd pulga, kreditga, lizingga
 Цифры по умолчанию — примерные (октябрь 2026): цена — объявления BYD T5 EV на OLX.uz, электричество — тариф для юрлиц, ставки — средние по банкам. Впишите свои из предложения дилера и банка: расчёт пересчитается сразу и запомнится на этом устройстве.	Standart raqamlar — taxminiy (2026-yil oktyabr): narx — OLX.uz’dagi BYD T5 EV e’lonlari, elektr — yuridik shaxslar tarifi, stavkalar — banklar bo‘yicha o‘rtacha. Diler va bank taklifidagi o‘z raqamlaringizni yozing: hisob darhol yangilanadi va shu qurilmada saqlanadi.
-Кредит	Kredit
 Лизинг	Lizing
 Наличными	Naqd pulga
 Модель	Model
@@ -2800,8 +2798,6 @@ BURAQ — приложением на Mac: меню «Файл» → «Доба�
 Зарплата водителя в месяц, сум	Haydovchining oylik maoshi, so‘m
 ТО, шины, страховка в год, сум	Texxizmat, shinalar, sug‘urta — yiliga, so‘m
 Партий в месяц	Oyiga partiyalar
-Первый взнос, %	Boshlang‘ich to‘lov, %
-Ставка, % годовых	Stavka, yillik %
 Срок, мес.	Muddat, oy
 Аванс, %	Avans, %
 Удорожание, % в год	Qimmatlashuv, yiliga %
@@ -2851,3 +2847,4 @@ BURAQ — приложением на Mac: меню «Файл» → «Доба�
 Окупится, мес.	O‘zini oqlaydi, oy
 Раздел	Bo‘lim
 Экономия в месяц, пока платим	To‘lov davrida oylik tejash
+Покупка: наличными или в лизинг	Xarid: naqd pulga yoki lizingga

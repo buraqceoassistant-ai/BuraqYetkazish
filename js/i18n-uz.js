@@ -2703,9 +2703,7 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Новая машина · {s}":"Yangi mashina · {s}",
 "Машина и расходы":"Mashina va xarajatlar",
 "Вернуть примерные цифры":"Taxminiy raqamlarni qaytarish",
-"Покупка: наличными, в кредит, в лизинг":"Xarid: naqd pulga, kreditga, lizingga",
 "Цифры по умолчанию — примерные (октябрь 2026): цена — объявления BYD T5 EV на OLX.uz, электричество — тариф для юрлиц, ставки — средние по банкам. Впишите свои из предложения дилера и банка: расчёт пересчитается сразу и запомнится на этом устройстве.":"Standart raqamlar — taxminiy (2026-yil oktyabr): narx — OLX.uz’dagi BYD T5 EV e’lonlari, elektr — yuridik shaxslar tarifi, stavkalar — banklar bo‘yicha o‘rtacha. Diler va bank taklifidagi o‘z raqamlaringizni yozing: hisob darhol yangilanadi va shu qurilmada saqlanadi.",
-"Кредит":"Kredit",
 "Лизинг":"Lizing",
 "Наличными":"Naqd pulga",
 "Модель":"Model",
@@ -2719,8 +2717,6 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Зарплата водителя в месяц, сум":"Haydovchining oylik maoshi, so‘m",
 "ТО, шины, страховка в год, сум":"Texxizmat, shinalar, sug‘urta — yiliga, so‘m",
 "Партий в месяц":"Oyiga partiyalar",
-"Первый взнос, %":"Boshlang‘ich to‘lov, %",
-"Ставка, % годовых":"Stavka, yillik %",
 "Срок, мес.":"Muddat, oy",
 "Аванс, %":"Avans, %",
 "Удорожание, % в год":"Qimmatlashuv, yiliga %",
@@ -2774,4 +2770,5 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Условия":"Shartlar",
 "Месяцев":"Oylar",
 "Окупится, мес.":"O‘zini oqlaydi, oy",
-"Раздел":"Bo‘lim"};
+"Раздел":"Bo‘lim",
+"Покупка: наличными или в лизинг":"Xarid: naqd pulga yoki lizingga"};

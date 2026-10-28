@@ -720,7 +720,7 @@
           </div>
         </section>
         <section class="rep-block">
-          <h3 style="margin:0 0 10px">Покупка: наличными, в кредит, в лизинг</h3>
+          <h3 style="margin:0 0 10px">Покупка: наличными или в лизинг</h3>
           <div class="glass" style="border:1px solid var(--color-divider);overflow-x:auto">
             <sc-raw-table class="table tc">
               <sc-raw-thead><sc-raw-tr><sc-raw-th>Как покупаем</sc-raw-th><sc-raw-th style="text-align:right">Сразу заплатить</sc-raw-th><sc-raw-th style="text-align:right">Платёж в месяц</sc-raw-th><sc-raw-th style="text-align:right">Переплата</sc-raw-th><sc-raw-th style="text-align:right">Всего за машину</sc-raw-th><sc-raw-th style="text-align:right">Экономия в месяц, пока платим</sc-raw-th><sc-raw-th style="text-align:right">После выплаты</sc-raw-th><sc-raw-th style="text-align:right">Окупится через</sc-raw-th><sc-raw-th style="text-align:right">Итог за 5 лет</sc-raw-th></sc-raw-tr></sc-raw-thead>
@@ -3967,7 +3967,7 @@ class Component extends DCLogic {
           raw: [name, o.pts.size, r3(o.cbm), Math.round(o.price), Math.round(o.paid), Math.round(o.free)] }));
         this._repX = { kind, out, R, T };
       } else if (kind === 'newcar') {
-        // новая машина (js/car-calc.js): какие рейсы периода взяла бы своя машина, её расходы в месяц, наличные / кредит / лизинг
+        // новая машина (js/car-calc.js): какие рейсы периода взяла бы своя машина, её расходы в месяц, наличные или лизинг
         const CC = window.LogiCarCalc, cc = st.carCalc || {}, fp = +S.fillPct, fill = fp > 0 && fp <= 100 ? fp / 100 : 1;
         const batches = R.map(r => ({ date: r.date, trips: r.trips.map(t => ({ price: t.price && t.price.total != null ? t.price.total : 0, km: t.real || 0, cbm: t.cbm || 0, kg: t.kg || 0 })) }));
         const res = CC.calc(batches, cc, { fill, perDay: +S.tripsPerVehicle || 2 }), { p, T: CT, M, V } = res;
@@ -3981,12 +3981,11 @@ class Component extends DCLogic {
           { title: 'Расходы', fields: [F('kwh100', 'Расход, кВт·ч на 100 км', 'с грузом, по городу'), F('kwhPrice', 'Цена кВт·ч, сум', 'юрлица с 1.06.2026 — 1 100 сум'),
             F('salary', 'Зарплата водителя в месяц, сум', money(p.salary)), F('upkeepYear', 'ТО, шины, страховка в год, сум', money(p.upkeepYear)),
             F('perMonth', 'Партий в месяц', 'пусто — по данным периода', { ph: f1(M.autoPerMonth, 1) })] },
-          { title: 'Кредит', fields: [F('creditDown', 'Первый взнос, %', ''), F('creditRate', 'Ставка, % годовых', ''), F('creditMonths', 'Срок, мес.', '')] },
           { title: 'Лизинг', fields: [F('leaseAdv', 'Аванс, %', ''), F('leaseRate', 'Удорожание, % в год', ''), F('leaseMonths', 'Срок, мес.', '')] }];
         out.carReset = () => { try { localStorage.removeItem('logi-car-calc'); } catch (e) { /* закрытый режим */ } this.setState({ carCalc: {} }); };
         const term = m => m == null ? 'не окупится' : m < 12 ? m + ' мес.' : Math.floor(m / 12) + ' г.' + (m % 12 ? ' ' + (m % 12) + ' мес.' : '');
         const neg = x => x < 0 ? 'var(--color-danger-ink)' : 'inherit';
-        out.carRows = V.map(x => ({ name: x.name, how: x.key === 'cash' ? 'вся сумма сразу' : f0(x.key === 'credit' ? p.creditDown : p.leaseAdv) + ' % сразу, ' + f1(x.rate, 1) + ' % годовых, ' + x.months + ' мес.',
+        out.carRows = V.map(x => ({ name: x.name, how: x.key === 'cash' ? 'вся сумма сразу' : f0(p.leaseAdv) + ' % сразу, ' + f1(x.rate, 1) + ' % годовых, ' + x.months + ' мес.',
           upfront: money(x.upfront), pay: x.pay ? money(x.pay) : '—', overpay: x.overpay > 0.5 ? money(x.overpay) : '—', total: money(x.total),
           during: x.pay ? money(x.netDuring) : '—', duringColor: x.pay ? neg(x.netDuring) : 'inherit', after: money(x.netAfter), afterColor: neg(x.netAfter),
           payback: term(x.payback), five: money(x.five), fiveColor: neg(x.five) }));

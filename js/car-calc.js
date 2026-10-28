@@ -3,15 +3,15 @@
    которых помещается в её кузов (полезный объём — как в планах), не больше «рейсов на машину в день» и не дальше
    запаса хода за день. Сэкономлено — тариф этих рейсов: сейчас его платим наёмной машине.
    Расходы своей машины: электричество (км × кВт·ч на 100 км × цена кВт·ч), зарплата водителя, ТО / шины / страховка.
-   Покупка — наличными, в кредит или в лизинг: платёж в месяц одинаковый (аннуитет).
+   Покупка — наличными или в лизинг: платёж в месяц одинаковый (аннуитет).
    Подключается в index.html (вкладка «Отчёты» → «Новая машина»), в node — тесты (tests/car-calc.test.mjs). */
 (function (root) {
   'use strict';
   // примерные цифры (октябрь 2026): цена — объявления BYD T5 EV на OLX.uz, электричество — тариф для юрлиц с 1.06.2026,
-  // ставки — средние по автокредитам; кузов, вес, расход и запас хода — по описаниям T5 EV у дилеров. Всё меняется в форме.
+  // лизинг — средняя ставка по кредитам на машины; кузов, вес, расход и запас хода — по описаниям T5 EV у дилеров. Всё меняется в форме.
   const DEFAULTS = { name: 'BYD T5 EV', price: 400000000, m3: 16, kg: 1500, rangeKm: 250, count: 1,
     kwh100: 30, kwhPrice: 1100, salary: 7000000, upkeepYear: 12000000, perMonth: '',
-    creditDown: 30, creditRate: 23, creditMonths: 36, leaseAdv: 20, leaseRate: 26, leaseMonths: 36 };
+    leaseAdv: 20, leaseRate: 26, leaseMonths: 36 };
   const YEARS = 5;   // итог «за 5 лет»
 
   const num = v => { const x = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/\s+/g, '').replace(',', '.')); return isFinite(x) ? x : null; };
@@ -75,7 +75,7 @@
       for (let m = 1; m <= 240; m++) { cum += M.net - (m <= n ? pay : 0); if (payback == null && cum >= 0) payback = m; if (m === YEARS * 12) five = cum; }
       return { key, name, upfront, loan, pay, months: n, rate: key === 'cash' ? 0 : rate, total, overpay: total - price, netDuring: M.net - pay, netAfter: M.net, payback, five };
     };
-    const V = [variant('cash', 'Наличными'), variant('credit', 'Кредит', p.creditDown, p.creditRate, p.creditMonths), variant('lease', 'Лизинг', p.leaseAdv, p.leaseRate, p.leaseMonths)];
+    const V = [variant('cash', 'Наличными'), variant('lease', 'Лизинг', p.leaseAdv, p.leaseRate, p.leaseMonths)];
     return { p, fill, per, capM3, T, M, V, price, years: YEARS };
   }
 

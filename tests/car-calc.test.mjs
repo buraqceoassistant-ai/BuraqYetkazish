@@ -1,4 +1,4 @@
-// Новая машина (js/car-calc.js): какие рейсы возьмёт, расходы в месяц, наличные / кредит / лизинг, окупаемость.
+// Новая машина (js/car-calc.js): какие рейсы возьмёт, расходы в месяц, наличные или лизинг, окупаемость.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -25,17 +25,17 @@ test('рейсы: самые дорогие из тех, что помещают
   assert.deepEqual([r3.T.fit, r3.T.taken, r3.T.saved], [2, 2, 850000]);
 });
 
-test('в месяц: среднее на партию × партий в месяц; расходы своей машины; наличные, кредит, лизинг', () => {
+test('в месяц: среднее на партию × партий в месяц; расходы своей машины; наличные и лизинг', () => {
   // 6 партий за 61 день (2 месяца) → 3 партии в месяц; в каждой — рейс 500 тыс., 50 км
   const b = ['2026-08-01', '2026-08-11', '2026-08-21', '2026-09-01', '2026-09-15', '2026-09-30'].map(date => ({ date, trips: [trip(500000, 50, 10, 500)] }));
-  const p = { price: 120000000, kwh100: 30, kwhPrice: 1000, salary: 0, upkeepYear: 0, creditDown: 50, creditRate: 0, creditMonths: 12, leaseAdv: 0, leaseRate: 0, leaseMonths: 24 };
+  const p = { price: 120000000, kwh100: 30, kwhPrice: 1000, salary: 0, upkeepYear: 0, leaseAdv: 0, leaseRate: 0, leaseMonths: 24 };
   const r = C.calc(b, p, { fill: 1, perDay: 2 });
   near(r.M.perMonth, 6 / (61 / 30.44), 0.01);
   near(r.M.saved, 500000 * r.M.perMonth); near(r.M.energy, 50 * r.M.perMonth * 0.3 * 1000);
-  const [cash, credit, lease] = r.V;
+  const [cash, lease] = r.V;
+  assert.deepEqual(r.V.map(v => v.key), ['cash', 'lease']);   // кредита нет — только наличные и лизинг
   assert.equal(cash.upfront, 120000000); assert.equal(cash.pay, 0); assert.equal(cash.overpay, 0);
   assert.equal(cash.payback, Math.ceil(120000000 / r.M.net));
-  assert.equal(credit.upfront, 60000000); near(credit.pay, 5000000); assert.equal(credit.overpay, 0);
   assert.equal(lease.upfront, 0); near(lease.pay, 5000000);
   near(cash.five, 60 * r.M.net - 120000000, 5);
   // своя машина дороже наёмных рейсов — не окупается
