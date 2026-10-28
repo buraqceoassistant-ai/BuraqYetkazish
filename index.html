@@ -714,12 +714,34 @@
             <div><h4>Что нужно, чтобы окупилась</h4><ul><sc-for list="{{ carNeed }}" as="n"><li>{{ n.text }}</li></sc-for></ul></div>
           </div>
         </section>
+        <section class="rep-block car-scen-block">
+          <h3 style="margin:0 0 4px">Как сделать, чтобы окупилась</h3>
+          <div class="car-hint">Тот же расчёт, если поменять одно условие. {{ carScenNote }}</div>
+          <div class="glass" style="border:1px solid var(--color-divider);overflow-x:auto">
+            <sc-raw-table class="table tc car-scen">
+              <sc-raw-thead><sc-raw-tr><sc-raw-th>Что меняем</sc-raw-th><sc-raw-th style="text-align:right">Рейсов в месяц</sc-raw-th><sc-raw-th style="text-align:right">Экономия в месяц</sc-raw-th><sc-raw-th style="text-align:right">Наличными</sc-raw-th><sc-raw-th style="text-align:right">В лизинг</sc-raw-th><sc-raw-th style="text-align:right">Итог за 5 лет</sc-raw-th><sc-raw-th></sc-raw-th></sc-raw-tr></sc-raw-thead>
+              <sc-raw-tbody>
+                <sc-for list="{{ carScen }}" as="x">
+                  <sc-raw-tr>
+                    <sc-raw-td class="c4 o-1 c-strong"><div style="font-weight:500">{{ x.title }} <sc-if value="{{ x.fast }}"><span class="tag tag-accent car-fast">быстрее всех</span></sc-if></div><div style="font-size:12px;color:var(--color-neutral-700)">{{ x.sub }}</div></sc-raw-td>
+                    <sc-raw-td class="c2" data-label="Рейсов в месяц" style="text-align:right">{{ x.trips }}</sc-raw-td>
+                    <sc-raw-td class="c2" data-label="Экономия в месяц" style="text-align:right;white-space:nowrap;color:{{ x.netColor }}">{{ x.net }}</sc-raw-td>
+                    <sc-raw-td class="c2" data-label="Наличными" style="text-align:right;white-space:nowrap;font-weight:500;color:{{ x.cashColor }}">{{ x.cash }}</sc-raw-td>
+                    <sc-raw-td class="c2" data-label="В лизинг" style="text-align:right;white-space:nowrap;font-weight:500;color:{{ x.leaseColor }}">{{ x.lease }}</sc-raw-td>
+                    <sc-raw-td class="c2" data-label="Итог за 5 лет" style="text-align:right;white-space:nowrap;color:{{ x.fiveColor }}">{{ x.five }}</sc-raw-td>
+                    <sc-raw-td class="c-actions" style="text-align:right"><sc-if value="{{ x.canApply }}"><button class="btn btn-secondary no-print" style="white-space:nowrap" sc-camel-on-click="{{ x.apply }}">Применить</button></sc-if></sc-raw-td>
+                  </sc-raw-tr>
+                </sc-for>
+              </sc-raw-tbody>
+            </sc-raw-table>
+          </div>
+        </section>
         <section class="rep-block car-calc">
           <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 6px"><h3 style="margin:0">Машина и расходы</h3><button class="btn btn-ghost no-print" sc-camel-on-click="{{ carReset }}">Вернуть примерные цифры</button></div>
           <div class="car-hint">{{ carHint }}</div>
           <div class="car-form">
             <sc-for list="{{ carGroups }}" as="g">
-              <div class="car-group glass">
+              <div class="car-group glass {{ g.cls }}">
                 <div class="car-group-title">{{ g.title }}</div>
                 <sc-for list="{{ g.fields }}" as="f">
                   <label class="car-field"><span>{{ f.label }}</span><input class="input" type="text" inputmode="{{ f.mode }}" value="{{ f.v }}" placeholder="{{ f.ph }}" sc-camel-on-change="{{ f.on }}"><small>{{ f.hint }}</small></label>
@@ -728,11 +750,11 @@
             </sc-for>
           </div>
         </section>
-        <section class="rep-block">
+        <section class="rep-block car-buy">
           <h3 style="margin:0 0 10px">Покупка: наличными или в лизинг</h3>
           <div class="glass" style="border:1px solid var(--color-divider);overflow-x:auto">
             <sc-raw-table class="table tc">
-              <sc-raw-thead><sc-raw-tr><sc-raw-th>Как покупаем</sc-raw-th><sc-raw-th style="text-align:right">Сразу заплатить</sc-raw-th><sc-raw-th style="text-align:right">Платёж в месяц</sc-raw-th><sc-raw-th style="text-align:right">Переплата</sc-raw-th><sc-raw-th style="text-align:right">Всего за машину</sc-raw-th><sc-raw-th style="text-align:right">Экономия в месяц, пока платим</sc-raw-th><sc-raw-th style="text-align:right">После выплаты</sc-raw-th><sc-raw-th style="text-align:right">Окупится через</sc-raw-th><sc-raw-th style="text-align:right">Итог за 5 лет</sc-raw-th></sc-raw-tr></sc-raw-thead>
+              <sc-raw-thead><sc-raw-tr><sc-raw-th>Как покупаем</sc-raw-th><sc-raw-th style="text-align:right">Сразу заплатить</sc-raw-th><sc-raw-th style="text-align:right">Платёж в месяц</sc-raw-th><sc-raw-th style="text-align:right">Переплата</sc-raw-th><sc-raw-th style="text-align:right">Всего за машину</sc-raw-th><sc-raw-th style="text-align:right">Экономия в месяц, пока платим</sc-raw-th><sc-raw-th style="text-align:right">После выплаты</sc-raw-th><sc-raw-th style="text-align:right">Окупится через</sc-raw-th><sc-raw-th style="text-align:right">Итог за 5 лет</sc-raw-th><sc-raw-th style="text-align:right">С продажей машины</sc-raw-th></sc-raw-tr></sc-raw-thead>
               <sc-raw-tbody>
                 <sc-for list="{{ carRows }}" as="x">
                   <sc-raw-tr>
@@ -745,6 +767,7 @@
                     <sc-raw-td class="c2" data-label="После выплаты" style="text-align:right;white-space:nowrap;color:{{ x.afterColor }}">{{ x.after }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="Окупится через" style="text-align:right;white-space:nowrap;font-weight:500">{{ x.payback }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="Итог за 5 лет" style="text-align:right;white-space:nowrap;color:{{ x.fiveColor }}">{{ x.five }}</sc-raw-td>
+                    <sc-raw-td class="c2" data-label="С продажей машины" style="text-align:right;white-space:nowrap;color:{{ x.fiveSaleColor }}">{{ x.fiveSale }}</sc-raw-td>
                   </sc-raw-tr>
                 </sc-for>
               </sc-raw-tbody>
@@ -754,11 +777,88 @@
             <sc-for list="{{ carNotes }}" as="n"><li>{{ n.text }}</li></sc-for>
           </ul>
         </section>
+        <sc-if value="{{ carHasTrip }}">
+          <section class="rep-block">
+            <h3 style="margin:0 0 4px">Один рейс: наёмная машина или своя</h3>
+            <div class="car-hint">Средний рейс, который взяла бы своя машина: сколько он стоит сейчас и во что обойдётся своей машиной.</div>
+            <div class="glass" style="border:1px solid var(--color-divider);overflow-x:auto;max-width:900px">
+              <sc-raw-table class="table tc">
+                <sc-raw-thead><sc-raw-tr><sc-raw-th></sc-raw-th><sc-raw-th style="text-align:right">Наличными</sc-raw-th><sc-raw-th style="text-align:right">В лизинг</sc-raw-th></sc-raw-tr></sc-raw-thead>
+                <sc-raw-tbody>
+                  <sc-for list="{{ carTrip }}" as="x">
+                    <sc-raw-tr>
+                      <sc-raw-td class="c4 o-1 c-strong" style="font-weight:{{ x.w }}">{{ x.l }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Наличными" style="text-align:right;font-weight:{{ x.w }};color:{{ x.aColor }}">{{ x.a }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="В лизинг" style="text-align:right;font-weight:{{ x.w }};color:{{ x.bColor }}">{{ x.b }}</sc-raw-td>
+                    </sc-raw-tr>
+                  </sc-for>
+                </sc-raw-tbody>
+              </sc-raw-table>
+            </div>
+          </section>
+        </sc-if>
+        <section class="rep-block">
+          <h3 style="margin:0 0 10px">По годам</h3>
+          <div class="car-years">
+            <sc-for list="{{ carYears }}" as="g">
+              <div class="glass" style="border:1px solid var(--color-divider);overflow-x:auto">
+                <div class="car-group-title" style="padding:12px 14px 0">{{ g.name }}</div>
+                <sc-raw-table class="table tc">
+                  <sc-raw-thead><sc-raw-tr><sc-raw-th>Год</sc-raw-th><sc-raw-th style="text-align:right">Экономия</sc-raw-th><sc-raw-th style="text-align:right">Расходы машины</sc-raw-th><sc-raw-th style="text-align:right">Заплачено за машину</sc-raw-th><sc-raw-th style="text-align:right">Итог за год</sc-raw-th><sc-raw-th style="text-align:right">Накопленный итог</sc-raw-th></sc-raw-tr></sc-raw-thead>
+                  <sc-raw-tbody>
+                    <sc-for list="{{ g.rows }}" as="y">
+                      <sc-raw-tr>
+                        <sc-raw-td class="c4 o-1 c-strong" style="white-space:nowrap">{{ y.year }}</sc-raw-td>
+                        <sc-raw-td class="c2" data-label="Экономия" style="text-align:right;white-space:nowrap">{{ y.saved }}</sc-raw-td>
+                        <sc-raw-td class="c2" data-label="Расходы машины" style="text-align:right;white-space:nowrap">{{ y.opex }}</sc-raw-td>
+                        <sc-raw-td class="c2" data-label="Заплачено за машину" style="text-align:right;white-space:nowrap">{{ y.paid }}</sc-raw-td>
+                        <sc-raw-td class="c2" data-label="Итог за год" style="text-align:right;white-space:nowrap;color:{{ y.resultColor }}">{{ y.result }}</sc-raw-td>
+                        <sc-raw-td class="c2" data-label="Накопленный итог" style="text-align:right;white-space:nowrap;font-weight:500;color:{{ y.cumColor }}">{{ y.cum }}</sc-raw-td>
+                      </sc-raw-tr>
+                    </sc-for>
+                  </sc-raw-tbody>
+                </sc-raw-table>
+              </div>
+            </sc-for>
+          </div>
+        </section>
         <section class="rep-block">
           <h3 style="margin:0 0 4px">Окупаемость по месяцам</h3>
           <div class="car-hint">Накопленный итог: экономия минус всё, что заплачено за машину. Линия пересекает ноль — машина окупилась.</div>
           <div class="car-legend"><span><i style="background:var(--chart-1)"></i>Наличными</span><span><i style="background:var(--chart-2)"></i>Лизинг</span></div>
           <div class="car-chart glass" aria-label="График окупаемости по месяцам" role="img"></div>
+        </section>
+        <section class="rep-block">
+          <h3 style="margin:0 0 4px">Что ещё проверить до покупки</h3>
+          <div class="car-hint">В цифры это не переведёшь, но на окупаемость влияет — уточните у дилера, банка и бухгалтера.</div>
+          <ul class="car-check">
+            <sc-for list="{{ carCheck }}" as="c"><li><b>{{ c.t }}</b><span>{{ c.d }}</span></li></sc-for>
+          </ul>
+        </section>
+        <section class="rep-block">
+          <details class="car-days">
+            <summary>{{ carDaysTitle }}</summary>
+            <div class="glass" style="border:1px solid var(--color-divider);overflow-x:auto;margin-top:10px">
+              <sc-raw-table class="table tc">
+                <sc-raw-thead><sc-raw-tr><sc-raw-th>Партия</sc-raw-th><sc-raw-th style="text-align:right">Рейсов с тарифом</sc-raw-th><sc-raw-th style="text-align:right">Подходят по кузову</sc-raw-th><sc-raw-th style="text-align:right">Взяла бы</sc-raw-th><sc-raw-th style="text-align:right">Зимой</sc-raw-th><sc-raw-th style="text-align:right">Сэкономлено</sc-raw-th><sc-raw-th style="text-align:right">Км</sc-raw-th><sc-raw-th style="text-align:right">Км за день</sc-raw-th><sc-raw-th style="text-align:right">Не хватило заряда</sc-raw-th></sc-raw-tr></sc-raw-thead>
+                <sc-raw-tbody>
+                  <sc-for list="{{ carDays }}" as="d">
+                    <sc-raw-tr>
+                      <sc-raw-td class="c4 o-1 c-strong" style="white-space:nowrap">{{ d.date }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Рейсов с тарифом" style="text-align:right">{{ d.all }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Подходят по кузову" style="text-align:right">{{ d.fit }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Взяла бы" style="text-align:right;font-weight:500">{{ d.taken }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Зимой" style="text-align:right">{{ d.takenW }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Сэкономлено" style="text-align:right;white-space:nowrap">{{ d.saved }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Км" style="text-align:right">{{ d.km }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Км за день" style="text-align:right">{{ d.maxKm }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Не хватило заряда" style="text-align:right">{{ d.byRange }}</sc-raw-td>
+                    </sc-raw-tr>
+                  </sc-for>
+                </sc-raw-tbody>
+              </sc-raw-table>
+            </div>
+          </details>
         </section>
       </sc-if>
 
@@ -3985,45 +4085,64 @@ class Component extends DCLogic {
         // новая машина (js/car-calc.js): какие рейсы периода взяла бы своя машина, её расходы в месяц, наличные или лизинг
         const CC = window.LogiCarCalc, cc = st.carCalc || {}, fp = +S.fillPct, fill = fp > 0 && fp <= 100 ? fp / 100 : 1;
         const batches = R.map(r => ({ date: r.date, trips: r.trips.map(t => ({ price: t.price && t.price.total != null ? t.price.total : 0, km: t.real || 0, cbm: t.cbm || 0, kg: t.kg || 0 })) }));
-        const res = CC.calc(batches, cc, { fill, perDay: +S.tripsPerVehicle || 2 }), { p, T: CT, M, V } = res;
+        const SC = CC.scenarios(batches, cc, { fill, perDay: +S.tripsPerVehicle || 2 }), res = SC[0].r, { p, T: CT, M, V } = res;
         const val = k => cc[k] != null ? String(cc[k]) : String(CC.DEFAULTS[k]);
         const set = k => e => { const v = e.target.value; this.setState(s0 => { const c = { ...(s0.carCalc || {}), [k]: v }; try { localStorage.setItem('logi-car-calc', JSON.stringify(c)); } catch (er) { /* без хранилища — до перезагрузки */ } return { carCalc: c }; }); };
         const F = (k, label, hint, o = {}) => ({ label, hint: hint || '', v: val(k), on: set(k), mode: o.text ? 'text' : 'decimal', ph: o.ph || '' });
+        // «Применить» у сценария — его правка в форму (и на устройство)
+        const apply = patch => () => this.setState(s0 => { const c = { ...(s0.carCalc || {}) }; Object.entries(patch).forEach(([k, v]) => { c[k] = String(v); }); try { localStorage.setItem('logi-car-calc', JSON.stringify(c)); } catch (er) { /* без хранилища */ } return { carCalc: c }; });
         out.carGroups = [
           { title: 'Машина', fields: [F('name', 'Модель', '', { text: 1 }), F('price', 'Цена одной машины, сум', money(p.price)), F('count', 'Сколько машин', ''),
             F('m3', 'Кузов, м³', 'в планах — ' + f1(res.capM3, 1) + ' м³ (полезный объём ' + Math.round(fill * 100) + ' %)'), F('kg', 'Груз, кг', ''),
             F('rangeKm', 'Запас хода, км', 'на одной зарядке за день; 0 — без ограничения')] },
           { title: 'Расходы', fields: [F('kwh100', 'Расход, кВт·ч на 100 км', 'с грузом, по городу'), F('kwhPrice', 'Цена кВт·ч, сум', 'юрлица с 1.06.2026 — 1 100 сум'),
-            F('salary', 'Зарплата водителя в месяц, сум', money(p.salary)), F('upkeepYear', 'ТО, шины, страховка в год, сум', money(p.upkeepYear)),
-            F('perMonth', 'Партий в месяц', 'пусто — по данным периода', { ph: f1(M.autoPerMonth, 1) })] },
-          { title: 'Лизинг', fields: [F('leaseAdv', 'Аванс, %', ''), F('leaseRate', 'Удорожание, % в год', ''), F('leaseMonths', 'Срок, мес.', '')] }];
+            F('salary', 'Зарплата водителя в месяц, сум', money(p.salary) + ' · 0 — без оклада'), F('driverPerTrip', 'Оплата водителю за рейс, сум', p.driverPerTrip ? money(p.driverPerTrip) + ' за рейс' : '0 — только оклад'),
+            F('upkeepYear', 'ТО, шины, страховка в год, сум', money(p.upkeepYear))] },
+          { title: 'Работа машины', fields: [F('perMonth', 'Партий в месяц', 'пусто — по данным периода', { ph: f1(M.autoPerMonth, 1) }),
+            F('perDay', 'Рейсов на машину в день', 'пусто — как в «Тарифах» (' + (+S.tripsPerVehicle || 2) + ')', { ph: String(+S.tripsPerVehicle || 2) }),
+            F('extraTrips', 'Ещё рейсов в месяц вне партий', res.base ? 'свои заказы, забор груза; по ' + money(res.base.price) + ' за рейс' : 'нет рейсов для средней цены')] },
+          { title: 'Лизинг', fields: [F('leaseAdv', 'Аванс, %', ''), F('leaseRate', 'Удорожание, % в год', ''), F('leaseMonths', 'Срок, мес.', '')] },
+          { title: 'Что ещё учесть', cls: 'car-group-wide', fields: [F('charger', 'Зарядная станция на складе, сум', 'одна на склад, платим сразу; 0 — заряжать в городе'),
+            F('regFee', 'Оформление одной машины, сум', 'регистрация, номера, техосмотр — сразу'), F('parking', 'Стоянка, охрана, мойка в месяц, сум', 'на машину; 0 — стоит на своём складе'),
+            F('payrollTax', 'Налог с зарплаты водителя, %', 'соцналог — платит компания сверх зарплаты'), F('downtime', 'Простой, %', 'ремонт, ТО, водитель в отпуске — рейсов меньше'),
+            F('winterLoss', 'Зимой запас хода меньше на, %', 'декабрь — февраль: батарея на холоде отдаёт меньше'),
+            F('resale', 'Продать через 5 лет, % цены', 'около ' + money(p.price * p.count * p.resale / 100)), F('deposit', 'Депозит в банке, % годовых', 'сколько принесли бы эти деньги; 0 — не учитывать'),
+            F('growth', 'Рост цен в год, %', 'инфляция: наёмные рейсы, зарплата, электричество дорожают — экономия тоже растёт')] }];
         out.carReset = () => { try { localStorage.removeItem('logi-car-calc'); } catch (e) { /* закрытый режим */ } this.setState({ carCalc: {} }); };
         const term = m => m == null ? 'не окупится' : m < 12 ? m + ' мес.' : Math.floor(m / 12) + ' г.' + (m % 12 ? ' ' + (m % 12) + ' мес.' : '');
         const neg = x => x < 0 ? 'var(--color-danger-ink)' : 'inherit';
+        const how = x => x.key === 'cash' ? 'наличными' : 'в лизинг';
         out.carRows = V.map(x => ({ name: x.name, how: x.key === 'cash' ? 'вся сумма сразу' : f0(p.leaseAdv) + ' % сразу, ' + f1(x.rate, 1) + ' % годовых, ' + x.months + ' мес.',
           upfront: money(x.upfront), pay: x.pay ? money(x.pay) : '—', overpay: x.overpay > 0.5 ? money(x.overpay) : '—', total: money(x.total),
           during: x.pay ? money(x.netDuring) : '—', duringColor: x.pay ? neg(x.netDuring) : 'inherit', after: money(x.netAfter), afterColor: neg(x.netAfter),
-          payback: term(x.payback), five: money(x.five), fiveColor: neg(x.five) }));
+          payback: term(x.payback), five: money(x.five), fiveColor: neg(x.five), fiveSale: money(x.fiveSale), fiveSaleColor: neg(x.fiveSale) }));
         const notes = ['Как считали: за ' + CT.batches + ' парт. периода новая машина взяла бы ' + CT.taken + ' из ' + CT.all + ' рейсов с тарифом — самые дорогие из тех, что помещаются в кузов (' + f1(res.capM3, 1) + ' м³ с учётом полезного объёма, ' + f0(p.kg) + ' кг), до ' + res.per + ' в день на машину'
           + (p.rangeKm ? ' и не дальше ' + f0(p.rangeKm) + ' км за день' : '') + '.', 'Сэкономлено — тариф этих рейсов: сейчас его платим наёмной машине; доплаты клиентов остаются как были.'];
         if (CT.bigger) notes.push(CT.bigger + ' ' + reys(CT.bigger) + ' больше кузова — их по-прежнему везут Gazel и другие машины.');
         if (CT.byRange) notes.push(CT.byRange + ' ' + reys(CT.byRange) + ' не взяли: за день не хватило бы запаса хода (' + f0(p.rangeKm) + ' км) — нужна подзарядка днём или батарея больше.');
         if (!CT.all) notes.push('В этом периоде нет рейсов с тарифом — выберите другой период.');
         else if (M.net <= 0) notes.push('Своя машина обходится дороже, чем платим за эти рейсы сейчас, на ' + money(-M.net) + ' в месяц — не окупится. Помогут больше рейсов на машину, меньше зарплата и расходы или ниже цена.');
-        notes.push('Месяц — ' + f1(M.perMonth, 1) + ' парт. (' + (p.perMonth ? 'вписано' : 'по данным периода') + '). Остаточная стоимость машины через ' + res.years + ' лет и налоги в расчёт не входят.');
+        notes.push('Месяц — ' + f1(M.perMonth, 1) + ' парт. (' + (p.perMonth ? 'вписано' : 'по данным периода') + ').');
+        // что ещё учтено: разовые траты, простой, зима, депозит, продажа
+        if (V[0].oneTime > 0) notes.push('Сразу, кроме машины: ' + [p.charger ? 'зарядная станция ' + money(p.charger) : '', p.regFee ? 'оформление ' + money(p.regFee * p.count) : ''].filter(Boolean).join(', ') + '.');
+        if (p.downtime) notes.push('Простой ' + f0(p.downtime) + ' % (ремонт, ТО, водитель в отпуске): рейсов в месяц на столько же меньше.');
+        if (p.rangeKm && p.winterLoss) notes.push(M.winterLess > 0.05 ? 'Зимой (декабрь — февраль) запас хода меньше на ' + f0(p.winterLoss) + ' %: в эти месяцы машина возьмёт на ' + f1(M.winterLess, 1) + ' рейсов в месяц меньше — в расчёте это учтено.'
+          : 'Зимой (декабрь — февраль) запас хода меньше на ' + f0(p.winterLoss) + ' %, но рейсы короткие — хватает и зимой.');
+        if (p.deposit) notes.push('Депозит ' + f1(p.deposit, 1) + ' % годовых: деньги, отданные за машину, в банке приносили бы проценты — окупаемость и итоги считаем с этим. За 5 лет это ' + V.map(x => how(x) + ' ' + money(Math.max(0, x.lost))).join(', ') + '.');
+        if (p.growth) notes.push('Рост цен ' + f1(p.growth, 1) + ' % в год: наёмные рейсы, зарплата и электричество каждый год дороже — экономия растёт так же, платёж лизинга не меняется.');
+        notes.push('С продажей машины через 5 лет (' + f0(p.resale) + ' % цены, ' + money(V[0].sale) + '): ' + V.map(x => how(x) + ' ' + money(x.fiveSale)).join(', ') + '.');
         out.carNotes = notes.map(text => ({ text }));
         // вывод сверху: окупится (лучший способ) или нет — и почему, на цифрах периода
         const best = V.filter(x => x.payback != null).sort((a, c) => a.payback - c.payback)[0], other = best && V.find(x => x !== best);
         const B = res.B, mln = v => f1(v / 1e6, 1) + ' млн сум', okC = 'var(--color-accent-text)', badC = 'var(--color-danger-ink)';
         out.carVerdict = best ? 'Окупится через ' + term(best.payback) : 'Не окупится';
         out.carVerdictColor = best ? okC : badC;
-        const how = x => x.key === 'cash' ? 'наличными' : 'в лизинг';
         out.carVerdictSub = (best ? [how(best)].concat(other ? [how(other) + ' — ' + (other.payback != null ? 'через ' + term(other.payback) : 'не окупится')] : [], ['экономия ' + mln(M.net) + ' в месяц'])
           : [!CT.all ? 'в этом периоде нет рейсов с тарифом' : 'своя машина обходится дороже наёмных рейсов на ' + mln(Math.max(0, -M.net)) + ' в месяц']).map(text => ({ text }));
         out.carWhy = [
           'Машина ездит только в дни партий: ' + f1(B.days, 1) + ' в месяц × до ' + res.per + ' рейсов в день × машин ' + p.count + ' = до ' + f0(B.cap) + ' рейсов. По кузову (' + f1(res.capM3, 1) + ' м³, ' + f0(p.kg) + ' кг) подходит ' + f1(B.fitMonth, 1) + ' в месяц — возьмёт ' + f1(M.trips, 1) + '.',
           'За эти рейсы сейчас платим ' + mln(M.saved) + ' в месяц' + (B.perTrip ? ' — в среднем ' + money(B.perTrip) + ' за рейс.' : '.'),
-          'Своя машина в месяц: водитель ' + mln(M.salary) + ' + ТО и страховка ' + mln(M.upkeep) + ' + электричество ' + mln(M.energy) + ' = ' + mln(M.opex) + '.',
+          'Своя машина в месяц: водитель ' + mln(M.salary) + (p.payrollTax ? ' с налогом ' + f0(p.payrollTax) + ' %' : '') + ' + ТО и страховка ' + mln(M.upkeep) + (M.parking ? ' + стоянка ' + mln(M.parking) : '') + ' + электричество ' + mln(M.energy) + ' = ' + mln(M.opex) + '.',
           M.net > 0 ? 'Экономия ' + mln(M.net) + ' в месяц — из неё машина и окупается.' : 'Расходы больше экономии на ' + mln(-M.net) + ' в месяц — поэтому не окупится.'].map(text => ({ text }));
         const need = [];
         if (B.tripsEven != null) {
@@ -4035,6 +4154,45 @@ class Component extends DCLogic {
         need.push(B.maxSalary > 0 ? 'Или зарплата водителя не больше ' + mln(B.maxSalary) + ' в месяц.' : 'Даже без зарплаты водителя расходы не покрываются.');
         if (B.maxPrice3y > 0) need.push('Окупится за 3 года наличными, если машина стоит не больше ' + mln(B.maxPrice3y) + '.');
         out.carNeed = need.map(text => ({ text }));
+        // сценарии: при каких условиях машина окупится
+        const fast = x => x == null ? 'не окупится' : term(x);
+        const scTitle = sc => ({ now: ['Как сейчас', 'ваши цифры в форме'], per3: [sc.n + ' рейса в день', 'вместо ' + sc.was], per4: [sc.n + ' рейса в день', 'вместо ' + sc.was],
+          driver: ['Водитель за рейс', money(sc.dpt) + ' за рейс вместо оклада'], extra: ['+' + sc.n + ' рейсов в месяц вне партий', 'по ' + money(sc.price) + ' — свои заказы, забор груза'],
+          more: ['Ещё одна машина', 'всего машин: ' + sc.n], price: ['Цена машины ' + mln(sc.price), 'окупится за 3 года наличными'],
+          combo: ['Всё вместе', sc.n + ' рейса в день, водитель за рейс, +20 рейсов вне партий'] })[sc.key];
+        out.carScen = SC.map(sc => { const [title, sub] = scTitle(sc), r = sc.r, b5 = Math.max(...r.V.map(v => v.five));
+          return { title, sub, fast: !!sc.fastest, now: sc.key === 'now', canApply: sc.key !== 'now', apply: apply(sc.patch), trips: f1(r.M.trips, 1), net: money(r.M.net), netColor: neg(r.M.net),
+            cash: fast(r.V[0].payback), lease: fast(r.V[1].payback), cashColor: r.V[0].payback == null ? badC : 'inherit', leaseColor: r.V[1].payback == null ? badC : 'inherit', five: money(b5), fiveColor: neg(b5) }; });
+        out.carScenNote = SC.some(sc => sc.key !== 'now' && isFinite(sc.best)) ? '«Применить» переносит условие сценария в форму — дальше можно менять цифры.' : 'Ни один сценарий не окупается — нужно сразу несколько условий или другие цифры: впишите их в форму.';
+        // один рейс: наёмная машина и своя
+        const U = res.U;
+        out.carTrip = U ? [
+          { l: 'Наёмной машине платим за рейс', a: money(U.hired), b: money(U.hired), strong: true },
+          { l: 'Своя: электричество', a: money(U.energy), b: money(U.energy) },
+          { l: 'Своя: водитель', a: money(U.driver), b: money(U.driver) },
+          { l: 'Своя: ТО, шины, страховка', a: money(U.upkeep), b: money(U.upkeep) },
+          { l: 'Своя: сама машина', a: money(U.carCash) + ' — цена на 5 лет', b: money(U.carLease) + ' — платёж лизинга, пока платим' },
+          { l: 'Своя машина за рейс, всего', a: money(U.energy + U.driver + U.upkeep + U.carCash), b: money(U.energy + U.driver + U.upkeep + U.carLease), strong: true },
+          { l: 'Выгода с рейса', a: money(U.hired - U.energy - U.driver - U.upkeep - U.carCash), b: money(U.hired - U.energy - U.driver - U.upkeep - U.carLease), strong: true,
+            aColor: neg(U.hired - U.energy - U.driver - U.upkeep - U.carCash), bColor: neg(U.hired - U.energy - U.driver - U.upkeep - U.carLease) }].map(x => ({ aColor: 'inherit', bColor: 'inherit', w: x.strong ? 500 : 400, ...x })) : [];
+        out.carHasTrip = !!U;
+        // по годам — наличными и в лизинг
+        out.carYears = V.map(x => ({ name: x.name, rows: x.years.map(y => ({ year: y.year + '-й год', saved: money(y.saved), opex: money(y.opex), paid: money(y.paid), result: money(y.result), resultColor: neg(y.result), cum: money(y.cum), cumColor: neg(y.cum) })) }));
+        // по партиям: какие рейсы взяла машина
+        out.carDays = CT.days.slice().reverse().map(x => ({ date: dLong(x.date), all: f0(x.all), fit: f0(x.fit), taken: f0(x.taken), takenW: f0(x.takenW), saved: money(x.saved), km: f0(x.km), maxKm: f0(x.maxKm), byRange: x.byRange ? f0(x.byRange) : '—' }));
+        // что ещё проверить: не переводится в цифры
+        out.carCheck = [
+          { t: 'Права водителя', d: 'Посмотрите полную массу машины в документах: больше 3,5 т — нужна категория C, с правами B ездить нельзя.' },
+          { t: 'Лизинг', d: 'Обычно нужна страховка КАСКО на весь срок — узнайте, входит ли она в удорожание, и есть ли комиссия за оформление.' },
+          { t: 'НДС и курс', d: 'Цена у дилера часто в долларах — к оплате сумма в сумах может вырасти. НДС 12 % в цене, в лизинге и в электричестве — уточните у бухгалтера, можно ли его зачесть.' },
+          { t: 'Батарея', d: 'Гарантия на батарею (лет и км) и сколько стоит замена. На морозе батарея заряжается медленнее — зимой лучше заряжать в тёплом боксе.' },
+          { t: 'Зарядка', d: 'Сколько часов заряжается до полной и успеет ли за ночь. Хватит ли мощности на складе — может понадобиться разрешение электросетей.' },
+          { t: 'Сервис и запчасти', d: 'Где в Ташкенте чинят грузовики BYD и сколько ждать запчасти: пока машина в ремонте, рейсы снова на наёмных.' },
+          { t: 'Водитель', d: 'Кто подменит в отпуск и на больничном; кто отвечает за груз и машину.' },
+          { t: 'Въезд в город', d: 'Проверьте ограничения для грузовиков в центре Ташкента — по времени и массе — на ваших маршрутах.' },
+          { t: 'Налоги на машину', d: 'Налог на имущество и другие платежи за машину — уточните у бухгалтера: для электромобилей бывают льготы.' },
+          { t: 'Что не в цифрах', d: 'Своя машина всегда под рукой — не ждать наёмную в пиковые дни; кузов — место для рекламы BURAQ.' }];
+        out.carDaysTitle = 'По партиям: какие рейсы взяла бы машина (' + CT.days.length + ')';
         this._carChart = { series: V.map((x, i) => ({ name: x.name, curve: x.curve, payback: x.payback, color: 'var(--chart-' + (i + 1) + ')' })) };
         out.carHint = 'Цифры по умолчанию — примерные (октябрь 2026): цена — объявления BYD T5 EV на OLX.uz, электричество — тариф для юрлиц, ставки — средние по банкам. Впишите свои из предложения дилера и банка: расчёт пересчитается сразу и запомнится на этом устройстве.';
         Object.assign(out, { repTitle: 'Новая машина: сколько обойдётся', repPrintTitle: 'Новая машина · ' + p.name + ' · ' + (plabel ? plabel + ' · ' : '') + range, repNote: srcNote + volNote });
@@ -4176,8 +4334,13 @@ class Component extends DCLogic {
     } else if (x.kind === 'newcar') {
       const r = x.res;
       sheets.push({ name: 'Итоги', rows: kp.concat([[]]).concat(o.carNotes.map(n => [n.text])) });
-      sheets.push({ name: 'Покупка', rows: [['Как покупаем', 'Условия', 'Сразу заплатить', 'Платёж в месяц', 'Месяцев', 'Переплата', 'Всего за машину', 'Экономия в месяц, пока платим', 'После выплаты', 'Окупится, мес.', 'Итог за ' + r.years + ' лет']]
-        .concat(r.V.map((v, i) => [v.name, o.carRows[i].how, Math.round(v.upfront), Math.round(v.pay), v.months, Math.round(v.overpay), Math.round(v.total), Math.round(v.netDuring), Math.round(v.netAfter), v.payback == null ? 'не окупится' : v.payback, Math.round(v.five)])) });
+      sheets.push({ name: 'Покупка', rows: [['Как покупаем', 'Условия', 'Сразу заплатить', 'Платёж в месяц', 'Месяцев', 'Переплата', 'Всего за машину', 'Экономия в месяц, пока платим', 'После выплаты', 'Окупится, мес.', 'Итог за ' + r.years + ' лет', 'С продажей машины']]
+        .concat(r.V.map((v, i) => [v.name, o.carRows[i].how, Math.round(v.upfront), Math.round(v.pay), v.months, Math.round(v.overpay), Math.round(v.total), Math.round(v.netDuring), Math.round(v.netAfter), v.payback == null ? 'не окупится' : v.payback, Math.round(v.five), Math.round(v.fiveSale)])) });
+      sheets.push({ name: 'Сценарии', rows: [['Что меняем', 'Подробно', 'Рейсов в месяц', 'Экономия в месяц', 'Окупится наличными', 'Окупится в лизинг', 'Итог за 5 лет']].concat(o.carScen.map(x => [x.title, x.sub, x.trips, x.net, x.cash, x.lease, x.five])) });
+      sheets.push({ name: 'По годам', rows: [['Способ', 'Год', 'Экономия', 'Расходы машины', 'Заплачено за машину', 'Итог за год', 'Накопленный итог']].concat(r.V.flatMap(v => v.years.map(y => [v.name, y.year, Math.round(y.saved), Math.round(y.opex), Math.round(y.paid), Math.round(y.result), Math.round(y.cum)]))) });
+      if (o.carTrip.length) sheets.push({ name: 'Один рейс', rows: [['', 'Наличными', 'В лизинг']].concat(o.carTrip.map(x => [x.l, x.a, x.b])) });
+      sheets.push({ name: 'По партиям', rows: [['Партия', 'Рейсов с тарифом', 'Подходят по кузову', 'Взяла бы', 'Зимой', 'Сэкономлено', 'Км', 'Км за день (больше всех)', 'Не хватило заряда']].concat(r.T.days.map(d => [dLong(d.date), d.all, d.fit, d.taken, d.takenW, Math.round(d.saved), Math.round(d.km), Math.round(d.maxKm), d.byRange])) });
+      sheets.push({ name: 'Что проверить', rows: [['Что', 'Подробно']].concat(o.carCheck.map(c => [c.t, c.d])) });
       sheets.push({ name: 'Исходные цифры', rows: [['Раздел', 'Показатель', 'Значение']].concat(o.carGroups.flatMap(g => g.fields.map(f => [g.title, f.label, f.v || f.ph]))) });
       name = 'yangi_mashina_' + o.repPeriodKey;
     } else {
