@@ -3131,3 +3131,97 @@ Buraq AI не нашёл, как сделать план {w} дешевле, —
 ответил за {n} с	{n} soniyada javob berdi
 пояснение на русском	izoh rus tilida
 пояснение на узбекском	izoh o‘zbek tilida
+
+# ── Buraq AI — помощник на весь сайт ──
+Открыть Buraq AI	Buraq AI’ni ochish
+Свернуть Buraq AI	Buraq AI’ni yig‘ish
+Новый разговор	Yangi suhbat
+Сообщение для Buraq AI	Buraq AI uchun xabar
+Спросите или дайте задание: «почему в плане A столько рейсов?», «перенеси партию 19.10 на 20.10»	So‘rang yoki topshiriq bering: «A rejada nega shuncha reys?», «19.10 partiyani 20.10 ga ko‘chir»
+Выполнить	Bajarish
+Не надо	Kerak emas
+Не стали.	Bajarilmadi.
+Выполняю…	Bajaryapman…
+Смотрю данные: {s}…	Ma’lumotlarni ko‘ryapman: {s}…
+клиент «{s}»	mijoz «{s}»
+партия {d}	partiya {d}
+план {w} · {d}	reja {w} · {d}
+Я Buraq AI. Спросите о партиях, планах, отчётах или дайте задание: объяснить план, переложить точки, открыть отчёт, перенести или удалить партию, поправить отгрузку. Что меняет данные — сначала покажу и попрошу «Выполнить».	Men Buraq AI. Partiyalar, rejalar, hisobotlar haqida so‘rang yoki topshiriq bering: rejani tushuntirish, nuqtalarni ko‘chirish, hisobotni ochish, partiyani ko‘chirish yoki o‘chirish, jo‘natmani tuzatish. Ma’lumotni o‘zgartiradigan narsani avval ko‘rsataman va «Bajarish»ni so‘rayman.
+Buraq AI видит то, что на экране, партии, планы и отчёты — без телефонов и адресов. Может ошибаться: проверяйте цифры.	Buraq AI ekrandagi narsani, partiyalar, rejalar va hisobotlarni ko‘radi — telefon va manzillarsiz. Xato qilishi mumkin: raqamlarni tekshiring.
+Почему в плане {w} столько рейсов?	{w} rejada nega shuncha reys?
+Можно сделать план {w} дешевле?	{w} rejani arzonroq qilish mumkinmi?
+Объедини два самых маленьких рейса	Eng kichik ikki reysni birlashtir
+Сколько отгрузок ещё не доставлено?	Hali nechta jo‘natma yetkazilmagan?
+Есть партии, похожие на повтор?	Takrorga o‘xshash partiyalar bormi?
+Какая партия самая большая?	Qaysi partiya eng katta?
+Что нужно, чтобы машина окупилась?	Mashina o‘zini oqlashi uchun nima kerak?
+Наличными или в лизинг — что лучше?	Naqd pulgami yoki lizinggami — qaysi yaxshi?
+Объясни этот отчёт	Bu hisobotni tushuntir
+Где мы теряем больше всего денег?	Eng ko‘p pulni qayerda yo‘qotyapmiz?
+Что ты умеешь?	Nimalar qila olasan?
+Сколько партий в этом месяце?	Bu oyda nechta partiya?
+Журнал · партия {d}	Jurnal · partiya {d}
+Журнал · все партии	Jurnal · barcha partiyalar
+Планы · партия {d} · план {w}	Rejalar · partiya {d} · reja {w}
+Планы · партия {d} + {d2} · план {w}	Rejalar · partiya {d} + {d2} · reja {w}
+Открыть: {s}	Ochish: {s}
+Открыл: {s}.	Ochdim: {s}.
+поиск «{s}»	qidiruv «{s}»
+Изменить план {w} партии {d}: {n} [рейс|рейса|рейсов]	{d} partiyaning {w} rejasini o‘zgartirish: {n} reys
+Изменить план {w}: {n} [рейс|рейса|рейсов]	{w} rejasini o‘zgartirish: {n} reys
+Составить план A с Buraq AI	Buraq AI bilan A rejasini tuzish
+Составить план A с Buraq AI · партия {d}	Buraq AI bilan A rejasini tuzish · partiya {d}
+Улучшить план {w} с Buraq AI · партия {d}	Buraq AI bilan {w} rejasini yaxshilash · partiya {d}
+Записать план {w} в журнал	{w} rejasini jurnalga yozish
+Записать план {w} партии {d} в журнал	{d} partiyaning {w} rejasini jurnalga yozish
+Удалить партию {d} ({n} отгр.)	{d} partiyasini o‘chirish ({n} jo‘n.)
+Удалить партии: {s}	Partiyalarni o‘chirish: {s}
+{d} ({n} отгр.)	{d} ({n} jo‘n.)
+Перенести партию {d} ({n} отгр.) на {d2}	{d} partiyasini ({n} jo‘n.) {d2} sanasiga ko‘chirish
+Перенести партию {d} ({n} отгр.) на {d2} — объединится с партией этой даты	{d} partiyasini ({n} jo‘n.) {d2} sanasiga ko‘chirish — shu sanadagi partiya bilan birlashadi
+Отгрузка {w} · {d}	Jo‘natma {w} · {d}
+статус	holat
+машина	mashina
+примечание	izoh
+План {w} изменён: {n} [рейс|рейса|рейсов], {n2} сум, компания платит {n3} сум[|, сверх кузова — {n4}].	{w} rejasi o‘zgardi: {n} [reys], {n2} so‘m, kompaniya to‘laydi {n3} so‘m[|, kuzovdan ortiq — {n4}].
+Отменить — «↶ Отменить правку» в «Планах».	Bekor qilish — «Rejalar»da «↶ Tuzatishni bekor qilish».
+Точек без рейса в ответе — {n}: они в отдельных рейсах.	Javobda reyssiz nuqtalar — {n}: ular alohida reyslarda.
+В «Новой машине» изменено полей: {n}.	«Yangi mashina»da o‘zgargan maydonlar: {n}.
+Вернуть — «Вернуть примерные цифры».	Qaytarish — «Taxminiy raqamlarni qaytarish».
+Изменено строк: {n} — записывается в Google Таблицу.	O‘zgargan qatorlar: {n} — Google Jadvalga yozilmoqda.
+Изменено строк: {n}.	O‘zgargan qatorlar: {n}.
+Партия {d} перенесена на {d2}.	{d} partiyasi {d2} sanasiga ko‘chirildi.
+Партия {d} удалена.	{d} partiyasi o‘chirildi.
+Удалено партий: {n}.	O‘chirilgan partiyalar: {n}.
+Excel-копия скачана, партия в корзине («🗂 Партии» → «Корзина») 30 дней.	Excel nusxasi yuklab olindi, partiya savatda («🗂 Partiyalar» → «Savat») 30 kun.
+План {w} записан в журнал: {n} [рейс|рейса|рейсов], {n2} [отгрузка|отгрузки|отгрузок] получили машину и номер рейса.	{w} rejasi jurnalga yozildi: {n} [reys], {n2} [jo‘natma] mashina va reys raqamini oldi.
+Отменить — «Отменить» в «Планах».	Bekor qilish — «Rejalar»da «Bekor qilish».
+Не указана партия.	Partiya ko‘rsatilmagan.
+В плане от Buraq AI нет рейсов с точками этой партии.	Buraq AI rejasida bu partiya nuqtalari bilan reys yo‘q.
+План не записан.	Reja yozilmadi.
+Нет таких партий.	Bunday partiyalar yo‘q.
+Не указаны даты.	Sanalar ko‘rsatilmagan.
+Партии {d} нет.	{d} partiyasi yo‘q.
+Проверьте дату.	Sanani tekshiring.
+Нет отгрузки {w}.	{w} jo‘natmasi yo‘q.
+Нет отгрузки {w} в партии {d}.	{d} partiyasida {w} jo‘natmasi yo‘q.
+У {w} отгрузки в нескольких партиях — укажите дату.	{w} jo‘natmalari bir nechta partiyada — sanani ko‘rsating.
+Неверное число: {s}	Noto‘g‘ri son: {s}
+Нет такого статуса: {s}	Bunday holat yo‘q: {s}
+Нет такой машины: {s}	Bunday mashina yo‘q: {s}
+Это поле Buraq AI не меняет: {s}	Buraq AI bu maydonni o‘zgartirmaydi: {s}
+Нечего менять.	O‘zgartiradigan narsa yo‘q.
+Нет таких полей в «Новой машине».	«Yangi mashina»da bunday maydonlar yo‘q.
+Неизвестное действие	Noma’lum amal
+Не знаю такой вкладки: {s}	Bunday bo‘limni bilmayman: {s}
+Готово — смотрите «Планы».	Tayyor — «Rejalar»ni ko‘ring.
+Готово.	Tayyor.
+Buraq AI работает для руководителя: вход «только просмотр» данные ИИ не отправляет.	Buraq AI rahbar uchun ishlaydi: «faqat ko‘rish» kirishi SI’ga ma’lumot yubormaydi.
+Ответ не поместился — спросите короче или по одной партии.	Javob sig‘madi — qisqaroq yoki bitta partiya bo‘yicha so‘rang.
+Не ответил вовремя (Apps Script ждёт около минуты) — спросите ещё раз.	O‘z vaqtida javob bermadi (Apps Script taxminan bir daqiqa kutadi) — yana so‘rang.
+Не смог ответить — спросите иначе.	Javob bera olmadi — boshqacha so‘rang.
+не ответил	javob bermadi
+Делаю.	Bajaryapman.
+Отчёты · {s}	Hisobotlar · {s}
+Отчёт Buraq AI	Buraq AI hisoboti
+Разбор Buraq AI	Buraq AI tahlili

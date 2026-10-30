@@ -202,3 +202,8 @@
     html[data-theme="dark"] body::before, html[data-theme="dark"] body::after, :root[data-theme="dark"] .auth::before, :root[data-theme="dark"] .auth::after { display: none; }
   }
 }
+
+/* Buraq AI: окно чата — плотное тёмное стекло (страница под ним не просвечивает) */
+:root[data-theme="dark"] .bq-panel { background: var(--glass-bg-solid) !important; border-color: var(--glass-edge) !important; }
+:root[data-theme="dark"] .bq-fab { border-color: var(--glass-edge); }
+

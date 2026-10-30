@@ -717,7 +717,7 @@
           </div>
         </section>
         <section class="rep-block car-ai">
-          <div class="ai-rep-head"><div><h3 style="margin:0">Разбор ИИ</h3><sc-if value="{{ carAiHas }}"><div class="ai-rep-meta">{{ carAiMeta }}</div></sc-if></div></div>
+          <div class="ai-rep-head"><div><h3 style="margin:0">Разбор Buraq AI</h3><sc-if value="{{ carAiHas }}"><div class="ai-rep-meta">{{ carAiMeta }}</div></sc-if></div></div>
           <sc-if value="{{ carAiCan }}">
             <div class="car-ai-ask no-print">
               <input class="input" type="text" value="{{ carAiQ }}" placeholder="Свой вопрос ИИ — необязательно. Например: сколько нужно машин и рейсов, чтобы окупилась за 2 года?" aria-label="Свой вопрос ИИ" sc-camel-on-change="{{ carAiOnQ }}">
@@ -2208,6 +2208,40 @@
       </div>
     </div>
   </sc-if>
+
+  <!-- Buraq AI: помощник на весь сайт (кнопка справа внизу, чат) -->
+  <sc-if value="{{ bqClosed }}"><button class="bq-fab no-print" sc-camel-on-click="{{ bqToggle }}" aria-label="Открыть Buraq AI"><i class="bq-dot"></i>Buraq AI</button></sc-if>
+  <sc-if value="{{ bqOpen }}">
+    <section class="bq-panel no-print" role="dialog" aria-label="Buraq AI">
+      <div class="bq-head">
+        <div style="flex:1;min-width:0"><div class="bq-title">Buraq AI</div><div class="bq-where">{{ bqWhere }}</div></div>
+        <button class="btn btn-ghost bq-new" sc-camel-on-click="{{ bqNew }}" title="Новый разговор">Новый разговор</button>
+        <button class="btn btn-ghost bq-x" sc-camel-on-click="{{ bqToggle }}" aria-label="Свернуть Buraq AI">✕</button>
+      </div>
+      <div class="bq-msgs">
+        <sc-if value="{{ bqEmpty }}"><div class="bq-hello">{{ bqHello }}</div></sc-if>
+        <sc-for list="{{ bqList }}" as="m">
+          <div class="bq-msg {{ m.cls }}">
+            <div class="bq-text" translate="{{ m.tr }}">{{ m.text }}</div>
+            <sc-for list="{{ m.acts }}" as="x">
+              <div class="bq-act {{ x.cls }}"><div class="bq-act-l">{{ x.label }}</div>
+                <sc-for list="{{ x.vals }}" as="v"><div class="bq-act-v"><span>{{ v.k }}</span> → <b translate="no">{{ v.v }}</b></div></sc-for>
+                <sc-if value="{{ x.wait }}"><div class="bq-act-btns"><button class="btn btn-secondary bq-do" sc-camel-on-click="{{ x.go }}">Выполнить</button><button class="btn btn-ghost bq-skip" sc-camel-on-click="{{ x.skip }}">Не надо</button></div></sc-if>
+                <sc-if value="{{ x.hasRes }}"><div class="bq-act-r">{{ x.result }}</div></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-if value="{{ bqBusy }}"><div class="bq-msg bq-ai bq-wait"><div class="bq-text">{{ bqStep }}</div></div></sc-if>
+      </div>
+      <sc-if value="{{ bqHasSug }}"><div class="bq-sug"><sc-for list="{{ bqSug }}" as="g"><button class="bq-chip" sc-camel-on-click="{{ g.go }}">{{ g.text }}</button></sc-for></div></sc-if>
+      <div class="bq-ask">
+        <textarea class="input bq-input" rows="2" value="{{ bqDraft }}" placeholder="Спросите или дайте задание: «почему в плане A столько рейсов?», «перенеси партию 19.10 на 20.10»" aria-label="Сообщение для Buraq AI" sc-camel-on-change="{{ bqOnDraft }}"></textarea>
+        <button class="btn btn-primary bq-send" sc-camel-on-click="{{ bqSendNow }}" disabled="{{ bqBusy }}">Отправить</button>
+      </div>
+      <div class="bq-foot">{{ bqFoot }}</div>
+    </section>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script="">
@@ -2242,6 +2276,7 @@ const reys = n => n % 10 === 1 && n % 100 !== 11 ? 'рейс' : [2, 3, 4].includ
 const plural = (n, one, few, many) => n % 10 === 1 && n % 100 !== 11 ? one : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? few : many;
 const tochki = n => plural(n, 'точка', 'точки', 'точек'), mashin = n => plural(n, 'машины', 'машин', 'машин');   // «у 1 машины», «у 3 машин»
 // вкладка → раздел шапки: импорт — в «Журнале», дашборд и отчёты — в «Отчётах», настройки — четыре подвкладки
+const T_OK = ['journal', 'clients', 'map', 'plans', 'drivers', 'viz'];   // вкладки, которые Buraq AI открывает без уточнений
 const TAB_GROUP = { import: 'journal', dash: 'reports', reports: 'reports', tariffs: 'settings', fleetset: 'settings', link: 'settings', check: 'settings' };
 // Где был пользователь: вкладка, подвкладка, план и партии. Обновление страницы возвращает туда же (sessionStorage —
 // только эта вкладка браузера; новое окно и новый запуск приложения открываются, как раньше, с «Журнала»)
@@ -2318,6 +2353,20 @@ const PLAN_AI_SCHEMA = { name: 'plan', description: 'План развоза п�
   trips: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['kind', 'stops'], properties: {
     kind: { type: 'string', enum: ['labo', 'changan', 'gazel', 'kamaz'] }, stops: { type: 'array', items: { type: 'string' }, description: 'id точек рейса' } } } },
   notes: { type: 'array', items: { type: 'string' }, description: 'Что проверить диспетчеру: до 4 коротких пунктов' } } } };
+// Buraq AI — помощник на весь сайт: ответ, запросы данных (lookups) и действия на сайте (actions; все поля обязательны —
+// неиспользуемые пустые, так строгая схема проще). Удалить / перенести партию и правку отгрузки руководитель подтверждает
+const BQ_ACTIONS = ['open', 'plan_change', 'plan_ai', 'plan_accept', 'batch_delete', 'batch_move', 'ship_update', 'car_set'], BQ_CONFIRM = ['batch_delete', 'batch_move', 'ship_update'];
+const BQ_SCHEMA = { name: 'buraq_ai', description: 'Ответ Buraq AI: текст, запросы данных, действия на сайте.', input_schema: { type: 'object', additionalProperties: false, required: ['reply', 'lookups', 'actions'], properties: {
+  reply: { type: 'string', description: 'Ответ руководителю: объяснение или что сделано / что предлагаешь сделать' },
+  lookups: { type: 'array', description: 'Каких данных не хватает для ответа; сайт пришлёт их и спросит снова. Пусто — данных хватает', items: { type: 'object', additionalProperties: false, required: ['type', 'date', 'query', 'plan'], properties: {
+    type: { type: 'string', enum: ['batch', 'client', 'plan'] }, date: { type: 'string' }, query: { type: 'string' }, plan: { type: 'string', enum: ['', 'A', 'B', 'X'] } } } },
+  actions: { type: 'array', description: 'Что сделать на сайте; пусто — только ответ', items: { type: 'object', additionalProperties: false,
+    required: ['type', 'date', 'dates', 'to', 'plan', 'tab', 'sub', 'search', 'status', 'bl', 'trips', 'fields'], properties: {
+    type: { type: 'string', enum: BQ_ACTIONS }, date: { type: 'string' }, dates: { type: 'array', items: { type: 'string' } }, to: { type: 'string' },
+    plan: { type: 'string', enum: ['', 'A', 'B', 'X'] }, tab: { type: 'string', enum: ['', 'journal', 'clients', 'map', 'reports', 'plans', 'drivers', 'viz', 'settings'] },
+    sub: { type: 'string' }, search: { type: 'string' }, status: { type: 'string' }, bl: { type: 'string' },
+    trips: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['kind', 'stops'], properties: { kind: { type: 'string', enum: ['labo', 'changan', 'gazel', 'kamaz'] }, stops: { type: 'array', items: { type: 'string' } } } } },
+    fields: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['key', 'value'], properties: { key: { type: 'string' }, value: { type: 'string' } } } } } } } } } };
 // разбор ИИ «Новой машины»: вывод, причины, идеи (какие цифры расчёта поменять — пересчитывает сайт), риски, вопросы
 const CAR_AI_KEYS = ['price', 'count', 'm3', 'kg', 'rangeKm', 'kwh100', 'kwhPrice', 'salary', 'driverPerTrip', 'upkeepYear', 'perMonth', 'perDay', 'extraTrips',
   'leaseAdv', 'leaseRate', 'leaseMonths', 'charger', 'regFee', 'parking', 'downtime'];
@@ -2394,6 +2443,8 @@ class Component extends DCLogic {
     window.addEventListener('buraq-theme', () => { if (this.viz) { this.viz.dispose(); this.viz = null; this.vizEl = null; } this.forceUpdate(); });
     // Esc закрывает открытое окно (отгрузка, клиент, склад, настройки связи) — как «Отмена»
     window.addEventListener('keydown', e => { if (e.key === 'Escape' && this.state.dialog && this.state.dialog.type !== 'gs' && !e.defaultPrevented) this.setState({ dialog: null }); });
+    // Buraq AI: Enter — отправить, Shift+Enter — новая строка
+    window.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.target && e.target.classList && e.target.classList.contains('bq-input')) { e.preventDefault(); this.bqSend(e.target.value); } });
     const tick = async () => {
       if (!(window.XlsxIO && window.LOGI_TEMPLATE_B64 && window.LogiEngine)) return setTimeout(tick, 60);
       try {
@@ -2604,6 +2655,7 @@ class Component extends DCLogic {
     }
     if (this.state.ready && !this._autoNameT && this.canLoc && (!this.gsUrl || (this.state.gsAt && this.state.gsStatus !== 'loading'))) { this._autoNameT = true; setTimeout(() => this.autoNamePoints(), 3000); }
     this.syncMap(); this.syncDvMap(); this.syncPlanMap(); this.syncViz(); this.syncSmooth(); this.syncImport(); this.syncCarChart();
+    if (this._bqScroll) { const el = document.querySelector('.bq-msgs'); if (el) { el.scrollTop = el.scrollHeight; this._bqScroll = false; } }
     // страница «Связь» открыта — черновик есть; ушли с неё — черновик убираем (Esc, кнопки вкладок)
     { const st = this.state, gs = st.dialog && st.dialog.type === 'gs';
       if (st.tab === 'link' && !st.dialog) this.setState({ dialog: this.gsDraft() });
@@ -3137,14 +3189,262 @@ class Component extends DCLogic {
   }
 
   // ---------- ручная правка плана ----------
+  // ---------- Buraq AI — помощник на весь сайт (кнопка справа внизу, чат) ----------
+  // Сообщение руководителя → ИИ через скрипт таблицы (aiPost) с разговором, тем, что на экране, и данными сайта (без телефонов,
+  // адресов и координат) → ответ, запросы данных (сайт отвечает сам, до двух кругов) и действия: открыть, план (правка как
+  // ручная — «Отменить правку»), записать план, удалить / перенести партию, правка отгрузки, цифры «Новой машины».
+  // Удалить, перенести и правку отгрузки руководитель подтверждает кнопкой «Выполнить». Разговор — на устройстве.
+  bqLoad() { if (!this.bqMsgs) { try { const v = JSON.parse(localStorage.getItem('logi-buraq-ai') || '[]'); this.bqMsgs = Array.isArray(v) ? v.filter(m => m && m.role && typeof m.text === 'string') : []; } catch (e) { this.bqMsgs = []; } } return this.bqMsgs; }
+  bqSave() { this.bqMsgs = this.bqLoad().slice(-40); try { localStorage.setItem('logi-buraq-ai', JSON.stringify(this.bqMsgs)); } catch (e) { /* закрытый режим — до перезагрузки */ } }
+  bqPush(m) { this.bqLoad().push({ at: Date.now(), ...m }); this.bqSave(); this._bqScroll = true; this.setState({}); return this.bqMsgs.length - 1; }
+  // дата от ИИ: 2026-10-26, 26.10.2026 или пара «A+B»
+  bqDate(v) {
+    const one = x => { x = String(x || '').trim(); const m = x.match(/^(\d{1,2})\.(\d{1,2})\.(20\d\d)$/); if (m) x = m[3] + '-' + m[2].padStart(2, '0') + '-' + m[1].padStart(2, '0'); return okDate(x) ? x : ''; };
+    const ds = String(v || '').split('+').map(one);
+    return ds.every(Boolean) ? ds.join('+') : '';
+  }
+  bqShips(date) {
+    const data = this.state.data, cm = new Map((data.clients || []).map(c => [String(c.bl || '').trim().toUpperCase(), c]));
+    return data.shipments.filter(s => s.date === date).slice(0, 250).map(s => { const c = cm.get(String(s.bl || '').trim().toUpperCase()) || {};
+      return { bl: s.bl, client: [c.brand, c.name].filter(Boolean).join(' · '), district: c.district || '', cbm: Math.round((+s.cbm || 0) * 1000) / 1000, kg: +s.kg || 0, places: +s.places || 0,
+        truck: TR[s.truck] || s.truck || '', route: s.route == null ? '' : s.route, status: ST[s.status] || s.status || '', note: s.note || '' }; });
+  }
+  bqPlan(pd, key) {
+    const P = this.plansFor(pd), S = this.state.data.settings, E = window.LogiEngine;
+    if (!P || !P[key]) return { error: 'нет плана' };
+    const { facts, codes } = this.planAiFacts(P, pd, key, S, { current: true, names: true });
+    (this._bqCodes || (this._bqCodes = new Map())).set(pd + '|' + key, codes);
+    const cost = pl => Math.round(this.costOf(pl.trips.map(t => E.costSplit(t.stops, t.price, S))).ours);
+    facts.plans = ['A', 'B', 'X'].map(k => { const pl = this.planOf(P, pd, k), e = (this.state.planEdits || {})[pd + '|' + k];
+      return { plan: k, trips: pl.trips.length, price: Math.round(pl.sum.price), companyPays: cost(pl), overloaded: pl.trips.filter(t => t.overload || t.over).length, byBuraqAI: !!(e && e.ai && pl.manual), editedByHand: !!(pl.manual && !(e && e.ai)) }; });
+    return facts;
+  }
+  bqWhere() {
+    const st = this.state, top = TAB_GROUP[st.tab] || st.tab, T = { journal: 'Журнал', clients: 'Клиенты', map: 'Карта', reports: 'Отчёты', plans: 'Планы', drivers: 'Водители', viz: 'Визуализация', settings: 'Настройки' };
+    const R = { dash: 'Дашборд', batch: 'Партия на день', cost: 'Расходы', fleet: 'Автопарк', newcar: 'Новая машина', drivers: 'Водители', ai: 'Отчёт Buraq AI' };
+    if (top === 'journal') return 'Журнал · ' + (okDate(st.jDate) ? 'партия ' + dLong(st.jDate) : 'все партии');
+    if (top === 'plans' && st.planDate) return 'Планы · партия ' + dLongs(this.planPair) + ' · план ' + (['A', 'B', 'X'].includes(st.planKey) ? st.planKey : 'A');
+    if (top === 'reports') return 'Отчёты · ' + (R[st.tab === 'dash' ? 'dash' : st.repKind || 'batch'] || '');
+    return T[top] || '';
+  }
+  bqContext() {
+    const st = this.state, data = st.data, S = data.settings, top = TAB_GROUP[st.tab] || st.tab, r2 = x => Math.round((+x || 0) * 100) / 100;
+    const ctx = { today: isoDay(), screen: { where: this.bqWhere(), tab: top, sub: top === 'reports' ? (st.tab === 'dash' ? 'dash' : st.repKind || 'batch') : top === 'settings' ? st.tab : '' },
+      statuses: (data.lists.statuses || Object.keys(ST)).map(v => ST[v] || v), trucks: (data.lists.trucks || []).map(t => TR[t] || t),
+      fleet: { gazel: { count: S.gazelCount, m3: S.gazelM3, kg: S.gazelKg }, changan: { count: S.changanCount, m3: S.changanM3, kg: S.changanKg }, labo: { count: S.laboCount, m3: S.laboM3, kg: S.laboKg },
+        kamaz: { count: S.cTrucks, m3: S.cM3, kg: S.cKg }, tripsPerVehicle: S.tripsPerVehicle, usefulVolumePct: S.fillPct },
+      clients: data.clients.length,
+      batches: window.LogiBatches.summary(data).slice(0, 40).map(x => ({ date: x.date, shipments: x.n, clients: x.clients, cbm: r2(x.cbm), kg: x.kg, delivered: x.done, onRoad: x.road, cancelled: x.cancel, withTruck: x.planned,
+        ...(x.dupOf.length ? { looksLikeRepeatOf: x.dupOf.map(d => d.date) } : {}) })) };
+    if (top === 'journal') { Object.assign(ctx.screen, { batch: okDate(st.jDate) ? st.jDate : 'все', search: st.jSearch || '', status: st.jStatus && st.jStatus !== 'all' ? ST[st.jStatus] || st.jStatus : '' });
+      if (okDate(st.jDate)) ctx.journal = this.bqShips(st.jDate); }
+    if (top === 'plans' && st.planDate) { const pd = this.planPair, key = ['A', 'B', 'X'].includes(st.planKey) ? st.planKey : 'A'; Object.assign(ctx.screen, { batch: pd, plan: key }); ctx.plan = this.bqPlan(pd, key); }
+    if (top === 'map') ctx.screen.batch = st.mapDate;
+    if (top === 'reports' && this._repX && this._repX.out) { const o = this._repX.out;
+      ctx.report = { title: o.repTitle || '', period: o.repSub || '', kpis: (o.repKpis || []).map(k => k.label + ': ' + k.value + (k.sub ? ' (' + k.sub + ')' : '')),
+        notes: Object.keys(o).filter(k => /(Notes|Why|Need|Check)$/.test(k) && Array.isArray(o[k])).flatMap(k => o[k].map(n => n.text || (n.t ? n.t + ': ' + n.d : ''))).filter(Boolean).slice(0, 30) };
+      if (o.carScen) ctx.report.scenarios = o.carScen.map(x => ({ change: x.title + ' (' + x.sub + ')', tripsPerMonth: x.trips, savingPerMonth: x.net, paybackCash: x.cash, paybackLease: x.lease, result5y: x.five }));
+      if (o.carGroups) ctx.report.carInputs = o.carGroups.flatMap(g => g.fields.map(f => ({ key: f.k, label: f.label, value: f.v || f.ph }))); }
+    return ctx;
+  }
+  bqLookup(l) {
+    const data = this.state.data, d = this.bqDate(l.date);
+    if (l.type === 'batch') return d && !d.includes('+') ? { batch: d, shipments: this.bqShips(d) } : { error: 'нет такой партии: ' + l.date };
+    if (l.type === 'plan') return d ? this.bqPlan(d, ['A', 'B', 'X'].includes(l.plan) ? l.plan : 'A') : { error: 'нет такой партии: ' + l.date };
+    const q = String(l.query || '').trim().toLowerCase();
+    if (!q) return { error: 'пустой запрос' };
+    const cnt = new Map(), last = new Map(); data.shipments.forEach(s => { const b = String(s.bl || '').trim().toUpperCase(); cnt.set(b, (cnt.get(b) || 0) + 1); if (!last.get(b) || s.date > last.get(b)) last.set(b, s.date); });
+    return { clients: data.clients.filter(c => [c.bl, c.brand, c.name, c.district, c.marks].join(' ').toLowerCase().includes(q)).slice(0, 15)
+      .map(c => { const b = String(c.bl || '').trim().toUpperCase(); return { bl: c.bl, brand: c.brand || '', name: c.name || '', district: c.district || '', shipments: cnt.get(b) || 0, lastBatch: last.get(b) || '' }; }) };
+  }
+  bqLabel(a) {
+    const d = this.bqDate(a.date), T = { journal: 'Журнал', clients: 'Клиенты', map: 'Карта', reports: 'Отчёты', plans: 'Планы', drivers: 'Водители', viz: 'Визуализация', settings: 'Настройки' };
+    const n = date => this.state.data.shipments.filter(s => s.date === date).length;
+    switch (a.type) {
+      case 'open': return 'Открыть: ' + (T[a.tab] || a.tab || '—') + (d ? ' · партия ' + dLongs(d) : '') + (a.plan ? ' · план ' + a.plan : '') + (a.search ? ' · поиск «' + a.search + '»' : '');
+      case 'plan_change': return 'Изменить план ' + (a.plan || 'A') + (d ? ' партии ' + dLongs(d) : '') + ': ' + (a.trips || []).length + ' ' + reys((a.trips || []).length);
+      case 'plan_ai': return (a.plan === 'B' || a.plan === 'X' ? 'Улучшить план ' + a.plan : 'Составить план A') + ' с Buraq AI' + (d ? ' · партия ' + dLongs(d) : '');
+      case 'plan_accept': return 'Записать план ' + (a.plan || 'A') + (d ? ' партии ' + dLongs(d) : '') + ' в журнал';
+      case 'batch_delete': { const ds = (a.dates && a.dates.length ? a.dates : [a.date]).map(x => this.bqDate(x)).filter(Boolean);
+        return 'Удалить ' + (ds.length === 1 ? 'партию ' : 'партии: ') + ds.map(x => dLong(x) + ' (' + n(x) + ' отгр.)').join(', '); }
+      case 'batch_move': { const to = this.bqDate(a.to); return 'Перенести партию ' + dLong(d) + ' (' + n(d) + ' отгр.) на ' + dLong(to) + (to && n(to) ? ' — объединится с партией этой даты' : ''); }
+      case 'ship_update': return 'Отгрузка ' + a.bl + (d ? ' · ' + dLong(d) : '');
+      case 'car_set': return 'Новая машина';
+      default: return a.type;
+    }
+  }
+  bqVals(a) {
+    const F = { status: 'статус', truck: 'машина', route: 'рейс', note: 'примечание', cbm: 'CBM', kg: 'KG', places: 'мест' };
+    const car = this._repX && this._repX.out && this._repX.out.carGroups ? Object.fromEntries(this._repX.out.carGroups.flatMap(g => g.fields.map(f => [f.k, f.label]))) : {};
+    return a.type === 'ship_update' || a.type === 'car_set' ? (a.fields || []).map(f => ({ key: f.key, k: (a.type === 'car_set' ? car[f.key] : F[f.key]) || f.key, v: String(f.value) })) : [];
+  }
+  async bqDo(a, m) {
+    const st = this.state, data = st.data, d = this.bqDate(a.date), narrow = typeof innerWidth === 'number' && innerWidth < 760;
+    const go = patch => { this.setState({ ...patch, ...(narrow ? { bqOpen: false } : {}) }); };
+    const plan = ['A', 'B', 'X'].includes(a.plan) ? a.plan : 'A';
+    if (a.type === 'open') {
+      const tab = a.tab, sub = String(a.sub || '');
+      if (tab === 'journal') { const code = Object.keys(ST).find(k => k === a.status || ST[k] === a.status);
+        go({ tab: 'journal', jLimit: 60, ...(d && !d.includes('+') ? { jDate: d, jDate2: '' } : {}), ...(a.search ? { jSearch: a.search } : {}), ...(code ? { jStatus: code } : {}) }); }
+      else if (tab === 'plans') { const [d1, d2] = (d || '').split('+'); go({ tab: 'plans', ...(d1 ? { planDate: d1, planDate2: d2 || '' } : {}), ...(a.plan ? { planKey: plan } : {}) }); }
+      else if (tab === 'map') go({ tab: 'map', ...(d && !d.includes('+') ? { mapDate: d } : {}) });
+      else if (tab === 'reports') { const k = ['batch', 'cost', 'fleet', 'newcar', 'drivers', 'ai'].includes(sub) ? sub : null; go(k ? { tab: 'reports', repKind: k, ...(k === 'batch' && d ? { repDate: d } : {}) } : { tab: 'dash' }); }
+      else if (tab === 'settings') { this.goSettings(['tariffs', 'fleetset', 'link', 'check'].includes(sub) ? sub : 'tariffs'); if (narrow) this.setState({ bqOpen: false }); }
+      else if (T_OK.includes(tab)) go({ tab });
+      else throw new Error('Не знаю такой вкладки: ' + tab);
+      return 'Открыл: ' + this.bqWhere() + '.';
+    }
+    if (a.type === 'plan_change') {
+      const pd = d || this.planPair; if (!pd) throw new Error('Не указана партия.');
+      const codes = (this._bqCodes && this._bqCodes.get(pd + '|' + plan)) || (this.bqPlan(pd, plan), this._bqCodes.get(pd + '|' + plan)), seen = new Set();
+      const groups = (a.trips || []).filter(t => ['labo', 'changan', 'gazel', 'kamaz'].includes(t.kind)).map(t => ({ kind: t.kind, car: null, round: null,
+        keys: (t.stops || []).map(c => codes && codes.get(String(c).trim())).filter(k => k && !seen.has(k) && seen.add(k)) })).filter(g => g.keys.length);
+      if (!groups.length) throw new Error('В плане от Buraq AI нет рейсов с точками этой партии.');
+      const E = window.LogiEngine, S = data.settings, P = this.plansFor(pd), before = this.planOf(P, pd, plan), next = P.manual(plan, groups);
+      const cost = pl => this.costOf(pl.trips.map(t => E.costSplit(t.stops, t.price, S))).ours, ov = pl => pl.trips.filter(t => t.overload || t.over).length;
+      const was = { trips: before.trips.length, price: before.sum.price, ours: cost(before), ov: ov(before) }, now = { trips: next.trips.length, price: next.sum.price, ours: cost(next), ov: ov(next) };
+      this.planEditSet(pd, plan, groups, { summary: m && m.text ? m.text : '', notes: [], model: (m && m.model) || '', ms: 0, at: Date.now(), lang: window.I18N && window.I18N.lang === 'uz' ? 'uz' : 'ru', was, now, missed: next.extra || 0, chat: true });
+      const [d1, d2] = pd.split('+'); go({ tab: 'plans', planDate: d1, planDate2: d2 || '', planKey: plan, planHi: null });
+      const line = x => x.trips + ' ' + reys(x.trips) + ', ' + money(x.price) + ', компания платит ' + money(x.ours) + (x.ov ? ', сверх кузова — ' + x.ov : '');
+      return 'План ' + plan + ' изменён: ' + line(now) + '. Было: ' + line(was) + '.' + (next.extra ? ' Точек без рейса в ответе — ' + next.extra + ': они в отдельных рейсах.' : '') + ' Отменить — «↶ Отменить правку» в «Планах».';
+    }
+    if (a.type === 'plan_ai') {
+      const pd = d || this.planPair; if (!pd) throw new Error('Не указана партия.');
+      const [d1, d2] = pd.split('+'); go({ tab: 'plans', planDate: d1, planDate2: d2 || '', planKey: plan });
+      await this.planAiMake(pd, plan);
+      const pm = this.state.planAiMsg; return pm && pm.text ? pm.text : 'Готово — смотрите «Планы».';
+    }
+    if (a.type === 'plan_accept') {
+      const pd = d || this.planPair; if (!pd) throw new Error('Не указана партия.');
+      const [d1, d2] = pd.split('+'); this.setState({ tab: 'plans', planDate: d1, planDate2: d2 || '', planKey: plan });
+      const r = this.acceptPlan(pd, plan);
+      if (!r) throw new Error('План не записан.');
+      return 'План ' + plan + ' записан в журнал: ' + r.trips + ' ' + reys(r.trips) + ', ' + r.n + ' ' + plural(r.n, 'отгрузка', 'отгрузки', 'отгрузок') + ' получили машину и номер рейса. Отменить — «Отменить» в «Планах».';
+    }
+    if (a.type === 'batch_delete') {
+      const ds = [...new Set((a.dates && a.dates.length ? a.dates : [a.date]).map(x => this.bqDate(x)).filter(x => x && data.shipments.some(s => s.date === x)))];
+      if (!ds.length) throw new Error('Нет таких партий.');
+      this.batchDelete(ds, true);
+      return (ds.length === 1 ? 'Партия ' + dLong(ds[0]) + ' удалена' : 'Удалено партий: ' + ds.length) + '. Excel-копия скачана, партия в корзине («🗂 Партии» → «Корзина») 30 дней.';
+    }
+    if (a.type === 'batch_move') {
+      const to = this.bqDate(a.to); if (!d || !to) throw new Error('Не указаны даты.');
+      const e = this.batchMove(d, to);
+      if (e) throw new Error(e === 'same' ? 'Это та же дата.' : e === 'empty' ? 'Партии ' + dLong(d) + ' нет.' : 'Проверьте дату.');
+      return 'Партия ' + dLong(d) + ' перенесена на ' + dLong(to) + '.';
+    }
+    if (a.type === 'ship_update') {
+      const bl = String(a.bl || '').trim().toUpperCase(), rows = data.shipments.filter(s => (!d || s.date === d) && String(s.bl || '').trim().toUpperCase() === bl);
+      if (!rows.length) throw new Error('Нет отгрузки ' + a.bl + (d ? ' в партии ' + dLong(d) : '') + '.');
+      if (!d && new Set(rows.map(s => s.date)).size > 1) throw new Error('У ' + a.bl + ' отгрузки в нескольких партиях — укажите дату.');
+      const patch = {}, num = v => { const x = parseFloat(String(v).replace(/\s+/g, '').replace(',', '.')); if (!isFinite(x) || x < 0) throw new Error('Неверное число: ' + v); return x; };
+      (a.fields || []).forEach(f => { const v = String(f.value == null ? '' : f.value).trim();
+        if (f.key === 'status') { const c = Object.keys(ST).find(k => k.toLowerCase() === v.toLowerCase() || ST[k].toLowerCase() === v.toLowerCase()); if (!c) throw new Error('Нет такого статуса: ' + v); patch.status = c; }
+        else if (f.key === 'truck') { const ts = data.lists.trucks || []; const c = ts.find(t => t.toLowerCase() === v.toLowerCase() || (TR[t] || '').toLowerCase() === v.toLowerCase()) || Object.keys(TR).find(k => TR[k].toLowerCase() === v.toLowerCase()); if (!c) throw new Error('Нет такой машины: ' + v); patch.truck = c; }
+        else if (f.key === 'route') patch.route = v === '' ? null : Math.round(num(v));
+        else if (f.key === 'note') patch.note = v;
+        else if (['cbm', 'kg', 'places'].includes(f.key)) patch[f.key] = num(v);
+        else throw new Error('Это поле Buraq AI не меняет: ' + f.key); });
+      if (!Object.keys(patch).length) throw new Error('Нечего менять.');
+      this.commit({ ...data, shipments: data.shipments.map(s => rows.includes(s) ? { ...s, ...patch } : s) });
+      return 'Изменено строк: ' + rows.length + (this.gsUrl ? ' — записывается в Google Таблицу.' : '.');
+    }
+    if (a.type === 'car_set') {
+      const CC = window.LogiCarCalc, c = { ...(st.carCalc || {}) }, done = [];
+      (a.fields || []).forEach(f => { if (f.key in CC.DEFAULTS) { c[f.key] = String(f.value); done.push(f.key); } });
+      if (!done.length) throw new Error('Нет таких полей в «Новой машине».');
+      try { localStorage.setItem('logi-car-calc', JSON.stringify(c)); } catch (e) { /* без хранилища */ }
+      go({ carCalc: c, tab: 'reports', repKind: 'newcar' });
+      return 'В «Новой машине» изменено полей: ' + done.length + '. Вернуть — «Вернуть примерные цифры».';
+    }
+    throw new Error('Неизвестное действие');
+  }
+  async bqExec(mi, k) {
+    const m = this.bqLoad()[mi], x = m && m.acts && m.acts[k];
+    if (!x || x.state === 'done' || x.state === 'skip' || x.state === 'run') return;
+    x.state = 'run'; this.setState({});
+    try { x.result = await this.bqDo(x.a, m) || 'Готово.'; x.state = 'done'; }
+    catch (e) { x.result = e.message || String(e); x.state = 'fail'; }
+    this.bqSave(); this._bqScroll = true; this.setState({});
+  }
+  bqPrompt(lang) {
+    return 'Ты — Buraq AI, помощник руководителя логистической компании BURAQ logistics (Ташкент) на её сайте. Компания привозит сборные грузы на свой склад и развозит клиентам по городу на Labo, Changan (Shineray), Gazel и Kamaz. Партия — все отгрузки одной даты. ' +
+      'Вкладки сайта: «Журнал» — отгрузки партий (BL клиента, CBM, KG, мест, машина, рейс, статус), «🗂 Партии» — удалить, перенести, объединить; «Клиенты»; «Карта»; «Отчёты» (dash — дашборд, batch — партия на день, cost — расходы, fleet — автопарк, newcar — новая машина и окупаемость, drivers — водители, ai — ИИ-отчёт); ' +
+      '«Планы A/B/X» — развоз партии по рейсам: A — план Buraq AI (пока не составлен — план сайта), B — меньше машин (Gazel с допуском), X — по районам; «Водители» (бот в Telegram); «Визуализация» (3D кузова); «Настройки» (tariffs, fleetset, link, check).\n' +
+      'Тебе дают разговор, что сейчас на экране (screen) и данные сайта в JSON. Отвечай по этим данным. Если данных не хватает — запроси в lookups (batch — отгрузки партии date; client — поиск клиента по query; plan — план партии date и plan), сайт пришлёт и спросит снова; или спроси руководителя. Цифры не выдумывай.\n' +
+      'Действия (actions) сайт выполнит сам. open — открыть вкладку tab (sub — подвкладка), date — партия, plan, search и status — фильтр журнала. ' +
+      'plan_change — новый план партии date и плана plan: в trips — ВСЕ рейсы плана, у каждого kind и stops (id точек из данных плана; каждая точка ровно в одном рейсе); сайт посчитает стоимость, перегруз, порядок и время, правку можно отменить. ' +
+      'plan_ai — Buraq AI составит план A или улучшит план B / X заново. plan_accept — записать план в журнал (машины и номера рейсов). batch_delete — удалить партии dates (в корзину на 30 дней). batch_move — перенести партию date на дату to (если там уже есть партия — объединятся). ' +
+      'ship_update — отгрузка BL bl в партии date, fields: key — status, truck, route, note, cbm, kg или places, value — новое (status и truck — из списков statuses и trucks). car_set — цифры «Новой машины»: fields с key из carInputs. ' +
+      'Удаление, перенос партии и правку отгрузки руководитель подтвердит кнопкой — так и скажи. В каждом action все поля обязательны: неиспользуемые — пустая строка или пустой список. Даты в действиях — ГГГГ-ММ-ДД.\n' +
+      'Планы: объясняя, опирайся на тарифы машин (base + тариф за каждую точку сверх pointsInBase; за кольцом дороже), вместимость (m3, kg), правила плана, направление (dir) и расстояние (km) точек. Просят изменить план — сразу давай plan_change со всеми рейсами; только спрашивают — объясни и предложи. ' +
+      'Номер рейса для руководителя — no в плане. Пиши коротко и просто, как коллега: 1–6 предложений или короткий список. Даты в тексте — как 26.10.2026. Телефонов, адресов и координат клиентов у тебя нет.\n' +
+      (lang === 'uz' ? 'Язык ответа: узбекский, латиница (o‘ и g‘ — со знаком ‘); если руководитель пишет по-русски — по-русски.' : 'Язык ответа: русский; если руководитель пишет по-узбекски — по-узбекски (латиница).');
+  }
+  async bqSend(text0) {
+    const text = String(text0 == null ? this.state.bqDraft || '' : text0).trim();
+    if (!text || this.state.bqBusy) return;
+    const say = t => this.bqPush({ role: 'site', text: t, err: true });
+    this.bqPush({ role: 'user', text });
+    this.setState({ bqDraft: '' });
+    if (this.readOnly) return say('Buraq AI работает для руководителя: вход «только просмотр» данные ИИ не отправляет.');
+    if (!this.gsUrl) return say('Сначала подключите Google Таблицу — Buraq AI работает через её скрипт: «Настройки» → «Связь».');
+    const A = window.LogiAuth;
+    if (A && A.owner && A.owner().state === 'locked') return say('Секрет редактора закрыт на этом устройстве: «Настройки» → «Связь» → «ИИ-импорт манифестов» → пароль входа → «Открыть секрет».');
+    this.setState({ bqBusy: true, bqStep: 'Buraq AI думает…' });
+    try {
+      const lang = window.I18N && window.I18N.lang === 'uz' ? 'uz' : 'ru', ctx = this.bqContext(), who = { user: 'Руководитель', ai: 'Buraq AI', site: 'Сайт' };
+      const hist = this.bqLoad().slice(-13, -1).map(m => who[m.role] + ': ' + m.text + (m.acts || []).map(x => '\n  [' + x.label + (x.vals && x.vals.length ? ': ' + x.vals.map(v => v.k + ' → ' + v.v).join(', ') : '') + ' — ' + (x.state === 'done' ? 'сделано: ' + x.result : x.state === 'fail' ? 'не вышло: ' + x.result : x.state === 'skip' ? 'отменил руководитель' : 'ждёт подтверждения') + ']').join('')).join('\n');
+      let extra = [];
+      for (let step = 0; step < 3; step++) {
+        const body = (hist ? 'Разговор до этого:\n' + hist + '\n\n' : '') + 'Что на экране и данные сайта (JSON):\n' + JSON.stringify(ctx) +
+          (extra.length ? '\n\nДанные по твоим запросам (JSON):\n' + JSON.stringify(extra) : '') + '\n\nСообщение руководителя: ' + text;
+        const j = await this.aiPost({ action: 'call', system: this.bqPrompt(lang), content: [{ type: 'text', text: body }], schema: BQ_SCHEMA, max_tokens: 8000, effort: 'low', meta: { step: 'Buraq AI', file: text.slice(0, 80) } });
+        if (!j.ok) throw new Error(j.code === 'truncated' ? 'Ответ не поместился — спросите короче или по одной партии.' : j.code === 'timeout' ? 'Не ответил вовремя (Apps Script ждёт около минуты) — спросите ещё раз.' :
+          j.code === 'refusal' || j.code === 'noresult' ? 'Не смог ответить — спросите иначе.' : (e => j.code === 'editor' ? e.replace(/[.!]?$/, '. ') + 'Проверьте секрет редактора: «Настройки» → «Связь» → «ИИ-импорт манифестов».' : e)(j.error || 'не ответил'));
+        const res = j.result || {}, str = v => String(v == null ? '' : v).trim();
+        const looks = (Array.isArray(res.lookups) ? res.lookups : []).filter(l => l && ['batch', 'client', 'plan'].includes(l.type)).slice(0, 4);
+        if (looks.length && step < 2) {
+          extra = extra.concat(looks.map(l => ({ request: l, result: this.bqLookup(l) })));
+          this.setState({ bqStep: 'Смотрю данные: ' + looks.map(l => l.type === 'client' ? 'клиент «' + l.query + '»' : (l.type === 'plan' ? 'план ' + (l.plan || 'A') + ' · ' : 'партия ') + dLongs(this.bqDate(l.date) || l.date)).join(', ') + '…' });
+          continue;
+        }
+        const acts = (Array.isArray(res.actions) ? res.actions : []).filter(a => a && BQ_ACTIONS.includes(a.type)).slice(0, 5).map(a => ({ a, label: this.bqLabel(a), vals: this.bqVals(a), state: BQ_CONFIRM.includes(a.type) ? 'wait' : 'auto' }));
+        const mi = this.bqPush({ role: 'ai', text: str(res.reply) || (acts.length ? 'Делаю.' : '…'), model: str(j.model), acts });
+        for (let k = 0; k < acts.length; k++) if (acts[k].state === 'auto') await this.bqExec(mi, k);
+        break;
+      }
+    } catch (e) { say('Buraq AI: ' + (e.message || String(e))); }
+    finally { this.setState({ bqBusy: false, bqStep: '' }); }
+  }
+  bqView(st) {
+    const show = !!st.ready && !this.readOnly, msgs = show ? this.bqLoad() : [], top = TAB_GROUP[st.tab] || st.tab, open = !!st.bqOpen;
+    const key = ['A', 'B', 'X'].includes(st.planKey) ? st.planKey : 'A';
+    const carL = this._repX && this._repX.out && this._repX.out.carGroups ? Object.fromEntries(this._repX.out.carGroups.flatMap(g => g.fields.map(f => [f.k, f.label]))) : {};
+    const SUG = top === 'plans' && st.planDate ? ['Почему в плане ' + key + ' столько рейсов?', 'Можно сделать план ' + key + ' дешевле?', 'Объедини два самых маленьких рейса'] :
+      top === 'journal' ? ['Сколько отгрузок ещё не доставлено?', 'Есть партии, похожие на повтор?', 'Какая партия самая большая?'] :
+      top === 'reports' && st.repKind === 'newcar' && st.tab === 'reports' ? ['Что нужно, чтобы машина окупилась?', 'Наличными или в лизинг — что лучше?'] :
+      top === 'reports' ? ['Объясни этот отчёт', 'Где мы теряем больше всего денег?'] : ['Что ты умеешь?', 'Сколько партий в этом месяце?'];
+    return { bqShow: show, bqOpen: show && open, bqClosed: show && !open, bqToggle: () => { this._bqScroll = true; this.setState({ bqOpen: !open }); },
+      bqWhere: this.bqWhere(), bqEmpty: !msgs.length, bqBusy: !!st.bqBusy, bqStep: st.bqStep || 'Buraq AI думает…',
+      bqHello: 'Я Buraq AI. Спросите о партиях, планах, отчётах или дайте задание: объяснить план, переложить точки, открыть отчёт, перенести или удалить партию, поправить отгрузку. Что меняет данные — сначала покажу и попрошу «Выполнить».',
+      bqList: msgs.map((m, mi) => ({ cls: 'bq-' + m.role + (m.err ? ' bq-err' : ''), text: m.text, tr: m.role === 'site' ? 'yes' : 'no',
+        acts: (m.acts || []).map((x, k) => ({ label: x.label, vals: (x.vals || []).map(v => ({ ...v, k: x.a && x.a.type === 'car_set' && carL[v.key] ? carL[v.key] : v.k })), wait: x.state === 'wait' && !st.bqBusy, run: x.state === 'run', hasRes: !!x.result || x.state === 'skip' || x.state === 'run',
+          result: x.state === 'skip' ? 'Не стали.' : x.state === 'run' ? 'Выполняю…' : x.result || '', cls: 'bq-act-' + x.state,
+          go: () => this.bqExec(mi, k), skip: () => { x.state = 'skip'; this.bqSave(); this.setState({}); } })) })),
+      bqSug: SUG.map(text => ({ text, go: () => this.bqSend(text) })), bqHasSug: !st.bqBusy && (!msgs.length || msgs.length < 3),
+      bqDraft: st.bqDraft || '', bqOnDraft: e => this.setState({ bqDraft: e.target.value }), bqSendNow: () => this.bqSend(),
+      bqNew: () => { this.bqMsgs = []; this.bqSave(); this.setState({ bqDraft: '' }); },
+      bqFoot: 'Buraq AI видит то, что на экране, партии, планы и отчёты — без телефонов и адресов. Может ошибаться: проверяйте цифры.' };
+  }
   // ---------- Buraq AI в «Планах»: план A составляет ИИ, планы B и X — улучшает ----------
   // В ИИ уходят только точки (код S1…, район, кольцо, км и направление от склада, груз), машины и тарифы — без клиентов,
   // адресов и координат. ИИ отвечает рейсами (группы точек); план считает сайт (P.manual), как ручную правку.
-  planAiFacts(P, pd, key, S) {
-    const E = window.LogiEngine, cur = key === 'A' ? P.A : this.planOf(P, pd, key), codes = new Map(), stops = [];
+  planAiFacts(P, pd, key, S, o = {}) {   // o.current — нынешний план A (с правками), o.names — BL и клиент у точек (для Buraq AI в чате)
+    const E = window.LogiEngine, cur = key === 'A' && !o.current ? P.A : this.planOf(P, pd, key), codes = new Map(), stops = [];
     const r1 = x => x == null || !isFinite(x) ? null : Math.round(x * 10) / 10, r3 = x => Math.round((+x || 0) * 1000) / 1000;
     cur.trips.forEach(t => t.stops.forEach(x => { const k = E.stopKey(x); if (codes.has(k)) return; const id = 'S' + (codes.size + 1); codes.set(k, id);
-      stops.push({ id, district: (x.client && x.client.district) || '', zone: x.zone === 'out' ? 'за кольцом' : 'внутри кольца', km: x.noLoc ? null : r1(x.depotKm), dir: x.noLoc ? null : Math.round(x.angle || 0),
+      stops.push({ id, ...(o.names ? { bl: x.bl, client: [(x.client && x.client.brand) || '', (x.client && x.client.name) || ''].filter(Boolean).join(' · ') } : {}), district: (x.client && x.client.district) || '', zone: x.zone === 'out' ? 'за кольцом' : 'внутри кольца', km: x.noLoc ? null : r1(x.depotKm), dir: x.noLoc ? null : Math.round(x.angle || 0),
         cbm: r3(x.cbm), kg: Math.round(+x.kg || 0), places: +x.places || 0, ...(x.noLoc ? { noLocation: true } : {}) }); }));
     const T = k => k === 'labo' ? [S.laboBase, S.laboPt, S.laboPt, S.laboBaseIncludesPts] : k === 'kamaz' ? [S.kamazBase, S.kamazPt, S.kamazPt, S.kamazBaseIncludesPts] :
       k === 'changan' ? [S.changanBase, S.changanPt, S.changanPt, S.changanBaseIncludesPts] : [S.gazelBase, S.gazelPtIn, S.gazelPtOut, S.baseIncludesPts];
@@ -3154,11 +3454,11 @@ class Component extends DCLogic {
         ...(vs.some(v => v.tolM3 || v.tolKg) ? { toleranceM3: r1(vs[0].tolM3 || 0), toleranceKg: vs[0].tolKg || 0 } : {}),
         tariff: { base: t[0] == null ? null : +t[0], perPointInsideRing: t[1] == null ? null : +t[1], perPointOutsideRing: t[2] == null ? null : +t[2], pointsInBase: +t[3] || 0,
           ...(k === 'gazel' && S.gazelHeavy != null ? { heavyFromKg: +S.gazelHeavyKg, heavyBase: +S.gazelHeavy } : {}) } }; });
-    const trip = t => ({ kind: t.kind, stops: t.stops.map(x => codes.get(E.stopKey(x))), cbm: r1(t.cbm), kg: Math.round(t.kg), price: t.price && t.price.total != null ? Math.round(t.price.total) : null, ...(t.overload ? { overload: true } : {}) });
+    const trip = (t, i) => ({ ...(o.current ? { no: i + 1, name: t.name } : {}), kind: t.kind, stops: t.stops.map(x => codes.get(E.stopKey(x))), cbm: r1(t.cbm), kg: Math.round(t.kg), price: t.price && t.price.total != null ? Math.round(t.price.total) : null, ...(t.overload ? { overload: true } : {}) });
     const facts = { batch: dLongs(pd), plan: key, fleet, tripsPerVehicle: +S.tripsPerVehicle || 1, maxStopsPerTrip: +(key === 'B' ? S.bcMaxStops : S.aMaxStops) || null,
       ...(cur.smallTo ? { smallCargoRule: 'отгрузку меньше ' + f1(cur.smallTo, 2) + ' м³ везёт только ' + this.kindLabel(P, 'changan') + ', Gazel — от ' + f1(cur.smallTo, 2) + ' м³' } : {}),
       ...(key === 'X' ? { districtRule: 'план X — по районам: район везёт одна машина, малые районы — вместе с соседними' } : {}),
-      stops, [key === 'A' ? 'sitePlan' : 'currentPlan']: { trips: cur.trips.map(trip), price: Math.round(cur.sum.price), trips_count: cur.sum.trips } };
+      stops, [key === 'A' && !o.current ? 'sitePlan' : 'currentPlan']: { trips: cur.trips.map(trip), price: Math.round(cur.sum.price), trips_count: cur.sum.trips } };
     return { facts, codes: new Map([...codes].map(([k, v]) => [v, k])), cur };
   }
   planAiPrompt(key, lang) {
@@ -5736,6 +6036,7 @@ class Component extends DCLogic {
     this.commit({ ...data, shipments: out, ...(grew ? { lists: { ...data.lists, trucks: list } } : {}) });
     if (grew && this.gsUrl && this.gsVersion >= 5) this.gsEnqueue([{ t: 'trucks', v: list }]);   // новые машины — в список таблицы
     this.setState({ acceptInfo: { date, key, prev, added, removed, n: ids.length, trips: plan.trips.length }, sendAsk: this.botReady() ? { date, key } : null, planMsg: null });
+    return { trips: plan.trips.length, n: ids.length };   // записано (Buraq AI пишет итог в чат)
   }
   undoAccept() {
     const a = this.state.acceptInfo;
@@ -5780,14 +6081,14 @@ class Component extends DCLogic {
     const tabsDef = [['journal', 'Журнал'], ['clients', 'Клиенты'], ['map', 'Карта'], ['reports', 'Отчёты'], ['plans', 'Планы A/B/X'], ['drivers', 'Водители'], ['viz', 'Визуализация'], ['settings', 'Настройки']];
     const goTop = k => k === 'reports' ? this.setState({ tab: 'dash' }) : k === 'settings' ? this.goSettings(st.setLast || 'tariffs') : (this.setState({ tab: k }), k === 'journal' && this.maybeAskLoc(st.jDate));
     const tabs = tabsDef.map(([k, l]) => ({ label: l, go: () => goTop(k), color: top === k ? 'var(--color-on-brand)' : 'color-mix(in srgb, var(--color-on-brand) 72%, transparent)', border: top === k ? 'var(--color-red)' : 'transparent' }));
-    const SUB = { reports: [['dash', 'Дашборд'], ['batch', 'Партия на день'], ['cost', 'Расходы'], ['fleet', 'Автопарк'], ['newcar', 'Новая машина'], ['drivers', 'Водители'], ['ai', 'ИИ-отчёт']],
+    const SUB = { reports: [['dash', 'Дашборд'], ['batch', 'Партия на день'], ['cost', 'Расходы'], ['fleet', 'Автопарк'], ['newcar', 'Новая машина'], ['drivers', 'Водители'], ['ai', 'Отчёт Buraq AI']],
       settings: [['tariffs', 'Тарифы и планы'], ['fleetset', 'Водители и автопарк'], ['link', 'Связь'], ['check', 'Проверка данных']] };
     const curSub = top === 'reports' ? (st.tab === 'dash' ? 'dash' : st.repKind || 'batch') : st.tab;
     const subtabs = (SUB[top] || []).filter(([k]) => !(k === 'link' && this.readOnly)).map(([k, l]) => ({ l, cls: k === curSub ? 'subtab on' : 'subtab',
       go: () => top === 'reports' ? this.setState(k === 'dash' ? { tab: 'dash' } : { tab: 'reports', repKind: k }) : this.goSettings(k) }));
     const base = { tabs, subtabs, hasSubtabs: subtabs.length > 0, loading: !st.ready, isJournal: false, isClients: false, isMap: false, isDash: false, isPlans: false, isDrivers: false, isViz: false, isTariffs: false, isReports: false, isImport: false, isShipDialog: false, isBatchDialog: false, isClientDialog: false, isLocAskDialog: false, isWhDialog: false, isVehDialog: false, isDrvDialog: false, isApDialog: false, isPackDialog: false, isPhotoDialog: false, isGsDialog: false, isCheck: false, isFleetSet: false, depotName: '', savedNote: '', exportXlsx: this.exportXlsx, mapRef: this.mapRef, planMapRef: this.planMapRef, vizRef: this.vizRef,
       fileInputRef: this.fileInputRef, onFilePicked: this.onFilePicked, connectFile: this.connectFile, disconnectFile: this.disconnectFile, saveNow: () => this.saveToFile(), reloadFromFile: () => this.readFromHandle(),
-      account: () => window.LogiAuth && window.LogiAuth.openAccount(), readOnly: this.readOnly };
+      account: () => window.LogiAuth && window.LogiAuth.openAccount(), readOnly: this.readOnly, ...this.bqView(st) };
     const fs = st.fileStatus, fat = st.fileAt ? hhmm(st.fileAt.getHours() * 60 + st.fileAt.getMinutes()) : '';
     Object.assign(base, {
       fileTitle: st.fileName ? 'Excel: ' + st.fileName : 'Excel-файл не подключён',
