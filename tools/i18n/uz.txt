@@ -3024,3 +3024,68 @@ BURAQ — приложением на Mac: меню «Файл» → «Доба�
 Вопрос: {s}	Savol: {s}
 Вывод	Xulosa
 С продажей машины	Mashinani sotish bilan
+
+
+# ── журнал → «Партии»: удалить, перенести, корзина ──
+🗂 Партии	🗂 Partiyalar
+Все партии: удалить, перенести на другую дату, объединить, Excel, корзина	Barcha partiyalar: o‘chirish, boshqa sanaga ko‘chirish, birlashtirish, Excel, savat
+Партии	Partiyalar
+{n} [партия|партии|партий] · {n2} [отгрузка|отгрузки|отгрузок] · {n3} м³	{n} partiya · {n2} jo‘natma · {n3} m³
+Все месяцы	Barcha oylar
+Месяц	Oy
+Только похожие на повтор	Faqat takrorga o‘xshashlari
+Выбрать все	Hammasini tanlash
+Снять выбор	Tanlovni bekor qilish
+Выбрано: {n} [партия|партии|партий] · {n2} [отгрузка|отгрузки|отгрузок]	Tanlandi: {n} partiya · {n2} jo‘natma
+Удалить выбранные	Tanlanganlarni o‘chirish
+в пути {n}	yo‘lda {n}
+отменено {n}	bekor qilingan {n}
+{n} маш.	{n} mash.
+не назначены	tayinlanmagan
+похоже на повтор партии {d} ({n} %)	{d} partiyasining takroriga o‘xshaydi ({n} %)
+BL нет в справочнике: {n}	Ma’lumotnomada yo‘q BL: {n}
+Перенести	Ko‘chirish
+Выбрать партию {d}	{d} partiyasini tanlash
+Нет партий по этому фильтру.	Bu filtr bo‘yicha partiyalar yo‘q.
+Партий пока нет.	Hozircha partiyalar yo‘q.
+Корзина на этом устройстве ({n})	Shu qurilmadagi savat ({n})
+{n} [отгрузка|отгрузки|отгрузок]	{n} jo‘natma
+удалено {d} {t}	o‘chirilgan: {d} {t}
+вернуть можно ещё {n} [день|дня|дней]	yana {n} kun qaytarish mumkin
+Вернуть	Qaytarish
+Убрать из корзины навсегда	Savatdan butunlay olib tashlash
+Убрать из корзины	Savatdan olib tashlash
+Убрать из корзины навсегда? Вернуть партию будет нельзя.	Savatdan butunlay olib tashlansinmi? Partiyani qaytarib bo‘lmaydi.
+Удалить партию {d}?	{d} partiyasini o‘chirasizmi?
+Удалить {n} [партию|партии|партий]?	{n} ta partiyani o‘chirasizmi?
+{d}: {n} [отгрузка|отгрузки|отгрузок], клиентов {n2}, {n3} м³	{d}: {n} jo‘natma, mijozlar {n2}, {n3} m³
+Отгрузки пропадут из журнала, планов, карты и отчётов. Справочник клиентов не меняется.	Jo‘natmalar jurnal, rejalar, xarita va hisobotlardan yo‘qoladi. Mijozlar ma’lumotnomasi o‘zgarmaydi.
+В пути: {n} — водители сейчас везут этот груз.	Yo‘lda: {n} — haydovchilar hozir bu yukni olib ketyapti.
+Уже доставлено: {n}. Отметки водителей в боте останутся.	Allaqachon yetkazilgan: {n}. Botdagi haydovchilar belgilari qoladi.
+Из Google Таблицы удалится строк: {n}.	Google Jadvaldan o‘chiriladigan qatorlar: {n}.
+Партия попадёт в корзину на этом устройстве: {n} дней её можно вернуть.	Partiya shu qurilmadagi savatga tushadi: {n} kun ichida uni qaytarish mumkin.
+Сначала скачать Excel с этими отгрузками	Avval shu jo‘natmalar bilan Excel’ni yuklab olish
+Удалить {n} [отгрузку|отгрузки|отгрузок]	{n} ta jo‘natmani o‘chirish
+Перенести партию {d} ({n} [отгрузка|отгрузки|отгрузок]) на другую дату	{d} partiyasini ({n} jo‘natma) boshqa sanaga ko‘chirish
+Перенести партию {d} на другую дату	{d} partiyasini boshqa sanaga ko‘chirish
+Новая дата партии	Partiyaning yangi sanasi
+Выберите дату. Если на эту дату уже есть партия — партии объединятся в одну.	Sanani tanlang. Agar bu sanada partiya bo‘lsa — partiyalar bittaga birlashadi.
+Проверьте дату: год {n}. Выберите её в календаре.	Sanani tekshiring: yil {n}. Uni kalendarda tanlang.
+Это та же дата.	Bu o‘sha sana.
+На {d} уже есть партия ({n} [отгрузка|отгрузки|отгрузок]) — партии объединятся в одну: {n2} [отгрузка|отгрузки|отгрузок].	{d} sanasida allaqachon partiya bor ({n} jo‘natma) — partiyalar bittaga birlashadi: {n2} jo‘natma.
+Партия будет с датой {d}.	Partiya sanasi {d} bo‘ladi.
+В Google Таблице поменяется дата у {n} [строки|строк].	Google Jadvalda {n} ta qatorning sanasi o‘zgaradi.
+Объединить	Birlashtirish
+Партия {d} удалена — {n} [отгрузка|отгрузки|отгрузок].	{d} partiyasi o‘chirildi — {n} jo‘natma.
+Удалено партий: {n} — {n2} [отгрузка|отгрузки|отгрузок].	O‘chirilgan partiyalar: {n} — {n2} jo‘natma.
+Строки удаляются из Google Таблицы.	Qatorlar Google Jadvaldan o‘chirilmoqda.
+Вернуть можно {n} дней: «🗂 Партии» → «Корзина».	{n} kun ichida qaytarish mumkin: «🗂 Partiyalar» → «Savat».
+Этой партии в корзине уже нет.	Bu partiya savatda endi yo‘q.
+Партия {d} возвращена — {n} [отгрузка|отгрузки|отгрузок].	{d} partiyasi qaytarildi — {n} jo‘natma.
+Возвращены партии	Qaytarilgan partiyalar
+Ещё {n} уже были в журнале — второй раз не добавлены.	Yana {n} tasi jurnalda bor edi — ikkinchi marta qo‘shilmadi.
+Строки допишутся в конец Google Таблицы.	Qatorlar Google Jadval oxiriga qo‘shiladi.
+Партия {d} перенесена на {d2} — {n} [отгрузка|отгрузки|отгрузок].	{d} partiyasi {d2} sanasiga ko‘chirildi — {n} jo‘natma.
+Партия {d} объединена с партией {d2} — {n} [отгрузка|отгрузки|отгрузок].	{d} partiyasi {d2} partiyasi bilan birlashtirildi — {n} jo‘natma.
+В Google Таблице поменяется дата у этих строк.	Google Jadvalda bu qatorlarning sanasi o‘zgaradi.
+Корзина	Savat

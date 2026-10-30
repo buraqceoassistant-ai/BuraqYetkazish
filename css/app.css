@@ -599,3 +599,32 @@ input.set-input[type="text"] { text-align: left !important; }
 .cc-tip b { display: block; font-weight: 500; margin-bottom: 2px; }
 .cc-tip div { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 @media screen and (max-width: 760px) { .car-verdict-title { font-size: 26px; } .car-why { grid-template-columns: minmax(0, 1fr); } }
+
+/* журнал → «🗂 Партии»: удалить, перенести / объединить, Excel, корзина */
+.bt-dialog { max-height: 92vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.bt-head { display: flex; align-items: flex-start; gap: 12px; }
+.bt-head > div { flex: 1; min-width: 0; }
+.bt-sub { font-size: 12px; color: var(--color-neutral-700); text-wrap: pretty; }
+.bt-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.bt-dup { font-size: 13px; }
+.bt-sel { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; font-size: 13px; }
+.bt-wrap { border: 1px solid var(--color-divider); overflow-x: auto; }
+.bt-tbl { width: 100%; }
+.bt-tbl td { vertical-align: top; }
+.bt-tbl tr.bt-cur { background: var(--color-surface); }
+.bt-ck input { width: 16px; height: 16px; margin: 2px 0 0; }
+.bt-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.bt-tags .tag { font-size: 11px; }
+.bt-tags:empty { display: none; }
+.bt-acts { display: flex; gap: 2px; justify-content: flex-end; flex-wrap: wrap; }
+.bt-acts .btn { min-height: 0; padding: 4px 8px; font-size: 13px; }
+.bt-del { color: var(--color-danger-ink); }
+.bt-step { border: 1px solid var(--color-divider); border-left: 2px solid var(--color-red); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.bt-step-title { font-family: var(--font-heading); font-size: 22px; font-weight: 400; text-transform: uppercase; line-height: 1.1; }
+.bt-step-list, .bt-warn { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; }
+.bt-warn { font-size: 13px; color: var(--color-neutral-700); }
+.bt-move-info { font-size: 13px; text-wrap: pretty; }
+.bt-trash { display: flex; flex-direction: column; gap: 8px; }
+.bt-trash-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--color-divider); padding-top: 8px; font-size: 14px; }
+@media screen and (max-width: 760px) { .bt-sel { margin-left: 0; } .tc td.bt-ck { grid-column: span 1; } }
+

@@ -38,6 +38,7 @@
 <script defer src="js/xlsx-io.js"></script>
 <script defer src="js/packing.js"></script>
 <script defer src="js/car-calc.js"></script>
+<script defer src="js/batches.js"></script>
 <script defer src="js/import-core.js"></script>
 <script defer src="js/import-checks.js"></script>
 <script defer src="js/import-local.js"></script>
@@ -131,6 +132,7 @@
             <option value="">+ вторая партия</option>
             <sc-for list="{{ jDate2Opts }}" as="o"><option value="{{ o.v }}">+ партия {{ o.l }}</option></sc-for>
           </sc-raw-select></sc-if>
+          <button class="btn btn-secondary j-bt-btn" style="white-space:nowrap" sc-camel-on-click="{{ openBatches }}" title="Все партии: удалить, перенести на другую дату, объединить, Excel, корзина">🗂 Партии</button>
           <sc-raw-select class="input j-grp-sel" style="width:170px" value="{{ jGroup }}" sc-camel-on-change="{{ onJGroup }}" title="Как собрать строки журнала" aria-label="Группировка">
             <option value="truck">По машинам</option><option value="district">По районам</option><option value="none">Без групп</option>
           </sc-raw-select>
@@ -147,7 +149,7 @@
           <button data-edit class="btn btn-primary blueprint" style="white-space:nowrap" sc-camel-on-click="{{ newShipment }}"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>+ Добавить отгрузку</button>
         </div>
       </div>
-      <sc-if value="{{ jHasMsg }}"><div class="dv-msg" style="border-left-color:{{ jMsgColor }};margin-bottom:16px"><div style="flex:1;white-space:pre-line;text-wrap:pretty">{{ jMsg }}</div><button class="btn btn-ghost" sc-camel-on-click="{{ jMsgClose }}">Закрыть</button></div></sc-if>
+      <sc-if value="{{ jHasMsg }}"><div class="dv-msg" style="border-left-color:{{ jMsgColor }};margin-bottom:16px"><div style="flex:1;white-space:pre-line;text-wrap:pretty">{{ jMsg }}</div><sc-if value="{{ jMsgUndo }}"><button data-edit class="btn btn-secondary" sc-camel-on-click="{{ jUndo }}">Вернуть</button></sc-if><button class="btn btn-ghost" sc-camel-on-click="{{ jMsgClose }}">Закрыть</button></div></sc-if>
       <sc-if value="{{ jHasDrafts }}"><div class="imp-alert" style="margin-bottom:20px"><div style="flex:1;text-wrap:pretty">{{ jDraftsNote }}</div><button class="btn btn-secondary" sc-camel-on-click="{{ goImport }}">Проверить</button></div></sc-if>
 
       <div class="kpi-strip" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--color-divider);margin-bottom:20px">
@@ -1788,6 +1790,76 @@
           <button class="btn btn-secondary" sc-camel-on-click="{{ closeDialog }}">Отмена</button>
           <button data-edit class="btn btn-primary" sc-camel-on-click="{{ saveShipment }}">Сохранить</button>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- журнал → «🗂 Партии»: все партии, удалить, перенести / объединить, Excel, корзина -->
+  <sc-if value="{{ isBatchDialog }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:3000" sc-camel-on-click="{{ closeDialogBg }}">
+      <div class="dialog bt-dialog" style="width:min(1180px,100%);background:var(--color-bg)">
+        <div class="bt-head">
+          <div><div class="dialog-title" style="margin:0">Партии</div><div class="bt-sub">{{ btSub }}</div></div>
+          <button class="btn btn-ghost" sc-camel-on-click="{{ closeDialog }}" aria-label="Закрыть">✕</button>
+        </div>
+        <sc-if value="{{ btHasMsg }}"><div class="dv-msg" style="border-left-color:{{ btMsgColor }}"><div style="flex:1;text-wrap:pretty">{{ btMsg }}</div><sc-if value="{{ btCanUndo }}"><button data-edit class="btn btn-secondary" sc-camel-on-click="{{ btUndo }}">Вернуть</button></sc-if><button class="btn btn-ghost" sc-camel-on-click="{{ btMsgClose }}">Закрыть</button></div></sc-if>
+        <sc-if value="{{ btIsDel }}">
+          <div class="bt-step">
+            <div class="bt-step-title">{{ btDelTitle }}</div>
+            <ul class="bt-step-list"><sc-for list="{{ btDelList }}" as="x"><li>{{ x.text }}</li></sc-for></ul>
+            <ul class="bt-warn"><sc-for list="{{ btDelWarn }}" as="w"><li>{{ w.text }}</li></sc-for></ul>
+            <label class="imp-ack"><input type="checkbox" checked="{{ btDelBackup }}" sc-camel-on-change="{{ btOnBackup }}"> Сначала скачать Excel с этими отгрузками</label>
+            <div class="dialog-actions"><button class="btn btn-secondary" sc-camel-on-click="{{ btCancel }}">Отмена</button><button data-edit class="btn btn-primary bt-del-go" sc-camel-on-click="{{ btDelGo }}">{{ btDelBtn }}</button></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ btIsMove }}">
+          <div class="bt-step">
+            <div class="bt-step-title">{{ btMoveTitle }}</div>
+            <div class="field" style="max-width:260px"><label>Новая дата партии</label><input class="input bt-move-to" type="date" min="2000-01-01" max="2099-12-31" sc-tplvalue="{{ btMoveTo }}" sc-camel-on-change="{{ btOnMoveTo }}"></div>
+            <div class="bt-move-info" style="color:{{ btMoveColor }}">{{ btMoveInfo }}</div>
+            <div class="dialog-actions"><button class="btn btn-secondary" sc-camel-on-click="{{ btCancel }}">Отмена</button><button data-edit class="btn btn-primary bt-move-go" sc-camel-on-click="{{ btMoveGo }}" disabled="{{ btMoveNo }}">{{ btMoveBtn }}</button></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ btList }}">
+          <div class="bt-bar">
+            <sc-raw-select class="input" style="width:190px" value="{{ btMonth }}" sc-camel-on-change="{{ btOnMonth }}" aria-label="Месяц"><sc-for list="{{ btMonthOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select>
+            <sc-if value="{{ btHasDup }}"><label class="dv-check bt-dup"><input type="checkbox" checked="{{ btDup }}" sc-camel-on-change="{{ btOnDup }}"><span>Только похожие на повтор</span></label></sc-if>
+            <sc-if value="{{ btCan }}"><button class="btn btn-ghost" sc-camel-on-click="{{ btSelAll }}">Выбрать все</button></sc-if>
+            <sc-if value="{{ btHasSel }}">
+              <div class="bt-sel"><span>{{ btSelText }}</span><button class="btn btn-ghost" sc-camel-on-click="{{ btSelNone }}">Снять выбор</button><button class="btn btn-secondary" sc-camel-on-click="{{ btSelXlsx }}">Excel</button><button data-edit class="btn btn-secondary bt-sel-del" sc-camel-on-click="{{ btSelDel }}">Удалить выбранные</button></div>
+            </sc-if>
+          </div>
+          <div class="bt-wrap">
+            <sc-raw-table class="table tc bt-tbl">
+              <sc-raw-thead><sc-raw-tr><sc-raw-th></sc-raw-th><sc-raw-th>Партия</sc-raw-th><sc-raw-th style="text-align:right">Отгрузок</sc-raw-th><sc-raw-th style="text-align:right">Клиентов</sc-raw-th><sc-raw-th style="text-align:right">CBM</sc-raw-th><sc-raw-th style="text-align:right">KG</sc-raw-th><sc-raw-th>Доставлено</sc-raw-th><sc-raw-th>Машины</sc-raw-th><sc-raw-th></sc-raw-th></sc-raw-tr></sc-raw-thead>
+              <sc-raw-tbody>
+                <sc-for list="{{ btRows }}" as="x">
+                  <sc-raw-tr class="{{ x.cur }}">
+                    <sc-raw-td class="c1 o-1 bt-ck"><sc-if value="{{ btCan }}"><input type="checkbox" checked="{{ x.checked }}" sc-camel-on-change="{{ x.onCheck }}" aria-label="Выбрать партию {{ x.date }}"></sc-if></sc-raw-td>
+                    <sc-raw-td class="c4 o-1 c-strong"><div style="font-weight:500;white-space:nowrap">{{ x.date }}</div><div class="bt-tags"><sc-for list="{{ x.tags }}" as="t"><span class="{{ t.cls }}">{{ t.text }}</span></sc-for></div></sc-raw-td>
+                    <sc-raw-td class="c2" data-label="Отгрузок" style="text-align:right">{{ x.n }}</sc-raw-td>
+                    <sc-raw-td class="c2" data-label="Клиентов" style="text-align:right">{{ x.clients }}</sc-raw-td>
+                    <sc-raw-td class="c2" data-label="CBM" style="text-align:right;white-space:nowrap">{{ x.cbm }}</sc-raw-td>
+                    <sc-raw-td class="c2" data-label="KG" style="text-align:right;white-space:nowrap">{{ x.kg }}</sc-raw-td>
+                    <sc-raw-td class="c3" data-label="Доставлено" style="color:{{ x.doneAll }}">{{ x.status }}</sc-raw-td>
+                    <sc-raw-td class="c3" data-label="Машины">{{ x.trucks }}</sc-raw-td>
+                    <sc-raw-td class="c-actions"><div class="bt-acts"><button class="btn btn-ghost" sc-camel-on-click="{{ x.open }}">Открыть</button><button class="btn btn-ghost" sc-camel-on-click="{{ x.xlsx }}">Excel</button><button data-edit class="btn btn-ghost bt-move" sc-camel-on-click="{{ x.move }}">Перенести</button><button data-edit class="btn btn-ghost bt-del" sc-camel-on-click="{{ x.del }}">Удалить</button></div></sc-raw-td>
+                  </sc-raw-tr>
+                </sc-for>
+              </sc-raw-tbody>
+            </sc-raw-table>
+            <sc-if value="{{ btNone }}"><div class="ai-empty" style="padding:18px">{{ btNoneText }}</div></sc-if>
+          </div>
+          <sc-if value="{{ btHasTrash }}">
+            <div class="bt-trash">
+              <div class="car-group-title">{{ btTrashTitle }}</div>
+              <sc-for list="{{ btTrash }}" as="t">
+                <div class="bt-trash-row"><div style="flex:1;min-width:0"><div style="font-weight:500">{{ t.title }}</div><div class="bt-sub">{{ t.sub }}</div></div>
+                  <button data-edit class="btn btn-secondary" sc-camel-on-click="{{ t.back }}">Вернуть</button><button class="btn btn-ghost" sc-camel-on-click="{{ t.xlsx }}">Excel</button><button data-edit class="btn btn-ghost" sc-camel-on-click="{{ t.drop }}" title="Убрать из корзины навсегда" aria-label="Убрать из корзины">✕</button></div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </sc-if>
       </div>
     </div>
   </sc-if>
@@ -3643,6 +3715,128 @@ class Component extends DCLogic {
     const blob = window.LogiEngine.xlsx(sheets), a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'BURAQ_' + name + '.xlsx';
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  // ---------- Партии (журнал → «🗂 Партии», js/batches.js): удалить, перенести / объединить, Excel, корзина ----------
+  // Удаление и перенос — обычные правки журнала (commit): в Google Таблицу уходят удаление строк или новые даты.
+  // Удалённые партии — в корзине на этом устройстве (localStorage «logi-batch-trash», 30 дней, до 20 партий).
+  batchTrash() { try { return window.LogiBatches.prune(JSON.parse(localStorage.getItem('logi-batch-trash') || '[]')); } catch (e) { return []; } }
+  batchTrashSave(t) { try { if (t.length) localStorage.setItem('logi-batch-trash', JSON.stringify(t)); else localStorage.removeItem('logi-batch-trash'); return true; } catch (e) { return false; } }
+  // правки планов этих партий (по дате или паре «A+B») — больше не к чему
+  batchDropEdits(dates) {
+    const set = new Set(dates), all = { ...(this.state.planEdits || {}) };
+    const gone = Object.keys(all).filter(k => k.split('|')[0].split('+').some(d => set.has(d)));
+    if (!gone.length) return {};
+    gone.forEach(k => delete all[k]);
+    try { localStorage.setItem('logi-plan-edits', JSON.stringify(all)); } catch (e) {}
+    return { planEdits: all };
+  }
+  // журнал, планы и карта, открытые на удалённой или перенесённой партии, — на новую дату или «все»
+  batchNav(s, dates, to) {
+    const o = {}, has = d => dates.includes(d);
+    if (has(s.jDate)) Object.assign(o, { jDate: to || 'all', jLimit: 60 });
+    if (has(s.jDate2) || (to && s.jDate2 === to)) o.jDate2 = '';
+    if (has(s.planDate)) o.planDate = to || '';
+    if (has(s.planDate2)) o.planDate2 = '';
+    if (has(s.mapDate)) o.mapDate = to || 'all';
+    return o;
+  }
+  batchRows(ships, data) {
+    const cm = new Map((data.clients || []).map(c => [String(c.bl || '').trim().toUpperCase(), c]));
+    const rows = ships.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : String(a.bl).localeCompare(String(b.bl)));
+    return [['Дата', 'BL', 'Клиент', 'Имя', 'Район', 'Адрес', 'CBM', 'KG', 'Мест', 'Машина', 'Рейс', 'Статус', 'Примечание', 'Локация', 'Коробки']].concat(rows.map(s => {
+      const c = cm.get(String(s.bl || '').trim().toUpperCase()) || {};
+      return [dLong(s.date), s.bl, c.brand || '', c.name || '', c.district || '', c.address || '', +s.cbm || 0, +s.kg || 0, +s.places || 0, TR[s.truck] || s.truck || '',
+        s.route == null ? '' : s.route, ST[s.status] || s.status || '', s.note || '', s.loc || '', s.boxes || ''];
+    }));
+  }
+  batchXlsx(ships, data, name) { this.dvXlsx(name, [{ name: 'Отгрузки', rows: this.batchRows(ships, data) }]); }
+  batchMsg(msg) { this.setState(s => ({ jMsg: msg, dialog: s.dialog && s.dialog.type === 'batches' ? { ...s.dialog, step: null, sel: {}, msg } : s.dialog })); }
+  batchDelete(dates, backup) {
+    if (this.readOnly) return;
+    const B = window.LogiBatches, data = this.state.data, r = B.remove(data, dates);
+    if (!r.removed.length) return;
+    const ds = dates.slice().sort(), n = r.removed.length;
+    if (backup) this.batchXlsx(r.removed, data, ds.length === 1 ? 'partiya_' + ds[0] : 'partiyalar_' + ds[0] + '_' + ds[ds.length - 1]);
+    const trash = B.trashAdd(this.batchTrash(), { dates: ds, ships: r.removed }), kept = this.batchTrashSave(trash);
+    this.commit(r.data);
+    this.setState(s => ({ ...this.batchNav(s, ds, null), ...this.batchDropEdits(ds) }));
+    this.batchMsg({ color: 'var(--color-accent)', undo: kept ? trash[0].id : null,
+      text: (ds.length === 1 ? 'Партия ' + dLong(ds[0]) + ' удалена' : 'Удалено партий: ' + ds.length) + ' — ' + n + ' ' + plural(n, 'отгрузка', 'отгрузки', 'отгрузок') + '.' +
+        (this.gsUrl ? ' Строки удаляются из Google Таблицы.' : '') + (kept ? ' Вернуть можно 30 дней: «🗂 Партии» → «Корзина».' : '') });
+  }
+  batchRestore(id) {
+    if (this.readOnly) return;
+    const trash = this.batchTrash(), it = trash.find(t => t.id === id);
+    if (!it) return this.batchMsg({ color: 'var(--color-danger-ink)', text: 'Этой партии в корзине уже нет.' });
+    const r = window.LogiBatches.restore(this.state.data, it);
+    if (r.added) this.commit(r.data);
+    this.batchTrashSave(trash.filter(t => t !== it));
+    this.batchMsg({ color: 'var(--color-accent)',
+      text: (it.dates.length === 1 ? 'Партия ' + dLong(it.dates[0]) + ' возвращена' : 'Возвращены партии: ' + it.dates.map(dLong).join(', ')) + ' — ' + r.added + ' ' + plural(r.added, 'отгрузка', 'отгрузки', 'отгрузок') + '.' +
+        (r.skipped ? ' Ещё ' + r.skipped + ' уже были в журнале — второй раз не добавлены.' : '') + (r.added && this.gsUrl ? ' Строки допишутся в конец Google Таблицы.' : '') });
+  }
+  batchMove(from, to) {
+    if (this.readOnly) return 'ro';
+    const r = window.LogiBatches.move(this.state.data, from, to);
+    if (r.error) return r.error;
+    this.commit(r.data);
+    this.setState(s => ({ ...this.batchNav(s, [from], to), ...this.batchDropEdits([from, to]) }));
+    this.batchMsg({ color: 'var(--color-accent)', text: 'Партия ' + dLong(from) + (r.merged ? ' объединена с партией ' + dLong(to) : ' перенесена на ' + dLong(to)) + ' — ' + r.n + ' ' + plural(r.n, 'отгрузка', 'отгрузки', 'отгрузок') + '.' +
+      (this.gsUrl ? ' В Google Таблице поменяется дата у этих строк.' : '') });
+    return null;
+  }
+  batchView(st, dl, data) {
+    const B = window.LogiBatches, ro = this.readOnly, all = B.summary(data), sel = dl.sel || {}, trash = this.batchTrash(), step = ro ? null : dl.step;
+    const setDl = patch => this.setState(s => s.dialog && s.dialog.type === 'batches' ? { dialog: { ...s.dialog, ...patch } } : null);
+    const months = [...new Set(all.map(x => x.date.slice(0, 7)))], month = months.includes(dl.month) ? dl.month : 'all', dup = !!dl.dup;
+    const list = all.filter(x => (month === 'all' || x.date.startsWith(month)) && (!dup || x.dupOf.length)), chosen = all.filter(x => sel[x.date]);
+    const sum = (xs, k) => xs.reduce((a, x) => a + x[k], 0), otg = n => plural(n, 'отгрузка', 'отгрузки', 'отгрузок'), parts = n => plural(n, 'партия', 'партии', 'партий');
+    const out = { btSub: all.length + ' ' + parts(all.length) + ' · ' + f0(sum(all, 'n')) + ' ' + otg(sum(all, 'n')) + ' · ' + f1(sum(all, 'cbm'), 1) + ' м³',
+      btCan: !ro, btList: !step, btHasMsg: !!dl.msg, btMsg: dl.msg ? dl.msg.text : '', btMsgColor: dl.msg ? dl.msg.color : 'var(--color-divider)',
+      btCanUndo: !!(dl.msg && dl.msg.undo) && !ro, btUndo: () => dl.msg && this.batchRestore(dl.msg.undo), btMsgClose: () => setDl({ msg: null }),
+      btMonth: month, btOnMonth: e => setDl({ month: e.target.value }), btMonthOpts: [{ v: 'all', l: 'Все месяцы' }].concat(months.map(m => ({ v: m, l: MONTHS[+m.slice(5) - 1] + ' ' + m.slice(0, 4) }))),
+      btHasDup: all.some(x => x.dupOf.length), btDup: dup, btOnDup: e => setDl({ dup: e.target.checked }),
+      btRows: list.map(x => ({ date: dLong(x.date), cur: x.date === st.jDate ? 'bt-cur' : '', n: f0(x.n), clients: f0(x.clients), cbm: f1(x.cbm, 2), kg: f0(x.kg), places: f0(x.places),
+        status: x.done + ' из ' + x.n + (x.road ? ' · в пути ' + x.road : '') + (x.cancel ? ' · отменено ' + x.cancel : ''), doneAll: x.done === x.n ? 'var(--color-accent-text)' : 'inherit',
+        trucks: x.trucks ? x.trucks + ' маш. · ' + x.planned + ' из ' + x.n : 'не назначены',
+        tags: x.dupOf.map(d => ({ text: 'похоже на повтор партии ' + dLong(d.date) + ' (' + Math.round(d.share * 100) + ' %)', cls: 'tag tag-red' }))
+          .concat(x.unknown ? [{ text: 'BL нет в справочнике: ' + x.unknown, cls: 'tag tag-outline' }] : []),
+        checked: !!sel[x.date], onCheck: e => setDl({ sel: { ...sel, [x.date]: e.target.checked } }),
+        open: () => this.setState({ dialog: null, tab: 'journal', jDate: x.date, jDate2: '', jLimit: 60 }),
+        xlsx: () => this.batchXlsx(data.shipments.filter(s => s.date === x.date), data, 'partiya_' + x.date),
+        move: () => setDl({ step: { kind: 'move', from: x.date, to: '' }, msg: null }),
+        del: () => setDl({ step: { kind: 'del', dates: [x.date], backup: true }, msg: null }) })),
+      btNone: !list.length, btNoneText: all.length ? 'Нет партий по этому фильтру.' : 'Партий пока нет.',
+      btHasSel: !!chosen.length && !ro, btSelText: 'Выбрано: ' + chosen.length + ' ' + parts(chosen.length) + ' · ' + f0(sum(chosen, 'n')) + ' ' + otg(sum(chosen, 'n')),
+      btSelAll: () => setDl({ sel: { ...sel, ...Object.fromEntries(list.map(x => [x.date, true])) } }), btSelNone: () => setDl({ sel: {} }),
+      btSelDel: () => setDl({ step: { kind: 'del', dates: chosen.map(x => x.date), backup: true }, msg: null }),
+      btSelXlsx: () => this.batchXlsx(data.shipments.filter(s => sel[s.date]), data, 'partiyalar_' + chosen.length),
+      btHasTrash: !!trash.length, btTrashTitle: 'Корзина на этом устройстве (' + trash.length + ')',
+      btTrash: trash.map(t => { const at = new Date(t.at), left = Math.max(1, B.TRASH_DAYS - Math.floor((Date.now() - at) / 864e5));
+        return { title: t.dates.map(dLong).join(', '), sub: t.ships.length + ' ' + otg(t.ships.length) + ' · удалено ' + dLong(isoDay(at)) + ' ' + hhmm(at.getHours() * 60 + at.getMinutes()) + ' · вернуть можно ещё ' + left + ' ' + plural(left, 'день', 'дня', 'дней'),
+          back: () => this.batchRestore(t.id), xlsx: () => this.batchXlsx(t.ships, data, 'korzina_' + t.dates[0]),
+          drop: () => { if (confirm('Убрать из корзины навсегда? Вернуть партию будет нельзя.')) { this.batchTrashSave(trash.filter(z => z.id !== t.id)); this.setState({}); } } }; }),
+      btIsDel: false, btIsMove: false };
+    if (step && step.kind === 'del') {
+      const rows = all.filter(x => step.dates.includes(x.date)), n = sum(rows, 'n'), road = sum(rows, 'road'), done = sum(rows, 'done');
+      Object.assign(out, { btIsDel: true, btDelTitle: rows.length === 1 ? 'Удалить партию ' + dLong(rows[0].date) + '?' : 'Удалить ' + rows.length + ' ' + plural(rows.length, 'партию', 'партии', 'партий') + '?',
+        btDelList: rows.map(x => ({ text: dLong(x.date) + ': ' + x.n + ' ' + otg(x.n) + ', клиентов ' + x.clients + ', ' + f1(x.cbm, 2) + ' м³' })),
+        btDelWarn: ['Отгрузки пропадут из журнала, планов, карты и отчётов. Справочник клиентов не меняется.',
+          road ? 'В пути: ' + road + ' — водители сейчас везут этот груз.' : '', done ? 'Уже доставлено: ' + done + '. Отметки водителей в боте останутся.' : '',
+          this.gsUrl ? 'Из Google Таблицы удалится строк: ' + n + '.' : '', 'Партия попадёт в корзину на этом устройстве: 30 дней её можно вернуть.'].filter(Boolean).map(text => ({ text })),
+        btDelRed: road > 0, btDelBackup: step.backup !== false, btOnBackup: e => setDl({ step: { ...step, backup: e.target.checked } }),
+        btDelBtn: 'Удалить ' + n + ' ' + plural(n, 'отгрузку', 'отгрузки', 'отгрузок'), btDelGo: () => this.batchDelete(step.dates, step.backup !== false), btCancel: () => setDl({ step: null }) });
+    } else if (step && step.kind === 'move') {
+      const from = all.find(x => x.date === step.from), to = step.to || '', there = all.find(x => x.date === to), ok = B.okDate(to) && to !== step.from && !!from;
+      Object.assign(out, { btIsMove: true, btMoveTitle: 'Перенести партию ' + dLong(step.from) + (from ? ' (' + from.n + ' ' + otg(from.n) + ')' : '') + ' на другую дату',
+        btMoveTo: to, btOnMoveTo: e => setDl({ step: { ...step, to: e.target.value } }), btMoveOk: ok, btMoveNo: !ok,
+        btMoveInfo: !to ? 'Выберите дату. Если на эту дату уже есть партия — партии объединятся в одну.' : !B.okDate(to) ? 'Проверьте дату: год ' + to.slice(0, 4) + '. Выберите её в календаре.' :
+          to === step.from ? 'Это та же дата.' : there ? 'На ' + dLong(to) + ' уже есть партия (' + there.n + ' ' + otg(there.n) + ') — партии объединятся в одну: ' + (there.n + from.n) + ' ' + otg(there.n + from.n) + '.' :
+          'Партия будет с датой ' + dLong(to) + '.' + (this.gsUrl ? ' В Google Таблице поменяется дата у ' + from.n + ' ' + plural(from.n, 'строки', 'строк', 'строк') + '.' : ''),
+        btMoveColor: there && ok ? 'var(--color-danger-ink)' : 'var(--color-neutral-700)', btMoveBtn: there && ok ? 'Объединить' : 'Перенести',
+        btMoveGo: () => { if (ok) this.batchMove(step.from, to); }, btCancel: () => setDl({ step: null }) });
+    }
+    return out;
   }
   driversView(st, S, D) {
     const E = window.LogiEngine, data = st.data, T = this.gsTg, today = isoDay(), out = {};
@@ -5505,7 +5699,7 @@ class Component extends DCLogic {
     const curSub = top === 'reports' ? (st.tab === 'dash' ? 'dash' : st.repKind || 'batch') : st.tab;
     const subtabs = (SUB[top] || []).filter(([k]) => !(k === 'link' && this.readOnly)).map(([k, l]) => ({ l, cls: k === curSub ? 'subtab on' : 'subtab',
       go: () => top === 'reports' ? this.setState(k === 'dash' ? { tab: 'dash' } : { tab: 'reports', repKind: k }) : this.goSettings(k) }));
-    const base = { tabs, subtabs, hasSubtabs: subtabs.length > 0, loading: !st.ready, isJournal: false, isClients: false, isMap: false, isDash: false, isPlans: false, isDrivers: false, isViz: false, isTariffs: false, isReports: false, isImport: false, isShipDialog: false, isClientDialog: false, isLocAskDialog: false, isWhDialog: false, isVehDialog: false, isDrvDialog: false, isApDialog: false, isPackDialog: false, isPhotoDialog: false, isGsDialog: false, isCheck: false, isFleetSet: false, depotName: '', savedNote: '', exportXlsx: this.exportXlsx, mapRef: this.mapRef, planMapRef: this.planMapRef, vizRef: this.vizRef,
+    const base = { tabs, subtabs, hasSubtabs: subtabs.length > 0, loading: !st.ready, isJournal: false, isClients: false, isMap: false, isDash: false, isPlans: false, isDrivers: false, isViz: false, isTariffs: false, isReports: false, isImport: false, isShipDialog: false, isBatchDialog: false, isClientDialog: false, isLocAskDialog: false, isWhDialog: false, isVehDialog: false, isDrvDialog: false, isApDialog: false, isPackDialog: false, isPhotoDialog: false, isGsDialog: false, isCheck: false, isFleetSet: false, depotName: '', savedNote: '', exportXlsx: this.exportXlsx, mapRef: this.mapRef, planMapRef: this.planMapRef, vizRef: this.vizRef,
       fileInputRef: this.fileInputRef, onFilePicked: this.onFilePicked, connectFile: this.connectFile, disconnectFile: this.disconnectFile, saveNow: () => this.saveToFile(), reloadFromFile: () => this.readFromHandle(),
       account: () => window.LogiAuth && window.LogiAuth.openAccount(), readOnly: this.readOnly };
     const fs = st.fileStatus, fat = st.fileAt ? hhmm(st.fileAt.getHours() * 60 + st.fileAt.getMinutes()) : '';
@@ -5635,7 +5829,9 @@ class Component extends DCLogic {
         jLocShow: this.canLoc && !!st.jDate && st.jDate !== 'all', jLocNeed: this.needLoc(st.jDate), openJLoc: () => this.openLocAsk(st.jDate),
         // «📤 В группу»: выбранная партия — в группу отчётов (бот подключён)
         jGroupShow: !this.readOnly && !!this.gsUrl && !!(this.gsTg && this.gsTg.hooked) && !!st.jDate && st.jDate !== 'all', jToGroup: () => this.batchToGroup(jd2 ? [st.jDate, jd2].sort().join('+') : st.jDate, 'jMsg'), dvBusy: !!st.dvBusy,
-        jHasMsg: !!st.jMsg, jMsg: st.jMsg ? st.jMsg.text : '', jMsgColor: st.jMsg ? st.jMsg.color : 'var(--color-divider)', jMsgClose: () => this.setState({ jMsg: null }), onJStatus: e => this.setState({ jStatus: e.target.value, jLimit: 60 }), onJSearch: e => this.setState({ jSearch: e.target.value, jLimit: 60 }), newShipment: () => this.openShipment(null) });
+        jHasMsg: !!st.jMsg, jMsg: st.jMsg ? st.jMsg.text : '', jMsgColor: st.jMsg ? st.jMsg.color : 'var(--color-divider)', jMsgClose: () => this.setState({ jMsg: null }),
+        jMsgUndo: !!(st.jMsg && st.jMsg.undo) && !this.readOnly, jUndo: () => st.jMsg && st.jMsg.undo && this.batchRestore(st.jMsg.undo),
+        openBatches: () => this.setState({ dialog: { type: 'batches', sel: {}, month: 'all', step: null } }), onJStatus: e => this.setState({ jStatus: e.target.value, jLimit: 60 }), onJSearch: e => this.setState({ jSearch: e.target.value, jLimit: 60 }), newShipment: () => this.openShipment(null) });
     }
 
     if (st.tab === 'clients' || st.tab === 'dash') {
@@ -6118,6 +6314,9 @@ class Component extends DCLogic {
             ...(q && !(rec.bl + ' ' + (rec.note || '')).toLowerCase().includes(q) ? { jSearch: '' } : {}) });
         };
         out.deleteItem = () => { if (confirm('Удалить отгрузку?')) { this.commit({ ...data, shipments: data.shipments.filter(s => s.id !== dl.id) }); this.setState({ dialog: null }); } };
+      } else if (dl.type === 'batches') {
+        out.isBatchDialog = true;
+        Object.assign(out, this.batchView(st, dl, data));
       } else if (dl.type === 'locask') {
         // «Какая локация на эту партию?» — все клиенты партии; у каждого: адрес клиента, точки из анкеты, склады, новая точка
         out.isLocAskDialog = true;
