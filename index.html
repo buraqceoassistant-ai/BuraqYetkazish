@@ -336,7 +336,7 @@
           <section class="blueprint" style="padding:18px 20px;display:flex;flex-direction:column;gap:8px">
             <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
             <h3 style="margin:0">Нет тарифа Kamaz</h3>
-            <div style="font-size:13px;color:var(--color-neutral-700);text-wrap:pretty">План C и рейсы Kamaz в журнале считаются без цены.</div>
+            <div style="font-size:13px;color:var(--color-neutral-700);text-wrap:pretty">Рейсы Kamaz в планах и журнале считаются без цены.</div>
             <div><button class="btn btn-secondary" sc-camel-on-click="{{ goTariffs }}">Заполнить тариф</button></div>
           </section>
         </sc-if>
@@ -939,14 +939,13 @@
           <h3 style="margin:0 0 10px">Сравнение планов</h3>
           <div class="glass" style="border:1px solid var(--color-divider);overflow-x:auto">
             <sc-raw-table class="table tc">
-              <sc-raw-thead><sc-raw-tr><sc-raw-th>Партия</sc-raw-th><sc-raw-th style="text-align:right">План A</sc-raw-th><sc-raw-th style="text-align:right">План B</sc-raw-th><sc-raw-th style="text-align:right">План C</sc-raw-th><sc-raw-th style="text-align:right">План X</sc-raw-th><sc-raw-th style="text-align:right">Журнал</sc-raw-th><sc-raw-th>Самый дешёвый</sc-raw-th><sc-raw-th class="no-print"></sc-raw-th></sc-raw-tr></sc-raw-thead>
+              <sc-raw-thead><sc-raw-tr><sc-raw-th>Партия</sc-raw-th><sc-raw-th style="text-align:right">План A</sc-raw-th><sc-raw-th style="text-align:right">План B</sc-raw-th><sc-raw-th style="text-align:right">План X</sc-raw-th><sc-raw-th style="text-align:right">Журнал</sc-raw-th><sc-raw-th>Самый дешёвый</sc-raw-th><sc-raw-th class="no-print"></sc-raw-th></sc-raw-tr></sc-raw-thead>
               <sc-raw-tbody>
                 <sc-for list="{{ repEcon }}" as="e">
                   <sc-raw-tr>
                     <sc-raw-td class="c3 o-1 c-strong" style="font-weight:500;white-space:nowrap">{{ e.label }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="План A" style="text-align:right;white-space:nowrap">{{ e.a }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="План B" style="text-align:right;white-space:nowrap">{{ e.b }}</sc-raw-td>
-                    <sc-raw-td class="c2" data-label="План C" style="text-align:right;white-space:nowrap">{{ e.c }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="План X" style="text-align:right;white-space:nowrap">{{ e.x }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="Журнал" style="text-align:right;white-space:nowrap">{{ e.j }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="Самый дешёвый">{{ e.best }}</sc-raw-td>
@@ -1372,7 +1371,7 @@
     <main class="page" style="max-width:1560px;margin:0 auto;padding:28px;display:flex;flex-direction:column;gap:24px">
       <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
         <div>
-          <div class="eyebrow" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">Reja A / B / C</div>
+          <div class="eyebrow" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">Reja A / B / X</div>
           <h1 style="margin:2px 0 0;font-size:38px">Планы маршрутов</h1>
         </div>
         <div style="font-size:13px;color:var(--color-neutral-700);padding-bottom:8px">{{ planSummary }}</div>
@@ -1398,6 +1397,7 @@
               <div style="font-family:var(--font-heading);font-weight:500;font-size:24px">{{ p.title }}</div>
               <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
                 <sc-if value="{{ p.manual }}"><span class="tag tag-outline plan-manual-tag" title="План изменён вручную: точки переложены по рейсам">вручную</span></sc-if>
+                <sc-if value="{{ p.ai }}"><span class="tag tag-red plan-ai-tag" title="План составил Buraq AI, посчитал сайт">Buraq AI</span></sc-if>
                 <sc-if value="{{ p.cheapest }}"><span class="tag tag-accent" title="Меньше всех платит компания (доставку за кольцом и мелкий груз оплачивают клиенты)">выгоднее всех</span></sc-if>
               </span>
             </div>
@@ -1422,11 +1422,22 @@
         </sc-for>
       </div>
 
-      <button class="plan-c-bar" sc-camel-on-click="{{ togglePlanC }}" style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;width:100%;text-align:left;background:transparent;color:inherit;font:inherit;font-size:13px;padding:10px 16px;border:1px dashed var(--color-divider);cursor:pointer">
-        <span style="font-family:var(--font-heading);font-weight:500;font-size:16px">{{ planCTitle }}</span>
-        <span style="color:var(--color-neutral-700)">{{ planCInfo }}</span>
-        <span style="margin-left:auto;color:var(--color-accent-700);white-space:nowrap">{{ planCAct }}</span>
-      </button>
+      <sc-if value="{{ paiShow }}">
+        <div class="plan-ai">
+          <div class="plan-ai-head">
+            <span class="plan-ai-badge">Buraq AI</span>
+            <div style="flex:1;min-width:220px"><div style="font-weight:500">{{ paiTitle }}</div><div class="plan-ai-note">{{ paiNote }}</div></div>
+            <sc-if value="{{ paiCan }}"><button data-edit class="btn btn-secondary plan-ai-go" sc-camel-on-click="{{ paiGo }}" disabled="{{ paiAnyBusy }}">{{ paiBtn }}</button></sc-if>
+          </div>
+          <sc-if value="{{ paiBusy }}"><div class="imp-alert imp-busy"><div style="flex:1"><div style="font-weight:500">Buraq AI раскладывает точки по рейсам</div><div style="font-size:12px;color:var(--color-neutral-700);margin-top:4px">Обычно 20–60 секунд. Не закрывайте страницу.</div></div></div></sc-if>
+          <sc-if value="{{ paiHasMsg }}"><div class="dv-msg" style="border-left-color:{{ paiMsgColor }}"><div style="flex:1;text-wrap:pretty">{{ paiMsg }}</div><button class="btn btn-ghost" sc-camel-on-click="{{ paiMsgClose }}">Закрыть</button></div></sc-if>
+          <sc-if value="{{ paiHas }}">
+            <div class="ai-rep-sum" translate="no">{{ paiSummary }}</div>
+            <sc-if value="{{ paiHasNotes }}"><ul class="plan-ai-notes"><sc-for list="{{ paiNotes }}" as="n"><li translate="no">{{ n.text }}</li></sc-for></ul></sc-if>
+            <div class="ai-rep-meta">{{ paiMeta }}</div>
+          </sc-if>
+        </div>
+      </sc-if>
 
       <sc-if value="{{ peShow }}">
         <div class="plan-edit-bar">
@@ -2206,9 +2217,8 @@ const okDate = d => /^(20\d\d)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(Stri
 const ST = { 'Rejada': 'В плане', 'Yolda': 'В пути', 'Yetkazildi': 'Доставлено', 'Qolib ketgan': 'Осталось', 'Mijoz ozi oldi': 'Клиент забрал сам', 'Bekor qilindi': 'Отменено' };
 const TR = { 'Belgilanmagan': 'Не назначена', 'Mijoz ozi oladi': 'Клиент заберёт' };
 const PLAN_INFO = {
-  A: { title: 'A — экономичный', desc: S => 'Самый дешёвый для компании без перегруза: меньше рейсов и машин, маршруты по направлениям. Labo, Changan, Gazel и Kamaz. Gazel строго до ' + f1(S.gazelM3, 1) + ' м³ / ' + f0(S.gazelKg) + ' кг, Kamaz — только если груз больше.' },
+  A: { title: 'A — Buraq AI', desc: S => 'Самый дешёвый для компании без перегруза: меньше рейсов и машин, маршруты по направлениям. Labo, Changan, Gazel и Kamaz. Gazel строго до ' + f1(S.gazelM3, 1) + ' м³ / ' + f0(S.gazelKg) + ' кг, Kamaz — только если груз больше.' },
   B: { title: 'B — Gazel и Labo', desc: S => 'Как можно меньше машин: Gazel, Labo и малый грузовик (Changan, Shineray). Gazel можно загрузить с допуском — до ' + f1((+S.gazelM3 || 0) + (+S.bTolM3 || 0), 1) + ' м³ / ' + f0((+S.gazelKg || 0) + (+S.bTolKg || 0)) + ' кг. Kamaz — только если груз больше.' },
-  C: { title: 'C — только Kamaz', desc: () => 'Большие машины делают несколько рейсов, каждая на своей стороне города.' },
   // план X (пробный): один район — одна машина (districtTrips в js/logi-engine.js)
   X: { title: 'X — по районам', desc: () => 'Пробный. Каждый район целиком везёт одна машина; районы с малым грузом — вместе, сначала соседние. Район больше машины — остаток едет с машиной соседнего района. Загрузка как в плане A.' }
 };
@@ -2302,6 +2312,12 @@ const AI_REP_SCHEMA = { name: 'report', description: 'ИИ-отчёт: итог,
   suggestions: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['area', 'title', 'detail', 'effect'], properties: {
     area: { type: 'string', enum: ['deliveries', 'costs', 'data'] }, title: { type: 'string', description: 'Что сделать, до 10 слов' },
     detail: { type: 'string', description: 'Как сделать: 1–2 предложения' }, effect: { type: 'string', description: 'Ожидаемый эффект, по возможности в сумах, рейсах или процентах' } } } } } } };
+// Buraq AI в «Планах»: рейсы — группы точек (id точек из сводки); стоимость, перегруз и время считает сайт (P.manual)
+const PLAN_AI_SCHEMA = { name: 'plan', description: 'План развоза партии: рейсы с точками.', input_schema: { type: 'object', additionalProperties: false, required: ['summary', 'trips', 'notes'], properties: {
+  summary: { type: 'string', description: 'Как разложил и почему так выгоднее: 2–3 предложения' },
+  trips: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['kind', 'stops'], properties: {
+    kind: { type: 'string', enum: ['labo', 'changan', 'gazel', 'kamaz'] }, stops: { type: 'array', items: { type: 'string' }, description: 'id точек рейса' } } } },
+  notes: { type: 'array', items: { type: 'string' }, description: 'Что проверить диспетчеру: до 4 коротких пунктов' } } } };
 // разбор ИИ «Новой машины»: вывод, причины, идеи (какие цифры расчёта поменять — пересчитывает сайт), риски, вопросы
 const CAR_AI_KEYS = ['price', 'count', 'm3', 'kg', 'rangeKm', 'kwh100', 'kwhPrice', 'salary', 'driverPerTrip', 'upkeepYear', 'perMonth', 'perDay', 'extraTrips',
   'leaseAdv', 'leaseRate', 'leaseMonths', 'charger', 'regFee', 'parking', 'downtime'];
@@ -2330,7 +2346,7 @@ const telHref = t => t ? 'tel:' + String(t).replace(/[^\d+]/g, '').replace(/^998
 class Component extends DCLogic {
   state = { ready: false, tab: 'journal', data: null, ver: 0, savedAt: null,
     jDate: 'all', jDate2: '', jGroup: (() => { try { return localStorage.getItem('logi-j-group') || 'truck'; } catch (e) { return 'truck'; } })(), jLimit: 60, cLimit: 100, editRow: null, jStatus: 'all', jSearch: '', cSearch: '', cDistrict: 'all', cZone: 'all',
-    mapDate: 'all', mapPlan: 'none', mapBase: (() => { try { return localStorage.getItem('logi-map-base') || 'yandex'; } catch (e) { return 'yandex'; } })(), planDate: '', planDate2: '', planKey: 'A', planC: (() => { try { return localStorage.getItem('logi-plan-c') === '1'; } catch (e) { return false; } })(), dialog: null,
+    mapDate: 'all', mapPlan: 'none', mapBase: (() => { try { return localStorage.getItem('logi-map-base') || 'yandex'; } catch (e) { return 'yandex'; } })(), planDate: '', planDate2: '', planKey: 'A', dialog: null,
     planEdits: (() => { try { const v = JSON.parse(localStorage.getItem('logi-plan-edits') || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } })(), planHi: null,
     vizTrip: 'all', vizStep: 0, vizSel: null, vizView: '3d', vizErr: '',
     vizQ: (() => { try { const v = localStorage.getItem('logi-viz-quality'); return v === 'hq' || v === 'std' ? v : ''; } catch (e) { return ''; } })(),   // качество 3D: '' — само
@@ -2340,7 +2356,7 @@ class Component extends DCLogic {
     dvTab: 'day', dvDate: '', dvPeriod: '7', dvTruck: 'all', dvRes: 'all', dvMsg: null, dvBusy: false, dvSet: null, dvCarryTo: '',
     // вкладка и подвкладка — сразу (партии — в setReady, когда известны даты)
     ...(NAV_TABS.includes(NAV0.tab) ? { tab: NAV0.tab } : {}), ...(['batch', 'cost', 'fleet', 'newcar', 'drivers', 'ai'].includes(NAV0.repKind) ? { repKind: NAV0.repKind } : {}),
-    ...(['tariffs', 'fleetset', 'link', 'check'].includes(NAV0.setLast) ? { setLast: NAV0.setLast } : {}), ...(['A', 'B', 'C', 'X'].includes(NAV0.planKey) ? { planKey: NAV0.planKey } : {}),
+    ...(['tariffs', 'fleetset', 'link', 'check'].includes(NAV0.setLast) ? { setLast: NAV0.setLast } : {}), ...(['A', 'B', 'X'].includes(NAV0.planKey) ? { planKey: NAV0.planKey } : {}),
     ...(['day', 'deliv'].includes(NAV0.dvTab) ? { dvTab: NAV0.dvTab } : {}) };
   mapRef = React.createRef();
   dvMapRef = React.createRef();
@@ -2515,11 +2531,12 @@ class Component extends DCLogic {
     return out;
   }
   planTitle(k, P) { if (k !== 'B' || !P || !P.B || !P.B.fleet) return PLAN_INFO[k].title; const m = this.planKinds(P.B, P); return m.on.length ? 'B — ' + m.on.join(' · ') : PLAN_INFO.B.title; }
-  planDesc(k, S, P) {
+  planDesc(k, S, P, ai) {
+    if (k === 'A' && ai) return 'Составил Buraq AI: точки по рейсам и машинам так, чтобы компания платила меньше. Стоимость, перегруз и время посчитал сайт.';
     if ((k !== 'A' && k !== 'B') || !P || !P[k] || !P[k].fleet) return PLAN_INFO[k].desc(S);
     const m = this.planKinds(P[k], P), np = m.noPrice.length ? ' ' + m.noPrice.join(', ') + ' — нет тарифа, в план не идёт (вкладка «Тарифы»).' : '';
     const T = P[k].smallTo, sm = T ? ' Мелкий груз (меньше ' + f1(T, 2) + ' м³) — на ' + this.smallLabels(P[k], P) + ', Gazel — от ' + f1(T, 2) + ' м³.' : '';
-    if (k === 'A') return 'Самый дешёвый для компании без перегруза: меньше рейсов и машин, маршруты по направлениям. Машины: ' + (m.on.join(', ') || '—') + '.' + np + sm + (m.big ? ' Каждая — строго по своему кузову, Kamaz — только если груз больше.' : ' Каждая — строго по своему кузову.');
+    if (k === 'A') return 'Пока Buraq AI не составил план — план сайта: самый дешёвый для компании без перегруза: меньше рейсов и машин, маршруты по направлениям. Машины: ' + (m.on.join(', ') || '—') + '.' + np + sm + (m.big ? ' Каждая — строго по своему кузову, Kamaz — только если груз больше.' : ' Каждая — строго по своему кузову.');
     return 'Как можно меньше машин: ' + (m.on.join(', ') || '—') + '.' + np + sm + (m.tol ? ' Gazel можно загрузить с допуском — +' + f1(m.tol.tolM3, 1) + ' м³ / +' + f0(m.tol.tolKg) + ' кг к полезному объёму каждой.' : '') + (m.big ? ' Kamaz — только если груз больше.' : '');
   }
   // машина правила мелкого груза — Changan / Shineray: подпись по маркам автопарка («Shineray»)
@@ -3120,6 +3137,76 @@ class Component extends DCLogic {
   }
 
   // ---------- ручная правка плана ----------
+  // ---------- Buraq AI в «Планах»: план A составляет ИИ, планы B и X — улучшает ----------
+  // В ИИ уходят только точки (код S1…, район, кольцо, км и направление от склада, груз), машины и тарифы — без клиентов,
+  // адресов и координат. ИИ отвечает рейсами (группы точек); план считает сайт (P.manual), как ручную правку.
+  planAiFacts(P, pd, key, S) {
+    const E = window.LogiEngine, cur = key === 'A' ? P.A : this.planOf(P, pd, key), codes = new Map(), stops = [];
+    const r1 = x => x == null || !isFinite(x) ? null : Math.round(x * 10) / 10, r3 = x => Math.round((+x || 0) * 1000) / 1000;
+    cur.trips.forEach(t => t.stops.forEach(x => { const k = E.stopKey(x); if (codes.has(k)) return; const id = 'S' + (codes.size + 1); codes.set(k, id);
+      stops.push({ id, district: (x.client && x.client.district) || '', zone: x.zone === 'out' ? 'за кольцом' : 'внутри кольца', km: x.noLoc ? null : r1(x.depotKm), dir: x.noLoc ? null : Math.round(x.angle || 0),
+        cbm: r3(x.cbm), kg: Math.round(+x.kg || 0), places: +x.places || 0, ...(x.noLoc ? { noLocation: true } : {}) }); }));
+    const T = k => k === 'labo' ? [S.laboBase, S.laboPt, S.laboPt, S.laboBaseIncludesPts] : k === 'kamaz' ? [S.kamazBase, S.kamazPt, S.kamazPt, S.kamazBaseIncludesPts] :
+      k === 'changan' ? [S.changanBase, S.changanPt, S.changanPt, S.changanBaseIncludesPts] : [S.gazelBase, S.gazelPtIn, S.gazelPtOut, S.baseIncludesPts];
+    const kinds = [...new Set((cur.fleet || []).map(v => v.kind))];
+    const fleet = kinds.map(k => { const vs = cur.fleet.filter(v => v.kind === k), t = T(k), cars = ((P.cars || {})[k] || []).length;
+      return { kind: k, name: this.kindLabel(P, k), cars: cars || null, m3: r1(Math.min(...vs.map(v => v.useM3 ?? v.m3))), kg: Math.min(...vs.map(v => v.nomKg ?? v.kg)),
+        ...(vs.some(v => v.tolM3 || v.tolKg) ? { toleranceM3: r1(vs[0].tolM3 || 0), toleranceKg: vs[0].tolKg || 0 } : {}),
+        tariff: { base: t[0] == null ? null : +t[0], perPointInsideRing: t[1] == null ? null : +t[1], perPointOutsideRing: t[2] == null ? null : +t[2], pointsInBase: +t[3] || 0,
+          ...(k === 'gazel' && S.gazelHeavy != null ? { heavyFromKg: +S.gazelHeavyKg, heavyBase: +S.gazelHeavy } : {}) } }; });
+    const trip = t => ({ kind: t.kind, stops: t.stops.map(x => codes.get(E.stopKey(x))), cbm: r1(t.cbm), kg: Math.round(t.kg), price: t.price && t.price.total != null ? Math.round(t.price.total) : null, ...(t.overload ? { overload: true } : {}) });
+    const facts = { batch: dLongs(pd), plan: key, fleet, tripsPerVehicle: +S.tripsPerVehicle || 1, maxStopsPerTrip: +(key === 'B' ? S.bcMaxStops : S.aMaxStops) || null,
+      ...(cur.smallTo ? { smallCargoRule: 'отгрузку меньше ' + f1(cur.smallTo, 2) + ' м³ везёт только ' + this.kindLabel(P, 'changan') + ', Gazel — от ' + f1(cur.smallTo, 2) + ' м³' } : {}),
+      ...(key === 'X' ? { districtRule: 'план X — по районам: район везёт одна машина, малые районы — вместе с соседними' } : {}),
+      stops, [key === 'A' ? 'sitePlan' : 'currentPlan']: { trips: cur.trips.map(trip), price: Math.round(cur.sum.price), trips_count: cur.sum.trips } };
+    return { facts, codes: new Map([...codes].map(([k, v]) => [v, k])), cur };
+  }
+  planAiPrompt(key, lang) {
+    return 'Ты — Buraq AI, диспетчер-логист компании BURAQ logistics (Ташкент). Компания развозит сборные грузы со своего склада клиентам по городу на Labo, Changan (Shineray), Gazel и Kamaz. ' +
+      'Тебе дают точки партии в JSON: id, район, кольцо (за кольцом дороже), km — расстояние от склада, dir — направление от склада в градусах (0 — север, 90 — восток), груз (cbm, kg, мест); машины (вид, сколько машин, полезный объём m3 и вес kg, тариф) и ' +
+      (key === 'A' ? 'план, который посчитал сайт (sitePlan). Составь свой план — дешевле для компании, если получится.' : 'нынешний план ' + key + ' (currentPlan). Улучши его: дешевле для компании, без перегруза.') + '\n' +
+      'Цена рейса: base + тариф за каждую точку сверх pointsInBase (за кольцом — perPointOutsideRing); у Gazel с грузом от heavyFromKg — heavyBase. Значит, выгодно меньше рейсов и точки одного направления и района вместе.\n' +
+      'Правила: каждая точка — ровно в одном рейсе, только id из списка; груз рейса не больше m3 и kg машины' + (key === 'B' ? ' (у Gazel можно с допуском toleranceM3 / toleranceKg)' : '') + '; не больше maxStopsPerTrip точек в рейсе; ' +
+      'рейсов одного вида не больше cars × tripsPerVehicle; соблюдай smallCargoRule и districtRule, если они есть; точки рядом по dir и km — в один рейс, рейс не должен ездить в разные стороны города. ' +
+      'Порядок точек в рейсе и время сайт посчитает сам. Пиши коротко: summary — 2–3 предложения, notes — до 4 пунктов.\n' +
+      (lang === 'uz' ? 'Язык ответа: узбекский, латиница (o‘ и g‘ — со знаком ‘). Названия машин и районов не переводи.' : 'Язык ответа: русский.');
+  }
+  async planAiMake(pd, key) {
+    const S = this.state.data.settings, E = window.LogiEngine, k0 = pd + '|' + key;
+    if (this.state.planAiBusy) return;
+    const fail = e => this.setState({ planAiBusy: null, planAiMsg: { k: k0, text: e, color: 'var(--color-danger-ink)' } });
+    if (this.readOnly) return fail('План с Buraq AI составляет руководитель: вход «только просмотр» данные ИИ не отправляет.');
+    if (!this.gsUrl) return fail('Сначала подключите Google Таблицу — Buraq AI работает через её скрипт: «Настройки» → «Связь».');
+    const A = window.LogiAuth;
+    if (A && A.owner && A.owner().state === 'locked') return fail('Секрет редактора закрыт на этом устройстве: «Настройки» → «Связь» → «ИИ-импорт манифестов» → пароль входа → «Открыть секрет».');
+    const P = this.plansFor(pd), { facts, codes, cur } = this.planAiFacts(P, pd, key, S);
+    if (!facts.stops.length) return fail('В партии нет точек для плана.');
+    this.setState({ planAiBusy: k0, planAiMsg: null });
+    try {
+      const lang = window.I18N && window.I18N.lang === 'uz' ? 'uz' : 'ru';
+      const j = await this.aiPost({ action: 'call', system: this.planAiPrompt(key, lang), content: [{ type: 'text', text: 'Партия ' + dLongs(pd) + ', план ' + key + ':\n' + JSON.stringify(facts) }],
+        schema: PLAN_AI_SCHEMA, max_tokens: 8000, effort: 'medium', meta: { step: 'Buraq AI: план ' + key, file: dLongs(pd) } });
+      if (!j.ok) return fail(j.code === 'truncated' ? 'Ответ Buraq AI не поместился — попробуйте ещё раз.' : j.code === 'timeout' ? 'Buraq AI не ответил вовремя (Apps Script ждёт около минуты) — попробуйте ещё раз.' :
+        j.code === 'refusal' || j.code === 'noresult' ? 'Buraq AI не составил план — попробуйте ещё раз.' :
+        (e => j.code === 'editor' ? e.replace(/[.!]?$/, '. ') + 'Проверьте секрет редактора: «Настройки» → «Связь» → «ИИ-импорт манифестов».' : e)(j.error || 'Buraq AI не ответил'));
+      const res = j.result || {}, str = v => String(v == null ? '' : v).trim(), seen = new Set();
+      const groups = (Array.isArray(res.trips) ? res.trips : []).filter(t => t && ['labo', 'changan', 'gazel', 'kamaz'].includes(t.kind)).map(t => ({ kind: t.kind, car: null, round: null,
+        keys: (Array.isArray(t.stops) ? t.stops : []).map(c => codes.get(str(c))).filter(k => k && !seen.has(k) && seen.add(k)) })).filter(g => g.keys.length);
+      if (!groups.length) return fail('Buraq AI не вернул ни одного рейса — попробуйте ещё раз.');
+      const next = P.manual(key, groups), cost = pl => this.costOf(pl.trips.map(t => E.costSplit(t.stops, t.price, S))).ours, ov = pl => pl.trips.filter(t => t.overload || t.over).length;
+      const was = { trips: cur.trips.length, price: cur.sum.price, ours: cost(cur), ov: ov(cur) }, now = { trips: next.trips.length, price: next.sum.price, ours: cost(next), ov: ov(next) };
+      const better = now.ours < was.ours - 0.5 || now.ov < was.ov || (Math.abs(now.ours - was.ours) <= 0.5 && now.trips < was.trips);
+      const ai = { summary: str(res.summary), notes: (Array.isArray(res.notes) ? res.notes : []).map(str).filter(Boolean).slice(0, 4), model: str(j.model), ms: +j.ms || 0, at: Date.now(), lang, was, now, missed: next.extra || 0 };
+      const line = (label, x) => label + ': ' + x.trips + ' ' + reys(x.trips) + ', ' + money(x.price) + ', компания платит ' + money(x.ours) + (x.ov ? ', сверх кузова — ' + x.ov : '');
+      const cmp = line('Buraq AI', now) + '. ' + line(key === 'A' ? 'План сайта' : 'Было', was) + '.';
+      if (key !== 'A' && !better) return this.setState({ planAiBusy: null, planAiMsg: { k: k0, color: 'var(--color-neutral-500)', text: 'Buraq AI не нашёл, как сделать план ' + key + ' дешевле, — план не меняли. ' + cmp } });
+      this.planEditSet(pd, key, groups, ai);
+      const d = was.ours - now.ours;
+      this.setState({ planAiBusy: null, planAiMsg: { k: k0, color: 'var(--color-accent)', text: (key === 'A' ? 'План A составил Buraq AI. ' : 'План ' + key + ' улучшил Buraq AI. ') + cmp +
+        (d > 0.5 ? ' Компании дешевле на ' + money(d) + '.' : d < -0.5 ? ' Дороже плана сайта на ' + money(-d) + ' — вернуть план сайта: «Сбросить правки».' : '') +
+        (ai.missed ? ' Точек, которые Buraq AI пропустил, — ' + ai.missed + ': они в отдельных рейсах.' : '') } });
+    } catch (e) { fail(e.message || String(e)); }
+  }
   // Правки — на устройстве (localStorage «logi-plan-edits»), по партии (или паре «A+B») и плану: { groups, hist, at }.
   // groups — рейсы как группы точек [{ kind, car, round, keys }] (LogiEngine: buildPlans → manual), hist — прошлые groups
   // для «Отменить правку» (null — план сайта). В журнал план попадает только кнопкой «Принять план».
@@ -3136,11 +3223,11 @@ class Component extends DCLogic {
     const E = window.LogiEngine;
     return plan.trips.map(t => ({ kind: t.kind, car: t.noVehicle ? null : t.car || null, round: t.noVehicle ? null : t.round || null, keys: t.stops.map(E.stopKey) }));
   }
-  planEditSet(pd, key, groups) {   // groups — новые рейсы; 'undo' — шаг назад; null — сбросить правки
+  planEditSet(pd, key, groups, ai) {   // groups — новые рейсы; 'undo' — шаг назад; null — сбросить правки; ai — план составил Buraq AI
     const k = pd + '|' + key, all = { ...(this.state.planEdits || {}) }, cur = all[k];
     if (groups === 'undo') { if (!cur) return; const hist = (cur.hist || []).slice(), prev = hist.pop(); if (prev) all[k] = { groups: prev, hist, at: Date.now() }; else delete all[k]; }
     else if (groups === null) delete all[k];
-    else all[k] = { groups, hist: (cur ? (cur.hist || []).concat([cur.groups]) : [null]).slice(-30), at: Date.now() };
+    else all[k] = { groups, hist: (cur ? (cur.hist || []).concat([cur.groups]) : [null]).slice(-30), at: Date.now(), ...(ai ? { ai } : {}) };
     const keep = Object.fromEntries(Object.entries(all).sort((a, b) => b[1].at - a[1].at).slice(0, 20));   // на устройстве — 20 последних
     try { localStorage.setItem('logi-plan-edits', JSON.stringify(keep)); } catch (e) {}
     this.setState({ planEdits: keep });
@@ -3335,14 +3422,14 @@ class Component extends DCLogic {
     const sugg = groups.filter(g => g.decision && !g.decision.decided && g.decision.suggest);
     out.impHasSugg = edit && sugg.length > 1; out.impSuggN = sugg.length;
     out.impAcceptAll = () => { sugg.forEach(g => this.impDecide(g.key, g.decision.suggest.client, 'suggest')); };
-    // предварительные планы A/B/C — тем же buildPlans, что во вкладке «Планы»
+    // предварительные планы A/B/X — тем же buildPlans, что во вкладке «Планы»
     const ships = L.shipmentsOf(d, ''), pk = JSON.stringify([ships, S, data.clients.length, st.ver]);
     if (!c.plans || c.plansKey !== pk) {
       const stops = ships.map((x, i) => { const cl = cmap[x.bl] || {}; return { id: 'p' + i, bl: x.bl, cbm: x.cbm, kg: x.kg, places: x.places, boxList: boxesOf(x), lat: cl.lat ?? null, lon: cl.lon ?? null, zone: (D.zones[x.bl] || {}).zone, client: cl }; });
       c.plans = E.buildPlans(stops, { ...S, vehicles: this.fleetVehicles(data) }); c.plansKey = pk;
     }
     const P = c.plans, kinds = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => this.kindLabel(P, k) + ' ' + s[k]).join(' · ');
-    out.impPlans = ['A', 'B', 'C', 'X'].map(k => { const s = P[k].sum; return { k, title: this.planTitle(k, P), trips: s.trips + ' ' + reys(s.trips), kinds: kinds(s),
+    out.impPlans = ['A', 'B', 'X'].map(k => { const s = P[k].sum; return { k, title: this.planTitle(k, P), trips: s.trips + ' ' + reys(s.trips), kinds: kinds(s),
       price: P[k].noFleet ? 'нет машин' : s.unpriced && !s.price ? 'нет тарифа' : money(s.price) + (s.unpriced ? ' +' : '') }; });
     out.impPlanNote = (P.noCoords.length ? P.noCoords.length + ' отгр. без координат клиента — в планах как точка у склада, уточните адрес. ' : '') + 'Отгрузок в партии: ' + ships.length + ' (маркировки одного клиента — одна отгрузка).';
     // документ
@@ -4496,14 +4583,14 @@ class Component extends DCLogic {
         let cmp = { n: 0, a: 0, b: 0, skip: 0 }, jc = { n: 0, j: 0, a: 0 }, cx = { n: 0, a: 0, x: 0 };
         out.repEcon = R.map(r => {
           // самый дешёвый — среди планов с ценой у всех рейсов; если у плана без цены части рейсов уже известная сумма меньше — ответа нет
-          const P = this.plansFor(r.date), ks = ['A', 'B', 'C', 'X'].filter(k => full(P, k)), min = ks.length ? ks.reduce((a, k) => P[k].sum.price < P[a].sum.price ? k : a) : null;
-          const best = min && !['A', 'B', 'C', 'X'].some(k => !P[k].noFleet && P[k].sum.unpriced && P[k].sum.price > 0 && P[k].sum.price < P[min].sum.price) ? min : null;
+          const P = this.plansFor(r.date), ks = ['A', 'B', 'X'].filter(k => full(P, k)), min = ks.length ? ks.reduce((a, k) => P[k].sum.price < P[a].sum.price ? k : a) : null;
+          const best = min && !['A', 'B', 'X'].some(k => !P[k].noFleet && P[k].sum.unpriced && P[k].sum.price > 0 && P[k].sum.price < P[min].sum.price) ? min : null;
           if (full(P, 'A') && full(P, 'B')) { cmp.n++; cmp.a += P.A.sum.price; cmp.b += P.B.sum.price; } else if (P.A.sum.trips || P.B.sum.trips) cmp.skip++;
           if (r.src === 'journal' && !r.sum.unpriced && full(P, 'A')) { jc.n++; jc.j += r.sum.price; jc.a += P.A.sum.price; }
           if (full(P, 'A') && full(P, 'X')) { cx.n++; cx.a += P.A.sum.price; cx.x += P.X.sum.price; }   // план X (пробный)
           const rawP = k => full(P, k) ? P[k].sum.price : cell(P, k);
-          return { label: dLong(r.date), a: cell(P, 'A'), b: cell(P, 'B'), c: cell(P, 'C'), x: cell(P, 'X'), j: r.src === 'journal' ? sumP(r.sum.price, r.sum.unpriced) : '—', best: best ? 'План ' + best : '—', open: () => this.setState({ tab: 'plans', planDate: r.date }),
-            raw: [dLong(r.date), rawP('A'), rawP('B'), rawP('C'), rawP('X'), r.src === 'journal' ? (r.sum.unpriced ? sumP(r.sum.price, r.sum.unpriced) : r.sum.price) : '', best ? 'План ' + best : ''] };
+          return { label: dLong(r.date), a: cell(P, 'A'), b: cell(P, 'B'), x: cell(P, 'X'), j: r.src === 'journal' ? sumP(r.sum.price, r.sum.unpriced) : '—', best: best ? 'План ' + best : '—', open: () => this.setState({ tab: 'plans', planDate: r.date }),
+            raw: [dLong(r.date), rawP('A'), rawP('B'), rawP('X'), r.src === 'journal' ? (r.sum.unpriced ? sumP(r.sum.price, r.sum.unpriced) : r.sum.price) : '', best ? 'План ' + best : ''] };
         });
         const econ = [];
         if (cmp.n) { const d = cmp.b - cmp.a, rel = Math.abs(d) / Math.max(cmp.a, cmp.b);
@@ -4513,7 +4600,6 @@ class Component extends DCLogic {
         if (cmp.skip) econ.push('Не сравнивали ' + cmp.skip + ' парт.: в них есть рейсы без тарифа (Kamaz).');
         if (cx.n) econ.push(cx.x - cx.a > 0.5 ? 'План X (по районам) дороже плана A на ' + money(cx.x - cx.a) + ' (' + pct((cx.x - cx.a) / cx.a) + ') за ' + cx.n + ' парт. — цена того, что район везёт одна машина.'
           : cx.a - cx.x > 0.5 ? 'План X (по районам) дешевле плана A на ' + money(cx.a - cx.x) + ' за ' + cx.n + ' парт.' : 'Планы A и X стоят одинаково за ' + cx.n + ' парт.');
-        if (R.length && R.every(r => { const P = this.plansFor(r.date); return !full(P, 'C'); })) econ.push('План C (только Kamaz) не с чем сравнить: у Kamaz нет тарифа. Заполните его во вкладке «Тарифы».');
         econ.push(jc.n ? 'По журналу ' + jc.n + ' парт. стоили ' + money(jc.j) + ', план A для них — ' + money(jc.a) + (jc.j - jc.a > 0.5 ? ': по плану вышло бы дешевле на ' + money(jc.j - jc.a) + '.' : jc.a - jc.j > 0.5 ? ': по журналу дешевле на ' + money(jc.a - jc.j) + '.' : ': одинаково.')
           : 'Сравнение с журналом появится, когда планы будут приняты («Планы» → «Принять план»).');
         Object.assign(out, { repTitle: 'Автопарк и экономия', repPrintTitle: 'Автопарк и экономия · ' + (plabel ? plabel + ' · ' : '') + range, repNote: srcNote + volNote,
@@ -4618,7 +4704,7 @@ class Component extends DCLogic {
     } else {
       sheets.push({ name: 'Итоги', rows: kp.concat([[]]).concat(o.repFleetNotes.concat(o.repEconNotes).map(n => [n.text])) });
       sheets.push({ name: 'Машины', rows: [['Машина', 'В парке', 'Рейсов', 'Дней с рейсами', 'Больше всего рейсов за день', 'Дата', 'Машин в тот день', 'Можно рейсов в день', 'Не хватало (партий)', 'Загрузка м³, %', 'Загрузка кг, %', 'Загружены меньше половины']].concat(o.repFleet.map(f => f.raw)) });
-      sheets.push({ name: 'Планы', rows: [['Партия', 'План A', 'План B', 'План C', 'План X', 'Журнал', 'Самый дешёвый']].concat(o.repEcon.map(e => e.raw)) });
+      sheets.push({ name: 'Планы', rows: [['Партия', 'План A', 'План B', 'План X', 'Журнал', 'Самый дешёвый']].concat(o.repEcon.map(e => e.raw)) });
       name = 'avtopark_' + o.repPeriodKey;
     }
     const blob = E.xlsx(sheets), a = document.createElement('a');
@@ -4781,7 +4867,7 @@ class Component extends DCLogic {
     f.districts = Object.entries(byD).sort((a, b) => b[1].price - a[1].price || b[1].cbm - a[1].cbm).slice(0, 20)
       .map(([name, o]) => ({ district: name, points: o.pts.size, cbm: r1(o.cbm), price: r0(o.price), notPaid: r0(o.notPaid), pricePerM3: o.cbm > 0 ? r0(o.price / o.cbm) : null }));
     const planVal = (P, k) => P[k].noFleet ? 'нет машин' : !P[k].sum.trips ? null : P[k].sum.unpriced ? 'рейсов без тарифа: ' + P[k].sum.unpriced : r0(P[k].sum.price);
-    f.plans = R.map(r => { const P = this.plansFor(r.date); return { date: r.date, planA: planVal(P, 'A'), planB: planVal(P, 'B'), planC: planVal(P, 'C'), planXbyDistricts: planVal(P, 'X'), tripsA: P.A.sum.trips,
+    f.plans = R.map(r => { const P = this.plansFor(r.date); return { date: r.date, planA: planVal(P, 'A'), planB: planVal(P, 'B'), planXbyDistricts: planVal(P, 'X'), tripsA: P.A.sum.trips,
       journal: r.src !== 'journal' ? null : r.sum.unpriced ? 'рейсов без тарифа: ' + r.sum.unpriced : r0(r.sum.price), tripsJournal: r.src === 'journal' ? r.sum.trips : null }; });
     f.settings = {};
     this.settingDefs().filter(g => !['Склад отправки', 'Импорт манифестов'].includes(g.title))
@@ -4838,7 +4924,7 @@ class Component extends DCLogic {
     return 'Ты — аналитик логистической компании BURAQ logistics (Ташкент). Компания возит сборные грузы со своего склада клиентам по городу на Gazel, Labo, Changan и Kamaz; ' +
       'водители отмечают каждую точку в Telegram-боте (фото обязательно). Тебе дают сводку за период в JSON. Найди проблемы и предложи конкретные улучшения по трём темам:\n' +
       '- deliveries — доставки и водители: недоставки и их причины, ожидание клиента, отметки далеко от клиента, отметки без фото, незакрытые рабочие дни, точки без отметки в боте, начало и конец дня, машины без водителя;\n' +
-      '- costs — расходы и машины: стоимость, «компания платит / с клиентов», загрузка машин, перегруз, рейсы без тарифа, нехватка машин, планы A/B/C против журнала, дорогие районы;\n' +
+      '- costs — расходы и машины: стоимость, «компания платит / с клиентов», загрузка машин, перегруз, рейсы без тарифа, нехватка машин, планы A/B/X против журнала, дорогие районы;\n' +
       '- data — качество данных: клиенты без координат и района, у границы кольцевой, отгрузки без CBM, KG и мест, BL не из справочника, незакрытые статусы, неполные карточки.\n' +
       'Как читать сводку: суммы — в сумах; «компания платит» (paid) — точки внутри кольцевой (ТКАД) от порога объёма; «с клиентов» — доставку оплачивают клиенты: груз меньше порога (notPaidSmall) и точки за кольцом (notPaidOutsideRing), фиксированно — доплата за заезд по тарифу точки, машина только к клиенту — вся цена рейса; ' +
       'source «план A» — у партии в журнале нет машин, рейсы и стоимость посчитаны по плану A; null — нет данных. Водители — под кодами DRV1, DRV2…, называй их так же.\n' +
@@ -4926,7 +5012,7 @@ class Component extends DCLogic {
   vizModel() {
     const st = this.state;
     if (!st.ready || !st.planDate || !window.LogiViz) return null;
-    const P = this.plansFor(this.planPair), key = ['A', 'B', 'C', 'X'].includes(st.planKey) ? st.planKey : 'A', plan = this.planOf(P, this.planPair, key);
+    const P = this.plansFor(this.planPair), key = ['A', 'B', 'X'].includes(st.planKey) ? st.planKey : 'A', plan = this.planOf(P, this.planPair, key);
     if (this._vizM && this._vizM.P === P && this._vizM.key === key && this._vizM.plan === plan) return this._vizM;
     const lays = plan.trips.map(t => window.LogiViz.layout(t));
     this._vizM = { P, key, plan, lays, id: (this._vizM ? this._vizM.id : 0) + 1 };
@@ -5064,7 +5150,7 @@ class Component extends DCLogic {
     const sheets = [{ name: 'Отгрузки', rows: ship }, { name: 'Клиенты', rows: cl }, { name: 'Настройки', rows: st }];
     if (this.state.planDate) {
       const P = this.plansFor(this.planPair);
-      ['A', 'B', 'C', 'X'].forEach(k => {
+      ['A', 'B', 'X'].forEach(k => {
         const rows = [['Рейс', '№', 'BL код', 'Клиент', 'Район', 'Получатель', 'Тел.', 'CBM', 'KG', 'Прибытие', 'Зона', 'Тариф', 'Цена рейса', 'Маршрут Яндекс']];
         this.planOf(P, this.planPair, k).trips.forEach(t => t.stops.forEach((s, j) => rows.push([t.name, j + 1, s.bl, (s.client.brand || '') + ' ' + (s.client.name || ''), s.loc ? '📍 ' + s.loc : s.client.district || '', s.client.receiver || '', s.client.receiverTel || '', s.cbm, s.kg, hhmm(t.arrivals[j]), s.zone === 'out' ? 'Снаружи' : 'Внутри', j === 0 ? t.price.label : '', j === 0 && t.price.total != null ? t.price.total : '', j === 0 ? E.yRoute([S.depotLat, S.depotLon], t.stops.map(x => [x.lat, x.lon])) : ''])));
         sheets.push({ name: 'План ' + k + ' ' + dShorts(this.planPair), rows });
@@ -5691,7 +5777,7 @@ class Component extends DCLogic {
     // вкладки шапки: «Журнал» — журнал и импорт, «Отчёты» — дашборд и отчёты,
     // «Настройки» — тарифы, водители и автопарк, связь, проверка данных (у них — строка подвкладок под шапкой)
     const top = TAB_GROUP[st.tab] || st.tab;
-    const tabsDef = [['journal', 'Журнал'], ['clients', 'Клиенты'], ['map', 'Карта'], ['reports', 'Отчёты'], ['plans', 'Планы A/B/C'], ['drivers', 'Водители'], ['viz', 'Визуализация'], ['settings', 'Настройки']];
+    const tabsDef = [['journal', 'Журнал'], ['clients', 'Клиенты'], ['map', 'Карта'], ['reports', 'Отчёты'], ['plans', 'Планы A/B/X'], ['drivers', 'Водители'], ['viz', 'Визуализация'], ['settings', 'Настройки']];
     const goTop = k => k === 'reports' ? this.setState({ tab: 'dash' }) : k === 'settings' ? this.goSettings(st.setLast || 'tariffs') : (this.setState({ tab: k }), k === 'journal' && this.maybeAskLoc(st.jDate));
     const tabs = tabsDef.map(([k, l]) => ({ label: l, go: () => goTop(k), color: top === k ? 'var(--color-on-brand)' : 'color-mix(in srgb, var(--color-on-brand) 72%, transparent)', border: top === k ? 'var(--color-red)' : 'transparent' }));
     const SUB = { reports: [['dash', 'Дашборд'], ['batch', 'Партия на день'], ['cost', 'Расходы'], ['fleet', 'Автопарк'], ['newcar', 'Новая машина'], ['drivers', 'Водители'], ['ai', 'ИИ-отчёт']],
@@ -5932,7 +6018,7 @@ class Component extends DCLogic {
       out.ringReset = () => { if (confirm('Вернуть уточнённую границу ТКАД (по карте, с Keles)?')) { this.ringDraft = E.TKAD_V2.map(p => p.slice()); this.setState(s => ({ ringEditVer: (s.ringEditVer || 0) + 1 })); } };
       out.mapLoadingText = window.L ? '' : (st.mapError ? 'Не удалось загрузить библиотеку карты — проверьте интернет' : 'Загрузка карты…');
       out.mapBaseOpts = [['yandex', 'Яндекс'], ['gis', '2ГИС'], ['ysat', 'Спутник'], ['esri', 'Esri']].map(([k, l]) => ({ l, go: () => { try { localStorage.setItem('logi-map-base', k); } catch (e) {} this.setState({ mapBase: k }); }, bg: st.mapBase === k ? 'var(--color-accent)' : 'transparent', fg: st.mapBase === k ? 'var(--color-on-accent)' : 'var(--color-text)' }));
-      out.mapPlanOpts = [['none', 'Без'], ['A', 'A'], ['B', 'B'], ['C', 'C'], ['X', 'X']].map(([k, l]) => ({ l, go: () => this.setState({ mapPlan: k }), bg: st.mapPlan === k ? 'var(--color-accent)' : 'transparent', fg: st.mapPlan === k ? 'var(--color-on-accent)' : 'var(--color-text)' }));
+      out.mapPlanOpts = [['none', 'Без'], ['A', 'A'], ['B', 'B'], ['X', 'X']].map(([k, l]) => ({ l, go: () => this.setState({ mapPlan: k }), bg: st.mapPlan === k ? 'var(--color-accent)' : 'transparent', fg: st.mapPlan === k ? 'var(--color-on-accent)' : 'var(--color-text)' }));
       if (st.mapDate === 'all') {
         const wc = data.clients.filter(c => c.lat != null);
         out.mapStats = [{ label: 'Клиентов', value: data.clients.length }, { label: 'На карте', value: wc.length }, { label: 'Снаружи', value: wc.filter(c => (D.zones[c.bl] || {}).zone === 'out').length }, { label: 'Без коорд.', value: data.clients.length - wc.length }];
@@ -5983,12 +6069,13 @@ class Component extends DCLogic {
     if (st.tab === 'plans' && st.planDate) {
       const pd = this.planPair, pair = pd.includes('+'), P = this.plansFor(pd);   // одна партия или две («+ вторая партия»)
       const PL = k => this.planOf(P, pd, k);   // план с ручной правкой, если её делали
-      // план C свёрнут, пока его не откроют; «самый дешёвый» — среди показанных планов, где у всех рейсов есть цена
-      const shown = st.planC ? ['A', 'B', 'X', 'C'] : ['A', 'B', 'X'], planKey = shown.includes(st.planKey) ? st.planKey : 'A';   // план X (пробный)
+      // «самый дешёвый» — среди планов, где у всех рейсов есть цена; план C (только Kamaz) убран
+      const shown = ['A', 'B', 'X'], planKey = shown.includes(st.planKey) ? st.planKey : 'A';   // план X (пробный)
+      const aiOf = k => { const e = (st.planEdits || {})[pd + '|' + k]; return e && e.ai && PL(k).manual ? e.ai : null; };
       const full = shown.filter(k => PL(k).sum.trips && !PL(k).sum.unpriced), minP = full.length ? Math.min(...full.map(k => PL(k).sum.price)) : null;
       const kindsOf = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => this.kindLabel(P, k) + ' ' + s[k]).join(' · ');
       out.planCols = shown.length;
-      const costs = {}; ['A', 'B', 'C', 'X'].forEach(k => { costs[k] = this.costOf(PL(k).trips.map(t => E.costSplit(t.stops, t.price, S))); });
+      const costs = {}; shown.forEach(k => { costs[k] = this.costOf(PL(k).trips.map(t => E.costSplit(t.stops, t.price, S))); });
       // «выгоднее всех» — где меньше всех платит компания (остальное — с клиентов); поровну — где дешевле в целом
       const ourOf = k => costs[k].n ? Math.round(costs[k].ours) : PL(k).sum.price, minC = full.length ? Math.min(...full.map(ourOf)) : null;
       const best = full.filter(k => ourOf(k) === minC).sort((a, b) => PL(a).sum.price - PL(b).sum.price)[0];
@@ -6002,18 +6089,26 @@ class Component extends DCLogic {
         return '';
       };
       out.planCards = shown.map(k => { const s = PL(k).sum, sel = planKey === k, noPrice = s.unpriced && !s.price, c = costs[k];
-        return { title: this.planTitle(k, P), desc: this.planDesc(k, S, P), trips: s.trips, kinds: kindsOf(s), real: f0(s.real) + ' км', outside: s.outside + ' · ' + f1(s.outsideCbm, 1) + ' м³',
+        return { title: this.planTitle(k, P), desc: this.planDesc(k, S, P, !!aiOf(k)), trips: s.trips, kinds: kindsOf(s), real: f0(s.real) + ' км', outside: s.outside + ' · ' + f1(s.outsideCbm, 1) + ' м³',
           price: PL(k).noFleet ? 'нет машин' : noPrice ? 'нет тарифа' : money(s.price) + (s.unpriced ? ' +' : ''),
-          cheapest: full.length > 1 && k === best, manual: !!PL(k).manual,
+          cheapest: full.length > 1 && k === best, manual: !!PL(k).manual && !aiOf(k), ai: !!aiOf(k),
           hasCost: !PL(k).noFleet && c.n > 0, cost: this.costRows(c, S, s.unpriced),
           diff: PL(k).noFleet ? 'Задайте объём и грузоподъёмность Kamaz во вкладке «Тарифы»' : s.unpriced ? '+ ' + s.unpriced + ' ' + reys(s.unpriced) + ' Kamaz без тарифа — заполните тариф во вкладке «Тарифы»' : (minP == null || minC == null || k === best || !full.includes(k) ? '' : ourOf(k) > minC ? '+' + f0(ourOf(k) - minC) + ' сум расходов компании к самому выгодному' : '+' + f0(s.price - PL(best).sum.price) + ' сум к самому выгодному'),
           why: whyOf(k), cls: sel ? 'plan-sel' : '', bg: sel ? 'var(--color-accent-100)' : 'transparent', border: sel ? 'var(--color-accent)' : 'var(--color-divider)', go: () => this.setState({ planKey: k, planHi: null }) }; });
-      const cS = PL('C').sum;
-      out.planCTitle = PLAN_INFO.C.title;
-      out.planCInfo = st.planC ? '' : P.C.noFleet ? 'нет машин' : cS.trips + ' ' + reys(cS.trips) + (cS.unpriced && !cS.price ? ' · нет тарифа' : ' · ' + money(cS.price) + (cS.unpriced ? ' +' : '') + (costs.C.notPaid ? ' · компания ' + f0(costs.C.ours) : ''));
-      out.planCAct = st.planC ? 'Свернуть ▴' : 'Показать ▾';
-      out.togglePlanC = () => { const v = !st.planC; try { localStorage.setItem('logi-plan-c', v ? '1' : '0'); } catch (e) {} this.setState({ planC: v, planKey: !v && st.planKey === 'C' ? 'A' : st.planKey }); };
       const plan = PL(planKey);
+      // Buraq AI: план A составляет ИИ, планы B и X — улучшает (как ручная правка: «Отменить правку», «Сбросить правки»)
+      { const ai = aiOf(planKey), k0 = pd + '|' + planKey, busy = st.planAiBusy === k0, msg = st.planAiMsg && st.planAiMsg.k === k0 ? st.planAiMsg : null;
+        const made = ai ? new Date(ai.at) : null, cur = window.I18N && window.I18N.lang === 'uz' ? 'uz' : 'ru';
+        Object.assign(out, { paiShow: plan.trips.length > 0 && !plan.noFleet, paiCan: !this.readOnly, paiBusy: busy, paiAnyBusy: !!st.planAiBusy,
+          paiTitle: planKey === 'A' ? (ai ? 'План A составил Buraq AI' : 'План A составляет Buraq AI') : 'Улучшить план ' + planKey + ' с Buraq AI',
+          paiNote: this.readOnly ? 'План с Buraq AI составляет руководитель.' : planKey === 'A' ? (ai ? 'Можно составить заново, поправить вручную или вернуть план сайта: «Сбросить правки».' :
+            'Пока показан план сайта. Buraq AI разложит точки по рейсам и машинам сам — стоимость, перегруз и время посчитает сайт; план можно поправить вручную и принять в журнал.') :
+            'Buraq AI переложит точки по рейсам, чтобы компания платила меньше. Если дешевле не выйдет — план не изменится.',
+          paiBtn: busy ? 'Buraq AI думает…' : planKey === 'A' ? (ai ? 'Составить заново' : 'Составить план Buraq AI') : 'Улучшить с Buraq AI', paiGo: () => this.planAiMake(pd, planKey),
+          paiHasMsg: !!msg, paiMsg: msg ? msg.text : '', paiMsgColor: msg ? msg.color : 'var(--color-divider)', paiMsgClose: () => this.setState({ planAiMsg: null }),
+          paiHas: !!ai, paiSummary: ai ? ai.summary : '', paiNotes: ai ? ai.notes.map(text => ({ text })) : [], paiHasNotes: !!(ai && ai.notes.length),
+          paiMeta: ai ? 'Buraq AI · ' + dLong(isoDay(made)) + ' ' + hhmm(made.getHours() * 60 + made.getMinutes()) + (ai.ms ? ' · ответил за ' + Math.max(1, Math.round(ai.ms / 1000)) + ' с' : '') + (ai.model ? ' · ' + ai.model : '') +
+            (ai.lang && ai.lang !== cur ? (ai.lang === 'uz' ? ' · пояснение на узбекском' : ' · пояснение на русском') : '') + ' · стоимость, перегруз и время посчитал сайт' : '' }); }
       const notes = [];
       const fleetN = { gazel: S.gazelCount, changan: S.changanCount, labo: S.laboCount, kamaz: S.cTrucks };
       // машины плана по видам; у вида машины разной вместимости — каждая своим объёмом: «4 × Gazel 15 из 17, 15,8 из 18, … м³»
@@ -6094,7 +6189,7 @@ class Component extends DCLogic {
           if (xr.length) pe.push('Больше рейсов, чем «Рейсов на машину в день» (' + (S.tripsPerVehicle || 1) + '): ' + xr.join(', ') + '.');
           if (plan.extra) pe.push('После правки в партии изменились точки: ' + plan.extra + ' — в отдельных рейсах. Проверьте или сбросьте правки.');
         }
-        Object.assign(out, { peShow: !!plan.manual, peTitle: '✎ План ' + planKey + ' изменён вручную', peNote: pe.join('\n'), peHint: canEdit && !plan.manual,
+        Object.assign(out, { peShow: !!plan.manual, peTitle: aiOf(planKey) ? '✦ План ' + planKey + ' — Buraq AI' : '✎ План ' + planKey + ' изменён вручную', peNote: pe.join('\n'), peHint: canEdit && !plan.manual,
           peUndo: () => this.planEditSet(pd, planKey, 'undo'), peReset: () => { if (confirm('Сбросить ручные правки плана ' + planKey + '? План вернётся к расчёту сайта.')) this.planEditSet(pd, planKey, null); } });
         if (ed && plan.manual) out.peTitle += ' · правок: ' + ((ed.hist || []).length || 1); }
       this._planMap = { plan, pd, key: planKey, hi, canEdit, moveOpts };
@@ -6146,7 +6241,7 @@ class Component extends DCLogic {
         planDate2: vPair ? st.planDate2 : '', date2Opts: dateOpts.filter(o => o.v !== st.planDate), onVizDate2: e => this.setState({ planDate2: e.target.value, vizTrip: 'all', vizStep: 0, vizSel: null }),
         vizTripOpts: [], vizIsAll: false, vizIsOne: false, vizSummary: '', vizNote: '', vizTitle: '',
         vizHint: 'Вращать — пальцем или мышью · масштаб — щипком или колесом · нажмите на груз — покажет точку' });
-      out.vizPlanOpts = ['A', 'B', 'C', 'X'].map(k => { const on = M ? M.key === k : st.planKey === k;
+      out.vizPlanOpts = ['A', 'B', 'X'].map(k => { const on = M ? M.key === k : st.planKey === k;
         return { l: 'План ' + k, go: () => this.setState({ planKey: k, vizTrip: 'all', vizStep: 0, vizSel: null }), bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-on-accent)' : 'var(--color-text)' }; });
       out.vizViews = [['3d', '3D'], ['side', 'Сбоку'], ['top', 'Сверху'], ['back', 'Сзади']].map(([k, l]) => ({ l, go: () => this.setState(s => ({ vizView: k, vizViewN: (s.vizViewN || 0) + 1 })),
         bg: st.vizView === k ? 'var(--color-accent)' : 'var(--color-bg)', fg: st.vizView === k ? 'var(--color-on-accent)' : 'var(--color-text)' }));

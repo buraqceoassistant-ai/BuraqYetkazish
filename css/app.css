@@ -628,3 +628,11 @@ input.set-input[type="text"] { text-align: left !important; }
 .bt-trash-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--color-divider); padding-top: 8px; font-size: 14px; }
 @media screen and (max-width: 760px) { .bt-sel { margin-left: 0; } .tc td.bt-ck { grid-column: span 1; } }
 
+/* «Планы» → Buraq AI: план A составляет ИИ, планы B и X — улучшает */
+.plan-ai { border: 1px solid var(--color-divider); border-left: 2px solid var(--color-red); border-radius: var(--radius-lg); background: var(--color-bg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.plan-ai-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.plan-ai-badge { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--color-red); border: 1px solid var(--color-red); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.plan-ai-note { font-size: 13px; color: var(--color-neutral-700); text-wrap: pretty; }
+.plan-ai-go { white-space: nowrap; }
+.plan-ai-notes { margin: 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
+
