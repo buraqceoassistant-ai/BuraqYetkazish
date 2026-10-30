@@ -714,6 +714,48 @@
             <div><h4>Что нужно, чтобы окупилась</h4><ul><sc-for list="{{ carNeed }}" as="n"><li>{{ n.text }}</li></sc-for></ul></div>
           </div>
         </section>
+        <section class="rep-block car-ai">
+          <div class="ai-rep-head"><div><h3 style="margin:0">Разбор ИИ</h3><sc-if value="{{ carAiHas }}"><div class="ai-rep-meta">{{ carAiMeta }}</div></sc-if></div></div>
+          <sc-if value="{{ carAiCan }}">
+            <div class="car-ai-ask no-print">
+              <input class="input" type="text" value="{{ carAiQ }}" placeholder="Свой вопрос ИИ — необязательно. Например: сколько нужно машин и рейсов, чтобы окупилась за 2 года?" aria-label="Свой вопрос ИИ" sc-camel-on-change="{{ carAiOnQ }}">
+              <button class="btn btn-secondary" sc-camel-on-click="{{ carAiMake }}" disabled="{{ carAiBusy }}">{{ carAiBtn }}</button>
+            </div>
+          </sc-if>
+          <div class="ai-rep-note no-print">{{ carAiNote }}</div>
+          <sc-if value="{{ carAiHasErr }}"><div class="imp-alert imp-alert-err no-print"><div style="flex:1;text-wrap:pretty">{{ carAiErr }}</div><button class="btn btn-ghost" sc-camel-on-click="{{ carAiErrClose }}">Закрыть</button></div></sc-if>
+          <sc-if value="{{ carAiBusy }}"><div class="imp-alert imp-busy no-print"><div style="flex:1"><div style="font-weight:500">ИИ разбирает расчёт</div><div style="font-size:12px;color:var(--color-neutral-700);margin-top:4px">Обычно 20–60 секунд. Не закрывайте страницу.</div></div></div></sc-if>
+          <sc-if value="{{ carAiHas }}">
+            <sc-for list="{{ carAiNotes }}" as="n"><div class="ai-rep-meta no-print">{{ n.text }}</div></sc-for>
+            <sc-if value="{{ carAiHasQ }}"><div class="ai-item-ev"><span class="ai-lbl">Вопрос:</span> <span translate="no">{{ carAiAsked }}</span></div></sc-if>
+            <sc-if value="{{ carAiHasSummary }}"><div class="ai-rep-sum" translate="no">{{ carAiSummary }}</div></sc-if>
+            <div class="car-why">
+              <div><h4>Почему так</h4><ul><sc-for list="{{ carAiReasons }}" as="n"><li translate="no">{{ n.text }}</li></sc-for></ul></div>
+              <sc-if value="{{ carAiHasRisks }}"><div><h4>Риски</h4><ul><sc-for list="{{ carAiRisks }}" as="r"><li><b style="font-weight:500" translate="no">{{ r.title }}</b> <span translate="no">{{ r.detail }}</span></li></sc-for></ul></div></sc-if>
+            </div>
+            <h4 class="car-ai-h">Идеи ИИ — результат посчитал сайт</h4>
+            <div class="glass" style="border:1px solid var(--color-divider);overflow-x:auto">
+              <sc-raw-table class="table tc car-scen car-ai-ideas">
+                <sc-raw-thead><sc-raw-tr><sc-raw-th>Идея</sc-raw-th><sc-raw-th style="text-align:right">Рейсов в месяц</sc-raw-th><sc-raw-th style="text-align:right">Экономия в месяц</sc-raw-th><sc-raw-th style="text-align:right">Наличными</sc-raw-th><sc-raw-th style="text-align:right">В лизинг</sc-raw-th><sc-raw-th style="text-align:right">Итог за 5 лет</sc-raw-th><sc-raw-th></sc-raw-th></sc-raw-tr></sc-raw-thead>
+                <sc-raw-tbody>
+                  <sc-for list="{{ carAiIdeas }}" as="x">
+                    <sc-raw-tr>
+                      <sc-raw-td class="c4 o-1 c-strong"><div style="font-weight:500" translate="no">{{ x.title }}</div><sc-if value="{{ x.hasDetail }}"><div style="font-size:12px" translate="no">{{ x.detail }}</div></sc-if><sc-if value="{{ x.hasChanges }}"><div style="font-size:12px;color:var(--color-neutral-700)">{{ x.changes }}</div></sc-if></sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Рейсов в месяц" style="text-align:right">{{ x.trips }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Экономия в месяц" style="text-align:right;white-space:nowrap;color:{{ x.netColor }}">{{ x.net }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="Наличными" style="text-align:right;white-space:nowrap;font-weight:500;color:{{ x.cashColor }}">{{ x.cash }}</sc-raw-td>
+                      <sc-raw-td class="c2" data-label="В лизинг" style="text-align:right;white-space:nowrap;font-weight:500;color:{{ x.leaseColor }}">{{ x.lease }}</sc-raw-td>
+                      <sc-raw-td class="c3" data-label="Итог за 5 лет" style="text-align:right;white-space:nowrap;color:{{ x.fiveColor }}">{{ x.five }}</sc-raw-td>
+                      <sc-raw-td class="c-actions" style="text-align:right"><sc-if value="{{ x.canApply }}"><button class="btn btn-secondary no-print" style="white-space:nowrap" sc-camel-on-click="{{ x.apply }}">Применить</button></sc-if></sc-raw-td>
+                    </sc-raw-tr>
+                  </sc-for>
+                </sc-raw-tbody>
+              </sc-raw-table>
+            </div>
+            <sc-if value="{{ carAiHasQuestions }}"><div class="car-why"><div><h4>Что спросить у дилера, банка и бухгалтера</h4><ul><sc-for list="{{ carAiQuestions }}" as="n"><li translate="no">{{ n.text }}</li></sc-for></ul></div></div></sc-if>
+            <div class="ai-rep-meta">ИИ может ошибаться: цифры у идей посчитал сайт, а выводы, риски и вопросы — проверяйте.</div>
+          </sc-if>
+        </section>
         <section class="rep-block car-scen-block">
           <h3 style="margin:0 0 4px">Как сделать, чтобы окупилась</h3>
           <div class="car-hint">Тот же расчёт, если поменять одно условие. {{ carScenNote }}</div>
@@ -728,7 +770,7 @@
                     <sc-raw-td class="c2" data-label="Экономия в месяц" style="text-align:right;white-space:nowrap;color:{{ x.netColor }}">{{ x.net }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="Наличными" style="text-align:right;white-space:nowrap;font-weight:500;color:{{ x.cashColor }}">{{ x.cash }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="В лизинг" style="text-align:right;white-space:nowrap;font-weight:500;color:{{ x.leaseColor }}">{{ x.lease }}</sc-raw-td>
-                    <sc-raw-td class="c2" data-label="Итог за 5 лет" style="text-align:right;white-space:nowrap;color:{{ x.fiveColor }}">{{ x.five }}</sc-raw-td>
+                    <sc-raw-td class="c3" data-label="Итог за 5 лет" style="text-align:right;white-space:nowrap;color:{{ x.fiveColor }}">{{ x.five }}</sc-raw-td>
                     <sc-raw-td class="c-actions" style="text-align:right"><sc-if value="{{ x.canApply }}"><button class="btn btn-secondary no-print" style="white-space:nowrap" sc-camel-on-click="{{ x.apply }}">Применить</button></sc-if></sc-raw-td>
                   </sc-raw-tr>
                 </sc-for>
@@ -766,8 +808,8 @@
                     <sc-raw-td class="c2" data-label="Экономия в месяц, пока платим" style="text-align:right;white-space:nowrap;color:{{ x.duringColor }}">{{ x.during }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="После выплаты" style="text-align:right;white-space:nowrap;color:{{ x.afterColor }}">{{ x.after }}</sc-raw-td>
                     <sc-raw-td class="c2" data-label="Окупится через" style="text-align:right;white-space:nowrap;font-weight:500">{{ x.payback }}</sc-raw-td>
-                    <sc-raw-td class="c2" data-label="Итог за 5 лет" style="text-align:right;white-space:nowrap;color:{{ x.fiveColor }}">{{ x.five }}</sc-raw-td>
-                    <sc-raw-td class="c2" data-label="С продажей машины" style="text-align:right;white-space:nowrap;color:{{ x.fiveSaleColor }}">{{ x.fiveSale }}</sc-raw-td>
+                    <sc-raw-td class="c3" data-label="Итог за 5 лет" style="text-align:right;white-space:nowrap;color:{{ x.fiveColor }}">{{ x.five }}</sc-raw-td>
+                    <sc-raw-td class="c3" data-label="С продажей машины" style="text-align:right;white-space:nowrap;color:{{ x.fiveSaleColor }}">{{ x.fiveSale }}</sc-raw-td>
                   </sc-raw-tr>
                 </sc-for>
               </sc-raw-tbody>
@@ -2188,6 +2230,18 @@ const AI_REP_SCHEMA = { name: 'report', description: 'ИИ-отчёт: итог,
   suggestions: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['area', 'title', 'detail', 'effect'], properties: {
     area: { type: 'string', enum: ['deliveries', 'costs', 'data'] }, title: { type: 'string', description: 'Что сделать, до 10 слов' },
     detail: { type: 'string', description: 'Как сделать: 1–2 предложения' }, effect: { type: 'string', description: 'Ожидаемый эффект, по возможности в сумах, рейсах или процентах' } } } } } } };
+// разбор ИИ «Новой машины»: вывод, причины, идеи (какие цифры расчёта поменять — пересчитывает сайт), риски, вопросы
+const CAR_AI_KEYS = ['price', 'count', 'm3', 'kg', 'rangeKm', 'kwh100', 'kwhPrice', 'salary', 'driverPerTrip', 'upkeepYear', 'perMonth', 'perDay', 'extraTrips',
+  'leaseAdv', 'leaseRate', 'leaseMonths', 'charger', 'regFee', 'parking', 'downtime'];
+const CAR_AI_SCHEMA = { name: 'car_review', description: 'Разбор расчёта новой машины: вывод, причины, идеи, риски, вопросы.', input_schema: { type: 'object', additionalProperties: false, required: ['summary', 'reasons', 'ideas', 'risks', 'questions'], properties: {
+  summary: { type: 'string', description: 'Вывод: стоит ли покупать и при каких условиях окупится; ответ на вопрос руководителя, если он есть. 2–4 предложения' },
+  reasons: { type: 'array', items: { type: 'string' }, description: 'Почему так: 2–4 пункта с цифрами из расчёта' },
+  ideas: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['title', 'detail', 'changes'], properties: {
+    title: { type: 'string', description: 'Что сделать, до 10 слов' }, detail: { type: 'string', description: 'Как это сделать в компании: 1–2 предложения' },
+    changes: { type: 'array', description: 'Новые значения цифр расчёта; результат посчитает сайт', items: { type: 'object', additionalProperties: false, required: ['key', 'value'], properties: {
+      key: { type: 'string', enum: CAR_AI_KEYS }, value: { type: 'number' } } } } } } },
+  risks: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['title', 'detail'], properties: { title: { type: 'string', description: 'До 8 слов' }, detail: { type: 'string', description: '1–2 предложения' } } } },
+  questions: { type: 'array', items: { type: 'string' }, description: 'Что спросить у дилера, банка или бухгалтера перед покупкой' } } } };
 // сводка для ИИ → строки «показатель · значение» для Excel
 const aiFlat = (v, p = '', rows = []) => {
   if (v && typeof v === 'object' && !Array.isArray(v)) Object.keys(v).forEach(k => aiFlat(v[k], p ? p + ' · ' + k : k, rows));
@@ -4088,7 +4142,7 @@ class Component extends DCLogic {
         const SC = CC.scenarios(batches, cc, { fill, perDay: +S.tripsPerVehicle || 2 }), res = SC[0].r, { p, T: CT, M, V } = res;
         const val = k => cc[k] != null ? String(cc[k]) : String(CC.DEFAULTS[k]);
         const set = k => e => { const v = e.target.value; this.setState(s0 => { const c = { ...(s0.carCalc || {}), [k]: v }; try { localStorage.setItem('logi-car-calc', JSON.stringify(c)); } catch (er) { /* без хранилища — до перезагрузки */ } return { carCalc: c }; }); };
-        const F = (k, label, hint, o = {}) => ({ label, hint: hint || '', v: val(k), on: set(k), mode: o.text ? 'text' : 'decimal', ph: o.ph || '' });
+        const F = (k, label, hint, o = {}) => ({ k, label, hint: hint || '', v: val(k), on: set(k), mode: o.text ? 'text' : 'decimal', ph: o.ph || '' });
         // «Применить» у сценария — его правка в форму (и на устройство)
         const apply = patch => () => this.setState(s0 => { const c = { ...(s0.carCalc || {}) }; Object.entries(patch).forEach(([k, v]) => { c[k] = String(v); }); try { localStorage.setItem('logi-car-calc', JSON.stringify(c)); } catch (er) { /* без хранилища */ } return { carCalc: c }; });
         out.carGroups = [
@@ -4203,6 +4257,24 @@ class Component extends DCLogic {
           { label: 'Электричество', value: f0(M.energy), sub: 'сум в месяц' },
           { label: 'Водитель и ТО', value: f0(M.salary + M.upkeep), sub: 'сум в месяц' },
           { label: 'Экономия до покупки', value: f0(M.net), sub: 'сум в месяц, без платежей за машину' }];
+        // разбор ИИ: в ИИ уходят только цифры расчёта (без клиентов); идеи ИИ пересчитывает сайт
+        const R1 = x => x == null || !isFinite(x) ? null : Math.round(x * 10) / 10, R0 = x => x == null || !isFinite(x) ? null : Math.round(x);
+        const label = (plabel ? plabel + ' · ' : '') + range, U0 = res.U;
+        const facts = { period: label, batches: CT.batches, batchesPerMonth: R1(M.perMonth), batchesPerMonthSource: p.perMonth ? 'вписано' : 'по данным периода',
+          car: { name: p.name, price: p.price, count: p.count, bodyM3: R1(res.capM3), kg: p.kg, rangeKm: p.rangeKm, kwhPer100km: p.kwh100, kwhPrice: p.kwhPrice },
+          inputs: { salary: p.salary, driverPerTrip: p.driverPerTrip, payrollTaxPct: p.payrollTax, upkeepYear: p.upkeepYear, parking: p.parking, tripsPerDay: res.per, extraTrips: p.extraTrips,
+            downtimePct: p.downtime, winterRangeLossPct: p.winterLoss, charger: p.charger, regFee: p.regFee, resalePct: p.resale, depositPct: p.deposit, priceGrowthPct: p.growth,
+            lease: { advancePct: p.leaseAdv, ratePct: p.leaseRate, months: p.leaseMonths } },
+          tripsPerMonth: { all: R1(M.allTrips), fitBody: R1(B.fitMonth), taken: R1(M.trips), maxPossible: R0(B.cap), winterLess: R1(M.winterLess), avgPrice: R0(B.perTrip), avgKm: res.base ? R1(res.base.km) : null, maxDayKm: R0(CT.maxDayKm) },
+          inPeriod: { tripsWithTariff: CT.all, tooBigForBody: CT.bigger, notEnoughRange: CT.byRange },
+          month: { paidToHiredNow: R0(M.saved), energy: R0(M.energy), driver: R0(M.salary), upkeep: R0(M.upkeep), parking: R0(M.parking), ownCostTotal: R0(M.opex), savingBeforeCarPayments: R0(M.net) },
+          needed: { tripsToCoverCosts: R1(B.tripsEven), tripsForPaybackIn3y: R1(B.tripsIn3y), maxDriverSalary: R0(B.maxSalary), maxCarPriceFor3y: R0(B.maxPrice3y) },
+          buy: V.map(x => ({ way: how(x), upfront: R0(x.upfront), monthlyPayment: R0(x.pay), months: x.months, overpay: R0(x.overpay), total: R0(x.total), paybackMonths: x.payback,
+            result5y: R0(x.five), result5yWithSale: R0(x.fiveSale), depositLost5y: R0(Math.max(0, x.lost)) })),
+          perTrip: U0 ? { hiredPrice: R0(U0.hired), energy: R0(U0.energy), driver: R0(U0.driver), upkeep: R0(U0.upkeep), carCash: R0(U0.carCash), carLease: R0(U0.carLease) } : null,
+          scenarios: out.carScen.map(x => ({ change: x.title + ' (' + x.sub + ')', tripsPerMonth: x.trips, savingPerMonth: x.net, paybackCash: x.cash, paybackLease: x.lease, result5y: x.five })) };
+        const aiKey = JSON.stringify([cc, label]), labels = Object.fromEntries(out.carGroups.flatMap(g => g.fields.map(f => [f.k, f.label])));
+        Object.assign(out, this.carAiView(st, { facts, key: aiKey, label, labels, apply, run: patch => CC.calc(batches, { ...cc, ...patch }, { fill, perDay: +S.tripsPerVehicle || 2 }), term, neg, money, badC }));
         this._repX = { kind, out, res };
       } else {
         // автопарк: рейсы и машины по дням, загрузка; сравнение планов по партиям
@@ -4341,6 +4413,12 @@ class Component extends DCLogic {
       if (o.carTrip.length) sheets.push({ name: 'Один рейс', rows: [['', 'Наличными', 'В лизинг']].concat(o.carTrip.map(x => [x.l, x.a, x.b])) });
       sheets.push({ name: 'По партиям', rows: [['Партия', 'Рейсов с тарифом', 'Подходят по кузову', 'Взяла бы', 'Зимой', 'Сэкономлено', 'Км', 'Км за день (больше всех)', 'Не хватило заряда']].concat(r.T.days.map(d => [dLong(d.date), d.all, d.fit, d.taken, d.takenW, Math.round(d.saved), Math.round(d.km), Math.round(d.maxKm), d.byRange])) });
       sheets.push({ name: 'Что проверить', rows: [['Что', 'Подробно']].concat(o.carCheck.map(c => [c.t, c.d])) });
+      if (o.carAiHas) { const a = o.carAiRep;
+        sheets.push({ name: 'Разбор ИИ', rows: [['Разбор ИИ · ' + a.label], [o.carAiMeta]].concat(a.q ? [['Вопрос: ' + a.q]] : [], [[], ['Вывод'], [a.summary], [], ['Почему так']], a.reasons.map(x => [x]),
+          [[], ['Идея', 'Подробно', 'Что поменять', 'Рейсов в месяц', 'Экономия в месяц', 'Наличными', 'В лизинг', 'Итог за 5 лет']], o.carAiIdeas.map(x => [x.title, x.detail, x.changes, x.trips, x.net, x.cash, x.lease, x.five]),
+          [[], ['Риски']], a.risks.map(x => [x.title, x.detail]), [[], ['Что спросить у дилера, банка и бухгалтера']], a.questions.map(x => [x]),
+          [[], ['ИИ может ошибаться: цифры у идей посчитал сайт, а выводы, риски и вопросы — проверяйте.']]) });
+        sheets.push({ name: 'Сводка для ИИ', rows: [['Показатель', 'Значение']].concat(aiFlat(a.facts)) }); }
       sheets.push({ name: 'Исходные цифры', rows: [['Раздел', 'Показатель', 'Значение']].concat(o.carGroups.flatMap(g => g.fields.map(f => [g.title, f.label, f.v || f.ph]))) });
       name = 'yangi_mashina_' + o.repPeriodKey;
     } else {
@@ -4372,6 +4450,82 @@ class Component extends DCLogic {
   // В сводке нет имён клиентов, телефонов и адресов: числа, BL, районы, машины, причины недоставки; водители — под кодами
   // DRV1, DRV2… (имя подставляется на экране и в Excel только на этом устройстве). Отчёт — только по кнопке; последний
   // хранится на этом устройстве, в таблицу не пишется (кроме строки «ИИ-журнала» о вызове).
+  // ---------- «Новая машина»: разбор ИИ (вывод, причины, идеи с пересчётом, риски, вопросы) ----------
+  carAiPrompt(lang) {
+    return 'Ты — финансовый аналитик логистической компании BURAQ logistics (Ташкент). Компания возит сборные грузы со своего склада клиентам по городу; ' +
+      'сейчас рейсы возят наёмные машины (Gazel, Labo, Changan, Kamaz), компания платит им тариф за рейс. Она думает купить свою машину (например, электрогрузовик BYD) — наличными или в лизинг. ' +
+      'Сайт уже посчитал по рейсам выбранного периода, какие рейсы возьмёт своя машина, её расходы в месяц, окупаемость и сценарии; тебе дают этот расчёт в JSON. ' +
+      'Суммы — в сумах, «в месяц», если не сказано иначе; paybackMonths null или «не окупится» — не окупается; машина ездит только в дни партий (batchesPerMonth), если не вписаны рейсы вне партий (extraTrips).\n' +
+      'Задача: объясни руководителю простыми словами, стоит ли покупать и при каких условиях машина окупится, и предложи реалистичные изменения.\n' +
+      'Правила: цифры бери только из расчёта, ничего не выдумывай и не считай сам итог идей. В ideas — до 5 идей, самые сильные первыми; в changes каждой идеи — новые значения цифр расчёта: ' +
+      'price — цена одной машины, count — машин, m3 и kg — кузов, rangeKm — запас хода, kwh100 и kwhPrice — расход и цена электричества, salary — оклад водителя в месяц, driverPerTrip — оплата водителю за рейс, ' +
+      'upkeepYear — ТО и страховка в год, perMonth — партий в месяц, perDay — рейсов на машину в день, extraTrips — рейсов в месяц вне партий, leaseAdv, leaseRate, leaseMonths — аванс %, удорожание % в год, срок мес., ' +
+      'charger, regFee, parking — зарядная станция, оформление, стоянка. Сайт сам посчитает результат каждой идеи и покажет его рядом. ' +
+      'Идеи должны быть выполнимы для компании: например, свои рейсы между партиями (забор груза у поставщиков, срочные доставки), оплата водителю за рейс вместо оклада, другая модель или машина дешевле, ' +
+      'лизинг на другой срок, кузов больше; не предлагай больше рейсов в день, если подходящих по кузову рейсов (fitBody) уже не больше взятых (taken). ' +
+      'В risks — 2–5 рисков, которые могут сделать результат хуже расчёта. В questions — 3–6 вопросов дилеру, банку или бухгалтеру. Если руководитель задал вопрос — ответь на него в summary. ' +
+      'Пиши коротко и просто: summary — 2–4 предложения, detail — 1–2 предложения.\n' +
+      (lang === 'uz' ? 'Язык ответа: узбекский, латиница (o‘ и g‘ — со знаком ‘), простые слова. Названия машин не переводи.' : 'Язык ответа: русский.');
+  }
+  carAiLoad() {
+    if (this.carAi === undefined) { try { const r = JSON.parse(localStorage.getItem('logi-car-ai') || 'null'); this.carAi = r && r.v === 1 && Array.isArray(r.ideas) ? r : null; } catch (e) { this.carAi = null; } }
+    return this.carAi;
+  }
+  async carAiMake(ctx) {
+    if (this.state.carAiBusy) return;
+    const fail = e => this.setState({ carAiBusy: false, carAiErr: e });
+    if (this.readOnly) return fail('Разбор ИИ делает руководитель: вход «только просмотр» данные ИИ не отправляет.');
+    if (!this.gsUrl) return fail('Сначала подключите Google Таблицу — ИИ работает через её скрипт: «Настройки» → «Связь».');
+    const A = window.LogiAuth;
+    if (A && A.owner && A.owner().state === 'locked') return fail('Секрет редактора закрыт на этом устройстве: «Настройки» → «Связь» → «ИИ-импорт манифестов» → пароль входа → «Открыть секрет».');
+    if (!ctx.facts.inPeriod.tripsWithTariff) return fail('В этом периоде нет рейсов с тарифом — выберите другой период.');
+    this.setState({ carAiBusy: true, carAiErr: '' });
+    try {
+      const lang = window.I18N && window.I18N.lang === 'uz' ? 'uz' : 'ru', q = String(this.state.carAiQ || '').trim().slice(0, 500);
+      const j = await this.aiPost({ action: 'call', system: this.carAiPrompt(lang),
+        content: [{ type: 'text', text: 'Расчёт сайта (' + ctx.label + '):\n' + JSON.stringify(ctx.facts) + (q ? '\n\nВопрос руководителя: ' + q : '') }],
+        schema: CAR_AI_SCHEMA, max_tokens: 5000, effort: 'low', meta: { step: 'ИИ: новая машина', file: ctx.label } });
+      if (!j.ok) return fail(j.code === 'truncated' ? 'Ответ ИИ не поместился — нажмите «Разобрать» ещё раз.' :
+        j.code === 'timeout' ? 'ИИ не ответил вовремя (Apps Script ждёт около минуты) — нажмите «Разобрать» ещё раз.' :
+        j.code === 'refusal' || j.code === 'noresult' ? 'ИИ не разобрал расчёт — попробуйте ещё раз.' :
+        (e => j.code === 'editor' ? e.replace(/[.!]?$/, '. ') + 'Проверьте секрет редактора: «Настройки» → «Связь» → «ИИ-импорт манифестов».' : e)(j.error || 'ИИ не ответил'));
+      const res = j.result || {}, str = v => String(v == null ? '' : v).trim(), list = v => (Array.isArray(v) ? v : []), objs = v => list(v).filter(x => x && typeof x === 'object');
+      const rep = { v: 1, made: new Date().toISOString(), lang, model: str(j.model), ms: +j.ms || 0, key: ctx.key, label: ctx.label, q, facts: ctx.facts, summary: str(res.summary),
+        reasons: list(res.reasons).map(str).filter(Boolean).slice(0, 6),
+        ideas: objs(res.ideas).slice(0, 6).map(x => ({ title: str(x.title), detail: str(x.detail),
+          changes: objs(x.changes).filter(c => CAR_AI_KEYS.includes(c.key) && isFinite(+c.value) && +c.value >= 0).map(c => ({ key: c.key, value: +c.value })) })).filter(x => x.title),
+        risks: objs(res.risks).slice(0, 6).map(x => ({ title: str(x.title), detail: str(x.detail) })).filter(x => x.title),
+        questions: list(res.questions).map(str).filter(Boolean).slice(0, 8) };
+      this.carAi = rep;
+      try { localStorage.setItem('logi-car-ai', JSON.stringify(rep)); } catch (e) { /* закрытый режим — разбор виден до перезагрузки */ }
+      this.setState({ carAiBusy: false, carAiErr: '' });
+    } catch (e) { fail(e.message || String(e)); }
+  }
+  carAiView(st, c) {
+    const ro = this.readOnly, rep = this.carAiLoad(), busy = !!st.carAiBusy, cur = window.I18N && window.I18N.lang === 'uz' ? 'uz' : 'ru';
+    const out = { carAiCan: !ro, carAiBusy: busy, carAiBtn: busy ? 'ИИ разбирает…' : rep ? 'Разобрать заново' : 'Разобрать расчёт', carAiMake: () => this.carAiMake(c),
+      carAiQ: st.carAiQ || '', carAiOnQ: e => this.setState({ carAiQ: e.target.value }),
+      carAiNote: ro ? 'Разбор ИИ делает руководитель: вход «только просмотр» данные ИИ не отправляет.' :
+        'ИИ получает только цифры этого расчёта: рейсы в месяц, расходы, покупку, сценарии. Клиенты, адреса и телефоны не отправляются. ИИ объяснит, стоит ли покупать, и предложит, что поменять, — результат каждой идеи посчитает сайт. Один разбор — один запрос к Claude API.',
+      carAiHasErr: !!st.carAiErr, carAiErr: st.carAiErr || '', carAiErrClose: () => this.setState({ carAiErr: '' }), carAiHas: !!rep, carAiNotes: [], carAiMeta: '' };
+    if (!rep) return out;
+    const made = new Date(rep.made), mk = isNaN(made) ? '' : dLong(isoDay(made)) + ' ' + hhmm(made.getHours() * 60 + made.getMinutes());
+    const notes = [];
+    if (rep.key !== c.key) notes.push('Цифры в форме или период изменились после разбора — выводы ИИ по прежним цифрам, идеи пересчитаны по нынешним. Чтобы обновить выводы, нажмите «Разобрать заново».');
+    if (rep.lang !== cur) notes.push(rep.lang === 'uz' ? 'Разбор написан на узбекском. Чтобы получить его на русском, разберите заново.' : 'Разбор написан на русском. Чтобы получить его на узбекском, разберите заново.');
+    const fmt = v => Number.isInteger(v) ? f0(v) : f1(v, 2);
+    const row = (title, detail, changes, r, patch) => { const b5 = Math.max(...r.V.map(v => v.five));
+      return { title, detail, changes, hasDetail: !!detail, hasChanges: !!changes, canApply: !!patch, apply: patch ? c.apply(patch) : null, trips: f1(r.M.trips, 1), net: c.money(r.M.net), netColor: c.neg(r.M.net),
+        cash: c.term(r.V[0].payback), lease: c.term(r.V[1].payback), cashColor: r.V[0].payback == null ? c.badC : 'inherit', leaseColor: r.V[1].payback == null ? c.badC : 'inherit', five: c.money(b5), fiveColor: c.neg(b5) }; };
+    const ideas = [row('Как сейчас', '', 'ваши цифры в форме', c.run({}), null)].concat(rep.ideas.map(x => {
+      const patch = Object.fromEntries(x.changes.map(ch => [ch.key, String(ch.value)]));
+      return row(x.title, x.detail, x.changes.map(ch => (c.labels[ch.key] || ch.key) + ': ' + fmt(ch.value)).join(' · '), c.run(patch), x.changes.length ? patch : null); }));
+    Object.assign(out, { carAiMeta: 'Разбор от ' + mk + (rep.ms ? ' · ИИ ответил за ' + Math.max(1, Math.round(rep.ms / 1000)) + ' с' : '') + (rep.model ? ' · ' + rep.model : ''),
+      carAiNotes: notes.map(text => ({ text })), carAiHasQ: !!rep.q, carAiAsked: rep.q || '', carAiSummary: rep.summary, carAiHasSummary: !!rep.summary,
+      carAiReasons: rep.reasons.map(text => ({ text })), carAiRisks: rep.risks, carAiHasRisks: !!rep.risks.length, carAiIdeas: ideas, carAiQuestions: rep.questions.map(text => ({ text })), carAiHasQuestions: !!rep.questions.length,
+      carAiRep: rep });
+    return out;
+  }
   aiRepRange() {
     const st = this.state, ds = this.derived().dates, today = isoDay(), per = ['batch', '7', '30'].includes(st.aiPer) ? st.aiPer : 'batch';
     if (per === 'batch') {
