@@ -628,6 +628,18 @@ input.set-input[type="text"] { text-align: left !important; }
 .bt-trash-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--color-divider); padding-top: 8px; font-size: 14px; }
 @media screen and (max-width: 760px) { .bt-sel { margin-left: 0; } .tc td.bt-ck { grid-column: span 1; } }
 
+/* «Клиенты» → «⇧ Загрузить базу»: база клиентов из Excel — итоги, галочки, списки, запись */
+.ci-msg { margin-bottom: 14px; }
+.ci-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1px; background: var(--color-divider); border: 1px solid var(--color-divider); }
+.ci-stat { background: var(--color-bg); padding: 10px 12px; }
+.ci-num { font-family: var(--font-num); font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ci-lbl { font-size: 12px; color: var(--color-neutral-700); }
+.ci-opts { display: flex; flex-direction: column; gap: 8px; }
+.ci-sec { border-top: 1px solid var(--color-divider); padding-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.ci-sec-title { font-weight: 500; font-size: 14px; }
+.ci-sec.ci-bad .ci-sec-title { color: var(--color-danger-ink); }
+.ci-list { margin: 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; }
+
 /* «Планы» → Buraq AI: план A составляет ИИ, планы B и X — улучшает */
 .plan-ai { border: 1px solid var(--color-divider); border-left: 2px solid var(--color-red); border-radius: var(--radius-lg); background: var(--color-bg); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .plan-ai-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }

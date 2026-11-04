@@ -39,6 +39,7 @@
 <script defer src="js/packing.js"></script>
 <script defer src="js/car-calc.js"></script>
 <script defer src="js/batches.js"></script>
+<script defer src="js/client-import.js"></script>
 <script defer src="js/import-core.js"></script>
 <script defer src="js/import-checks.js"></script>
 <script defer src="js/import-local.js"></script>
@@ -235,9 +236,12 @@
             <option value="none">Без координат</option>
           </sc-raw-select>
           <input class="input" style="width:240px" placeholder="Поиск: BL, бренд, имя, телефон…" value="{{ cSearch }}" sc-camel-on-change="{{ onCSearch }}">
+          <input type="file" accept=".xlsx,.xls" ref="{{ cliImpRef }}" sc-camel-on-change="{{ onCliImpFile }}" style="display:none">
+          <button data-edit class="btn btn-secondary ci-pick" style="white-space:nowrap" sc-camel-on-click="{{ cliImpPick }}" title="Excel с клиентами: BL, имя, бренд, телефоны, адрес">⇧ Загрузить базу</button>
           <button data-edit class="btn btn-primary blueprint" style="white-space:nowrap" sc-camel-on-click="{{ newClient }}"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>+ Добавить клиента</button>
         </div>
       </div>
+      <sc-if value="{{ cImpHasMsg }}"><div class="dv-msg ci-msg" style="border-left-color:{{ cImpColor }}"><div style="flex:1;text-wrap:pretty">{{ cImpText }}</div><sc-if value="{{ cImpCanUndo }}"><button data-edit class="btn btn-secondary ci-undo" sc-camel-on-click="{{ cImpUndo }}">Отменить загрузку</button></sc-if><button class="btn btn-ghost" sc-camel-on-click="{{ cImpClose }}">Закрыть</button></div></sc-if>
       <div class="tbl-wrap" style="overflow-x:auto;border:1px solid var(--color-divider)">
         <sc-raw-table class="table tc" style="min-width:1200px">
           <sc-raw-thead><sc-raw-tr><sc-raw-th>BL</sc-raw-th><sc-raw-th>Бренд / имя</sc-raw-th><sc-raw-th>Телефоны</sc-raw-th><sc-raw-th>Получатель</sc-raw-th><sc-raw-th>Район</sc-raw-th><sc-raw-th>Адрес склада</sc-raw-th><sc-raw-th>Зона</sc-raw-th><sc-raw-th style="text-align:right">Полнота</sc-raw-th><sc-raw-th style="text-align:right">Отгрузок</sc-raw-th><sc-raw-th style="text-align:right">CBM / KG всего</sc-raw-th><sc-raw-th>Посл. партия</sc-raw-th><sc-raw-th></sc-raw-th></sc-raw-tr></sc-raw-thead>
@@ -1883,6 +1887,38 @@
     </div>
   </sc-if>
 
+  <!-- «Клиенты» → «⇧ Загрузить базу»: база клиентов из Excel — что добавится и дополнится, что не загрузится; потом запись -->
+  <sc-if value="{{ isCliImpDialog }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" style="z-index:3000" sc-camel-on-click="{{ closeDialogBg }}">
+      <div class="dialog bt-dialog ci-dialog" style="width:min(900px,100%);background:var(--color-bg)">
+        <div class="bt-head">
+          <div><div class="dialog-title" style="margin:0">Загрузка базы клиентов</div><div class="bt-sub">{{ ciSub }}</div></div>
+          <button class="btn btn-ghost" sc-camel-on-click="{{ closeDialog }}" aria-label="Закрыть">✕</button>
+        </div>
+        <sc-if value="{{ ciBusy }}"><div class="ai-empty">Читаю файл…</div></sc-if>
+        <sc-if value="{{ ciHasError }}"><div class="dv-msg" style="border-left-color:var(--color-danger-ink)"><div style="flex:1;text-wrap:pretty">{{ ciError }}</div></div></sc-if>
+        <sc-if value="{{ ciReady }}">
+          <div class="ci-stats"><sc-for list="{{ ciStats }}" as="x"><div class="ci-stat"><div class="ci-num">{{ x.n }}</div><div class="ci-lbl">{{ x.l }}</div></div></sc-for></div>
+          <div class="ci-opts">
+            <label class="dv-check"><input type="checkbox" class="ci-fill" checked="{{ ciFill }}" sc-camel-on-change="{{ ciOnFill }}"><span>Дополнить клиентов, которые уже есть<br><small>имя, бренд, телефон, адрес — только там, где на сайте пусто</small></span></label>
+            <label class="dv-check"><input type="checkbox" class="ci-replace" checked="{{ ciReplace }}" sc-camel-on-change="{{ ciOnReplace }}"><span>Заменить отличающиеся — взять данные из файла<br><small>по умолчанию сайт свои данные не меняет — отличия только показывает</small></span></label>
+            <label class="dv-check"><input type="checkbox" class="ci-notes" checked="{{ ciNotes }}" sc-camel-on-change="{{ ciOnNotes }}"><span>Менеджер, тип груза и вид деятельности — в примечание<br><small>только если примечание пустое</small></span></label>
+          </div>
+          <sc-for list="{{ ciSecs }}" as="g">
+            <div class="ci-sec {{ g.cls }}">
+              <div class="ci-sec-title">{{ g.title }}</div>
+              <sc-if value="{{ g.hasHint }}"><div class="bt-sub">{{ g.hint }}</div></sc-if>
+              <ul class="ci-list"><sc-for list="{{ g.items }}" as="x"><li>{{ x.text }}</li></sc-for></ul>
+              <sc-if value="{{ g.hasMore }}"><div class="bt-sub">{{ g.more }}</div></sc-if>
+            </div>
+          </sc-for>
+          <ul class="bt-warn"><sc-for list="{{ ciNotesList }}" as="w"><li>{{ w.text }}</li></sc-for></ul>
+          <div class="dialog-actions"><button class="btn btn-secondary" sc-camel-on-click="{{ closeDialog }}">Отмена</button><button data-edit class="btn btn-primary ci-go" sc-camel-on-click="{{ ciGo }}" disabled="{{ ciNo }}">{{ ciBtn }}</button></div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
   <!-- «Настройки» → «Связь»: Google Таблица, ИИ-импорт, телеграм-бот (прежде — окно «Настройки связи») -->
   <sc-if value="{{ isGsDialog }}" hint-placeholder-val="{{ false }}">
     <main class="page gs-page" style="max-width:980px;margin:0 auto;padding:28px;display:flex;flex-direction:column;gap:16px">
@@ -3377,7 +3413,7 @@ class Component extends DCLogic {
   }
   bqPrompt(lang) {
     return 'Ты — Buraq AI, помощник руководителя логистической компании BURAQ logistics (Ташкент) на её сайте. Компания привозит сборные грузы на свой склад и развозит клиентам по городу на Labo, Changan (Shineray), Gazel и Kamaz. Партия — все отгрузки одной даты. ' +
-      'Вкладки сайта: «Журнал» — отгрузки партий (BL клиента, CBM, KG, мест, машина, рейс, статус), «🗂 Партии» — удалить, перенести, объединить; «Клиенты»; «Карта»; «Отчёты» (dash — дашборд, batch — партия на день, cost — расходы, fleet — автопарк, newcar — новая машина и окупаемость, drivers — водители, ai — ИИ-отчёт); ' +
+      'Вкладки сайта: «Журнал» — отгрузки партий (BL клиента, CBM, KG, мест, машина, рейс, статус), «🗂 Партии» — удалить, перенести, объединить; «Клиенты» («⇧ Загрузить базу» — клиенты из Excel: окно покажет, что добавится и дополнится); «Карта»; «Отчёты» (dash — дашборд, batch — партия на день, cost — расходы, fleet — автопарк, newcar — новая машина и окупаемость, drivers — водители, ai — ИИ-отчёт); ' +
       '«Планы A/B/X» — развоз партии по рейсам: A — план Buraq AI (пока не составлен — план сайта), B — меньше машин (Gazel с допуском), X — по районам; «Водители» (бот в Telegram); «Визуализация» (3D кузова); «Настройки» (tariffs, fleetset, link, check).\n' +
       'Тебе дают разговор, что сейчас на экране (screen) и данные сайта в JSON. Отвечай по этим данным. Если данных не хватает — запроси в lookups (batch — отгрузки партии date; client — поиск клиента по query; plan — план партии date и plan), сайт пришлёт и спросит снова; или спроси руководителя. Цифры не выдумывай.\n' +
       'Действия (actions) сайт выполнит сам. open — открыть вкладку tab (sub — подвкладка), date — партия, plan, search и status — фильтр журнала. ' +
@@ -4267,6 +4303,90 @@ class Component extends DCLogic {
         btMoveColor: there && ok ? 'var(--color-danger-ink)' : 'var(--color-neutral-700)', btMoveBtn: there && ok ? 'Объединить' : 'Перенести',
         btMoveGo: () => { if (ok) this.batchMove(step.from, to); }, btCancel: () => setDl({ step: null }) });
     }
+    return out;
+  }
+  // «Клиенты» → «⇧ Загрузить базу»: Excel с клиентами (js/client-import.js) — окно «что будет», запись, «Отменить загрузку»
+  cliImpRef = React.createRef();
+  async cliImpFile(e) {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f || this.readOnly) return;
+    const tag = f.name + '|' + Date.now();
+    this.setState({ dialog: { type: 'cliimp', busy: true, tag, file: f.name, fill: true, replace: false, notes: true }, cliImpMsg: null });
+    let parsed;
+    try { parsed = window.LogiClientImport.parse(await window.XlsxIO.readGrid(await f.arrayBuffer())); }
+    catch (err) { parsed = { error: 'Не удалось прочитать файл: ' + String((err && err.message) || err) }; }
+    this.setState(s => s.dialog && s.dialog.type === 'cliimp' && s.dialog.tag === tag ? { dialog: { ...s.dialog, busy: false, parsed } } : null);
+  }
+  // сравнение со справочником — на каждую галочку; тот же справочник и те же галочки — прошлый ответ
+  cliImpMerge(data, dl) {
+    const k = this._ciMemo;
+    if (k && k.clients === data.clients && k.parsed === dl.parsed && k.fill === dl.fill && k.replace === dl.replace && k.notes === dl.notes) return k.m;
+    const m = window.LogiClientImport.merge(data.clients, dl.parsed, { fill: dl.fill, replace: dl.replace, notes: dl.notes, districts: (data.lists || {}).districts || [] });
+    this._ciMemo = { clients: data.clients, parsed: dl.parsed, fill: dl.fill, replace: dl.replace, notes: dl.notes, m };
+    return m;
+  }
+  cliImpGo(dl) {
+    if (this.readOnly || !dl.parsed || dl.parsed.error) return;
+    const data = this.state.data, m = this.cliImpMerge(data, dl);
+    if (!m.added.length && !m.filled.length) return;
+    // для «Отменить загрузку»: какие поля у кого были до загрузки и какими стали
+    const old = new Map(data.clients.map(c => [c.bl, c])), now = new Map(m.clients.map(c => [c.bl, c])), before = {}, after = {};
+    m.filled.forEach(x => { before[x.bl] = {}; after[x.bl] = {}; x.fields.forEach(f => { before[x.bl][f] = old.get(x.bl)[f]; after[x.bl][f] = now.get(x.bl)[f]; }); });
+    this.commit({ ...data, clients: m.clients });
+    const a = m.added.length, u = m.filled.length;
+    this.setState({ dialog: null, cliImpMsg: { color: 'var(--color-accent)', undo: { added: m.added.slice(), before, after },
+      text: 'База загружена: ' + [a ? 'добавлено ' + a + ' ' + plural(a, 'клиент', 'клиента', 'клиентов') : 'новых клиентов нет', u ? (dl.replace ? 'изменено ' : 'дополнено ') + u : ''].filter(Boolean).join(', ') + '.' +
+        (m.diffs.length ? ' Отличий оставлено как на сайте: ' + m.diffs.length + '.' : '') + (this.gsUrl ? ' Клиенты записываются в Google Таблицу.' : '') } });
+  }
+  // отменить: новых — убрать, у дополненных — вернуть поля, которые с тех пор никто не менял
+  cliImpUndo() {
+    const msg = this.state.cliImpMsg, u = msg && msg.undo;
+    if (!u || this.readOnly) return;
+    const data = this.state.data, drop = new Set(u.added);
+    const clients = data.clients.filter(c => !drop.has(c.bl)).map(c => {
+      const b = u.before[c.bl]; if (!b) return c;
+      const x = { ...c }; Object.keys(b).forEach(f => { if (String(c[f] ?? '') === String(u.after[c.bl][f] ?? '')) x[f] = b[f]; }); return x; });
+    const gone = data.clients.length - clients.length;
+    this.commit({ ...data, clients });
+    this.setState({ cliImpMsg: { color: 'var(--color-neutral-700)', text: 'Загрузка отменена: убрано новых клиентов — ' + gone + ', дополненные поля возвращены как были.' + (this.gsUrl ? ' Google Таблица обновится так же.' : '') } });
+  }
+  cliImpView(st, dl, data) {
+    const set = patch => this.setState(s => s.dialog && s.dialog.type === 'cliimp' ? { dialog: { ...s.dialog, ...patch } } : null);
+    const p = dl.parsed, ready = !!(p && !p.error);
+    const out = { ciSub: dl.file || '', ciBusy: !!dl.busy, ciHasError: !!(p && p.error), ciError: (p && p.error) || '', ciReady: ready, ciStats: [], ciSecs: [], ciNotesList: [], ciNo: true, ciBtn: '' };
+    if (!ready) return out;
+    const m = this.cliImpMerge(data, dl), byBl = new Map(m.clients.map(c => [c.bl, c])), who = c => c ? [c.brand, c.name].filter(Boolean).join(' · ') : '';
+    const FN = { brand: 'бренд', name: 'имя', tel1: 'телефон', tel2: 'телефон 2', tel: 'телефон', address: 'адрес', district: 'район', link: 'ссылка', note: 'примечание' };
+    const LIM = 40, pr = k => p.problems.filter(x => x.kind === k);
+    const sec = (title, list, text, hint, cls) => !list.length ? null : { title: title + ': ' + list.length, cls: cls || '', hint: hint || '', hasHint: !!hint,
+      items: list.slice(0, LIM).map(x => ({ text: text(x) })), hasMore: list.length > LIM, more: 'И ещё ' + (list.length - LIM) + '.' };
+    const rowsOf = x => (x.rows.length > 1 ? 'строки ' : 'строка ') + x.rows.join(', ');
+    out.ciSub = dl.file + ' · лист «' + p.sheet + '» · шапка в строке ' + p.headerRow;
+    out.ciStats = [{ n: p.total, l: 'строк в файле' }, { n: p.empty, l: 'пустых кодов пропущено' }, { n: m.added.length, l: 'новых клиентов' },
+      { n: m.filled.length, l: dl.replace ? 'изменится' : 'дополнится' }, { n: m.same.length, l: 'без изменений' }, { n: p.clash.length + pr('nobl').length + pr('zero').length, l: 'не загрузится' }];
+    out.ciSecs = [
+      sec('Новые клиенты', m.added, bl => bl + ' — ' + (who(byBl.get(bl)) || 'без имени')),
+      sec(dl.replace ? 'Изменятся' : 'Дополнятся', m.filled, x => x.bl + ': ' + x.fields.map(f => FN[f] || f).join(', ')),
+      sec('Отличаются от сайта', m.diffs, d => d.bl + ' · ' + (FN[d.f] || d.f) + ': на сайте «' + d.site + '», в файле «' + d.file + '»', 'Сайт оставит свои данные. Взять данные из файла — отметьте «Заменить отличающиеся».'),
+      sec('Не загружаются: разные клиенты под одним BL', p.clash, x => x.bl + ' — ' + rowsOf(x) + ': ' + x.names.join(' / '), 'Решите, чей это код, исправьте файл и загрузите снова — или добавьте клиента вручную.', 'ci-bad'),
+      sec('Строки без BL', pr('nobl'), x => 'строка ' + x.row, 'Не загружаются: впишите код в файле.', 'ci-bad'),
+      sec('BL-00', pr('zero'), x => 'строка ' + x.row, 'BL-00 — груз без известного владельца, а не клиент. Не загружается.', 'ci-bad'),
+      sec('Проверьте телефоны', pr('phone'), x => x.bl + ' (строка ' + x.row + ')', 'Номер не похож на узбекский (+998 и 9 цифр) — загрузится как есть, поправьте в карточке клиента.'),
+      sec('Без имени, бренда и телефона', pr('thin'), x => x.bl + ' (строка ' + x.row + ')', 'Загрузятся с тем, что есть в строке.'),
+      sec('Повторы в файле — загрузятся один раз', p.dups, x => x.bl + ' — ' + rowsOf(x))
+    ].filter(Boolean);
+    out.ciNotesList = [
+      p.passport && 'Паспорта на сайт не переносятся.',
+      p.ignored.length && 'Не загружаются столбцы: ' + p.ignored.join(', ') + '.',
+      m.added.length && 'У новых клиентов нет точки на карте и района («Не определён») — поставьте точку в карточке клиента.',
+      this.gsUrl && 'Клиенты запишутся и в Google Таблицу.'
+    ].filter(Boolean).map(text => ({ text }));
+    const a = m.added.length, u = m.filled.length;
+    out.ciNo = !(a || u) || this.readOnly;
+    out.ciBtn = !(a || u) ? 'Нечего загружать' : 'Загрузить: ' + [a && 'новых ' + a, u && (dl.replace ? 'изменить ' : 'дополнить ') + u].filter(Boolean).join(', ');
+    Object.assign(out, { ciFill: !!dl.fill, ciReplace: !!dl.replace, ciNotes: !!dl.notes, ciOnFill: e => set({ fill: e.target.checked }), ciOnReplace: e => set({ replace: e.target.checked }),
+      ciOnNotes: e => set({ notes: e.target.checked }), ciGo: () => this.cliImpGo(dl) });
     return out;
   }
   driversView(st, S, D) {
@@ -6130,7 +6250,7 @@ class Component extends DCLogic {
     const curSub = top === 'reports' ? (st.tab === 'dash' ? 'dash' : st.repKind || 'batch') : st.tab;
     const subtabs = (SUB[top] || []).filter(([k]) => !(k === 'link' && this.readOnly)).map(([k, l]) => ({ l, cls: k === curSub ? 'subtab on' : 'subtab',
       go: () => top === 'reports' ? this.setState(k === 'dash' ? { tab: 'dash' } : { tab: 'reports', repKind: k }) : this.goSettings(k) }));
-    const base = { tabs, subtabs, hasSubtabs: subtabs.length > 0, loading: !st.ready, isJournal: false, isClients: false, isMap: false, isDash: false, isPlans: false, isDrivers: false, isViz: false, isTariffs: false, isReports: false, isImport: false, isShipDialog: false, isBatchDialog: false, isClientDialog: false, isLocAskDialog: false, isWhDialog: false, isVehDialog: false, isDrvDialog: false, isApDialog: false, isPackDialog: false, isPhotoDialog: false, isGsDialog: false, isCheck: false, isFleetSet: false, depotName: '', savedNote: '', exportXlsx: this.exportXlsx, mapRef: this.mapRef, planMapRef: this.planMapRef, vizRef: this.vizRef,
+    const base = { tabs, subtabs, hasSubtabs: subtabs.length > 0, loading: !st.ready, isJournal: false, isClients: false, isMap: false, isDash: false, isPlans: false, isDrivers: false, isViz: false, isTariffs: false, isReports: false, isImport: false, isShipDialog: false, isBatchDialog: false, isCliImpDialog: false, isClientDialog: false, isLocAskDialog: false, isWhDialog: false, isVehDialog: false, isDrvDialog: false, isApDialog: false, isPackDialog: false, isPhotoDialog: false, isGsDialog: false, isCheck: false, isFleetSet: false, depotName: '', savedNote: '', exportXlsx: this.exportXlsx, mapRef: this.mapRef, planMapRef: this.planMapRef, vizRef: this.vizRef,
       fileInputRef: this.fileInputRef, onFilePicked: this.onFilePicked, connectFile: this.connectFile, disconnectFile: this.disconnectFile, saveNow: () => this.saveToFile(), reloadFromFile: () => this.readFromHandle(),
       account: () => window.LogiAuth && window.LogiAuth.openAccount(), readOnly: this.readOnly, ...this.bqView(st) };
     const fs = st.fileStatus, fat = st.fileAt ? hhmm(st.fileAt.getHours() * 60 + st.fileAt.getMinutes()) : '';
@@ -6344,6 +6464,10 @@ class Component extends DCLogic {
       out.whCount = (data.warehouses || []).length;
       out.newWh = () => this.openWh(null);
       Object.assign(out, { cSearch: st.cSearch, cDistrict: st.cDistrict, cZone: st.cZone, onCSearch: e => this.setState({ cSearch: e.target.value, cLimit: 100 }), onCDistrict: e => this.setState({ cDistrict: e.target.value, cLimit: 100 }), onCZone: e => this.setState({ cZone: e.target.value, cLimit: 100 }), newClient: () => this.openClient(null) });
+      // «⇧ Загрузить базу» — Excel с клиентами; после записи — сообщение и «Отменить загрузку»
+      const cim = st.cliImpMsg;
+      Object.assign(out, { cliImpRef: this.cliImpRef, cliImpPick: () => this.cliImpRef.current && this.cliImpRef.current.click(), onCliImpFile: e => this.cliImpFile(e),
+        cImpHasMsg: !!cim, cImpText: cim ? cim.text : '', cImpColor: cim ? cim.color : '', cImpCanUndo: !!(cim && cim.undo) && !this.readOnly, cImpUndo: () => this.cliImpUndo(), cImpClose: () => this.setState({ cliImpMsg: null }) });
     }
 
     if (st.tab === 'map') {
@@ -6757,6 +6881,9 @@ class Component extends DCLogic {
       } else if (dl.type === 'batches') {
         out.isBatchDialog = true;
         Object.assign(out, this.batchView(st, dl, data));
+      } else if (dl.type === 'cliimp') {
+        out.isCliImpDialog = true;
+        Object.assign(out, this.cliImpView(st, dl, data));
       } else if (dl.type === 'locask') {
         // «Какая локация на эту партию?» — все клиенты партии; у каждого: адрес клиента, точки из анкеты, склады, новая точка
         out.isLocAskDialog = true;
