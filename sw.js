@@ -29,6 +29,7 @@ const SHELL = [
   'js/car-calc.js',
   'js/batches.js',
   'js/client-import.js',
+  'js/warehouses.js',
   'js/plan-worker.js',
   'js/import-core.js',
   'js/import-checks.js',

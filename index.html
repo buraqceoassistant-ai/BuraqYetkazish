@@ -40,6 +40,7 @@
 <script defer src="js/car-calc.js"></script>
 <script defer src="js/batches.js"></script>
 <script defer src="js/client-import.js"></script>
+<script defer src="js/warehouses.js"></script>
 <script defer src="js/import-core.js"></script>
 <script defer src="js/import-checks.js"></script>
 <script defer src="js/import-local.js"></script>
@@ -290,6 +291,20 @@
           <div style="font-size:13px;color:var(--color-neutral-700);padding-bottom:5px">{{ whCount }} · если у клиента несколько складов</div>
           <button data-edit class="btn btn-secondary" style="margin-left:auto" sc-camel-on-click="{{ newWh }}">+ Добавить склад</button>
         </div>
+        <sc-if value="{{ whHasMsg }}"><div class="dv-msg wh-msg" style="border-left-color:var(--color-accent)"><div style="flex:1;text-wrap:pretty">{{ whMsg }}</div><sc-if value="{{ whCanUndo }}"><button data-edit class="btn btn-secondary wh-undo" sc-camel-on-click="{{ whUndo }}">Вернуть</button></sc-if><button class="btn btn-ghost" sc-camel-on-click="{{ whMsgClose }}">Закрыть</button></div></sc-if>
+        <sc-if value="{{ whHasDup }}">
+          <div class="wh-dup">
+            <div class="wh-dup-head"><div class="wh-dup-info"><div class="wh-dup-title">{{ whDupTitle }}</div><div class="bt-sub">{{ whDupSub }}</div></div>
+              <sc-if value="{{ whHasSame }}"><button data-edit class="btn btn-secondary wh-same-all" sc-camel-on-click="{{ whSameAll }}">{{ whSameBtn }}</button></sc-if></div>
+            <sc-for list="{{ whDups }}" as="g">
+              <div class="wh-dup-g">
+                <div class="wh-dup-gt">{{ g.title }}</div>
+                <div class="wh-dup-items"><sc-for list="{{ g.items }}" as="x"><label class="dv-check"><input type="radio" name="{{ g.radio }}" checked="{{ x.checked }}" sc-camel-on-change="{{ x.pick }}"><span>{{ x.text }}<br><small>{{ x.sub }}</small></span></label></sc-for></div>
+                <div class="wh-dup-acts"><button data-edit class="btn btn-secondary wh-merge" sc-camel-on-click="{{ g.merge }}">{{ g.btn }}</button><button data-edit class="btn btn-ghost wh-keep" sc-camel-on-click="{{ g.skip }}" title="Это разные склады — больше не предлагать">Оставить все</button></div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
         <div class="tbl-wrap" style="overflow-x:auto;border:1px solid var(--color-divider)">
           <sc-raw-table class="table tc">
             <sc-raw-thead><sc-raw-tr><sc-raw-th>BL</sc-raw-th><sc-raw-th>Бренд</sc-raw-th><sc-raw-th>Склад</sc-raw-th><sc-raw-th>Координаты</sc-raw-th><sc-raw-th>Зона</sc-raw-th><sc-raw-th style="text-align:right">До кольца</sc-raw-th><sc-raw-th></sc-raw-th></sc-raw-tr></sc-raw-thead>
@@ -298,7 +313,7 @@
                 <sc-raw-tr>
                   <sc-raw-td class="c-strong" style="font-weight:500;white-space:nowrap">{{ w.bl }}</sc-raw-td>
                   <sc-raw-td data-label="Бренд">{{ w.brand }}</sc-raw-td>
-                  <sc-raw-td class="cw" data-label="Склад">{{ w.name }}</sc-raw-td>
+                  <sc-raw-td class="cw" data-label="Склад">{{ w.name }}<sc-if value="{{ w.isDup }}"> <span class="tag tag-neutral wh-dup-tag">повтор</span></sc-if></sc-raw-td>
                   <sc-raw-td class="cw" data-label="Координаты" style="white-space:nowrap;font-variant-numeric:tabular-nums">{{ w.coord }}</sc-raw-td>
                   <sc-raw-td data-label="Зона">
                     <sc-if value="{{ w.zIn }}"><span class="tag tag-accent">Внутри</span></sc-if>
@@ -4305,6 +4320,46 @@ class Component extends DCLogic {
     }
     return out;
   }
+  // ---------- Доп. склады: повторы (js/warehouses.js) — найти, оставить один, «Вернуть» ----------
+  // «Оставить все» — эти склады разные: группа больше не предлагается на этом устройстве, пока склады те же
+  whKept() { try { const a = JSON.parse(localStorage.getItem('logi-wh-keep') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  whKeep(sig) { try { localStorage.setItem('logi-wh-keep', JSON.stringify([sig].concat(this.whKept().filter(x => x !== sig)).slice(0, 200))); } catch (e) { /* закрытый режим */ } this.setState({ whTick: Date.now() }); }
+  whDupGroups(data) {
+    const ws = data.warehouses || [], k = this._whMemo;
+    if (k && k.ws === ws && k.tick === this.state.whTick) return k.g;
+    const kept = new Set(this.whKept()), g = window.LogiWarehouses.groups(ws).filter(x => !kept.has(x.sig));
+    this._whMemo = { ws, tick: this.state.whTick, g };
+    return g;
+  }
+  whMerge(groups, keepOf) {
+    if (this.readOnly || !groups.length) return;
+    const W = window.LogiWarehouses, data = this.state.data;
+    const r = W.merge(data, groups.map(g => { const keep = (keepOf && keepOf(g)) || g.keep; return { keep, drop: g.items.map(w => w.id).filter(id => id !== keep) }; }));
+    if (!r.removed) return;
+    this.commit(r.data);
+    this.setState({ whMsg: { undo: r.undo, text: 'Объединено: убрано складов — ' + r.removed + '.' + (r.renamed ? ' Отгрузок перешло на оставленный склад: ' + r.renamed + '.' : '') + (this.gsUrl ? ' Строки удаляются из Google Таблицы.' : '') } });
+  }
+  whUndo() {
+    const m = this.state.whMsg;
+    if (!m || !m.undo || this.readOnly) return;
+    this.commit(window.LogiWarehouses.unmerge(this.state.data, m.undo));
+    this.setState({ whMsg: { text: 'Склады возвращены.' + (this.gsUrl ? ' Строки допишутся в конец Google Таблицы.' : '') } });
+  }
+  whDupView(st, data) {
+    const groups = this.whDupGroups(data), pick = st.whPick || {}, same = groups.filter(g => g.kind === 'same'), m = st.whMsg;
+    const ll = w => w.lat != null && w.lat !== '' ? (+w.lat).toFixed(6) + ', ' + (+w.lon).toFixed(6) : 'без координат';
+    const rowOf = w => { const r = /^w(\d{1,5})$/.exec(String(w.id || '')); return r ? 'строка ' + r[1] + ' в таблице' : 'добавлен на сайте'; };
+    return { whHasMsg: !!m, whMsg: m ? m.text : '', whCanUndo: !!(m && m.undo) && !this.readOnly, whUndo: () => this.whUndo(), whMsgClose: () => this.setState({ whMsg: null }),
+      whHasDup: groups.length > 0, whDupTitle: 'Повторяющиеся склады: ' + groups.length,
+      whDupSub: 'У клиента несколько складов в одной точке или с одним названием. Выберите, какой оставить: остальные удалятся' + (this.gsUrl ? ' (и из Google Таблицы)' : '') + ', отгрузки перейдут на оставленный.',
+      whHasSame: same.length > 0 && !this.readOnly, whSameBtn: 'Объединить все одинаковые (' + same.length + ')', whSameAll: () => this.whMerge(same, g => pick[g.sig]),
+      whDups: groups.map((g, gi) => { const keep = g.items.some(w => w.id === pick[g.sig]) ? pick[g.sig] : g.keep;
+        return { radio: 'wh-dup-' + gi, title: g.bl + ' · ' + (g.kind === 'same' ? 'одинаковые склады: ' + g.items.length : g.kind === 'place' ? 'в одной точке, разные названия: ' + g.items.length : 'одно название в разных местах: ' + g.items.length + ' (до ' + f1(g.far / 1000, 1) + ' км)'),
+          items: g.items.map(w => ({ checked: w.id === keep, pick: () => this.setState(s => ({ whPick: { ...(s.whPick || {}), [g.sig]: w.id } })),
+            text: '«' + (w.name || '—') + '» · ' + ll(w), sub: [w.brand, rowOf(w)].filter(Boolean).join(' · ') })),
+          btn: 'Оставить выбранный, убрать ' + (g.items.length - 1), merge: () => this.whMerge([g], () => keep), skip: () => this.whKeep(g.sig) }; }) };
+  }
+
   // «Клиенты» → «⇧ Загрузить базу»: Excel с клиентами (js/client-import.js) — окно «что будет», запись, «Отменить загрузку»
   cliImpRef = React.createRef();
   async cliImpFile(e) {
@@ -6414,6 +6469,9 @@ class Component extends DCLogic {
         mk('Неполные карточки (< 67%)', low, 'Не хватает бренда, имени, телефона, получателя, адреса или координат.', 'info'),
         mk('Снаружи кольцевой', outC, 'Для них действует тариф точки снаружи кольца.', 'info'),
         mk('Повторяющиеся BL в справочнике', blDup.map(([bl]) => D.cmap[bl]), 'Один BL должен быть одной строкой.', 'warn'),
+        { ...mk('Повторяющиеся доп. склады', this.whDupGroups(data), 'У клиента несколько складов в одной точке или с одним названием. «Клиенты» → «Дополнительные склады» — выберите, какой оставить.', 'warn',
+            g => ({ label: g.bl, sub: '«' + (g.items[0].name || '—') + '» × ' + g.items.length, go: () => this.setState({ tab: 'clients' }) })),
+          ...((n => ({ act: n && !this.readOnly ? 'Объединить одинаковые (' + n + ')' : '', go: () => this.whMerge(this.whDupGroups(data).filter(g => g.kind === 'same')), fix: (st.whMsg || {}).text || '' }))(this.whDupGroups(data).filter(g => g.kind === 'same').length)) },
         { ...mk('Строки без даты — не видны на сайте', data.skipped || [], 'В листе Yuborishlar дата не распознана. Впишите дату в столбец A как ДД.ММ.ГГГГ.', 'warn', x => ({ label: 'строка ' + x.row, sub: x.bl + (x.value ? ' «' + x.value + '»' : ' без даты'), go: () => {} })),
           // удалить такие строки из таблицы одной кнопкой (снизу вверх — номера строк выше не сдвигаются)
           ...((sk => ({ act: sk.length && this.gsUrl && !this.readOnly ? 'Удалить из таблицы (' + sk.length + ')' : '', go: () => {
@@ -6458,8 +6516,10 @@ class Component extends DCLogic {
           hasPoint: c.lat != null, pointHref: c.lat != null ? E.yPoint(c.lat, c.lon) : '', onEdit: () => this.openClient(c),
           hasLink: !!safeUrl(c.link), link: safeUrl(c.link), kg: f0(a.kg || 0), compl: Math.round(compl(c) * 100) + '%', complLow: compl(c) < 0.67, complOk: compl(c) >= 0.67,
           whNote: (whBy[c.bl] || []).length ? '+ доп. склады: ' + whBy[c.bl].map(w => w.name).join(', ') : '' }; });
+      Object.assign(out, this.whDupView(st, data));
+      const whDupIds = new Set(this.whDupGroups(data).flatMap(g => g.items.map(w => w.id)));
       out.whRows = (data.warehouses || []).map(w => { const z = w.lat != null ? E.zoneOf({ lat: w.lat, lon: w.lon }, data.ring, S.ringBuffer) : {};
-        return { bl: w.bl, brand: w.brand || (D.cmap[w.bl] || {}).brand || '—', name: w.name || '—', coord: w.lat != null ? w.lat.toFixed(6) + ', ' + w.lon.toFixed(6) : '—', zIn: z.zone === 'in', zOut: z.zone === 'out', zNone: !z.zone,
+        return { isDup: whDupIds.has(w.id), bl: w.bl, brand: w.brand || (D.cmap[w.bl] || {}).brand || '—', name: w.name || '—', coord: w.lat != null ? w.lat.toFixed(6) + ', ' + w.lon.toFixed(6) : '—', zIn: z.zone === 'in', zOut: z.zone === 'out', zNone: !z.zone,
           dist: z.dist != null ? f1(z.dist, 1) + ' км' : '—', hasPoint: w.lat != null, pointHref: w.lat != null ? E.yPoint(w.lat, w.lon) : '', onEdit: () => this.openWh(w) }; });
       out.whCount = (data.warehouses || []).length;
       out.newWh = () => this.openWh(null);
@@ -7161,7 +7221,8 @@ class Component extends DCLogic {
           if (a.includes(',') && !b) { const p = a.split(',').map(x => x.trim()); a = p[0]; b = p[1]; }
           if (!String(dr.bl).trim()) return this.setState({ dialog: { ...dl, error: 'Укажите BL код клиента' } });
           const rec = { ...dr, bl: String(dr.bl).trim(), brand: dr.brand || (D.cmap[String(dr.bl).trim()] || {}).brand || '', lat: a === '' || isNaN(+a) ? null : +a, lon: b === '' || isNaN(+b) ? null : +b };
-          const ws = data.warehouses || [];
+          const ws = data.warehouses || [], twin = window.LogiWarehouses.findSame(ws, rec, dl.mode === 'new' ? null : dl.id);
+          if (twin) return this.setState({ dialog: { ...dl, error: 'Такой склад уже есть: ' + twin.bl + ' «' + (twin.name || '—') + '» в той же точке. Измените его, а не добавляйте второй.' } });
           this.commit({ ...data, warehouses: dl.mode === 'new' ? [...ws, { ...rec, id: 'w' + Date.now() }] : ws.map(w => w.id === dl.id ? { ...rec, id: dl.id } : w) }); this.setState({ dialog: null });
         };
         out.deleteItem = () => { if (confirm('Удалить склад?')) { this.commit({ ...data, warehouses: (data.warehouses || []).filter(w => w.id !== dl.id) }); this.setState({ dialog: null }); } };
