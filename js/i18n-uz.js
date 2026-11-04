@@ -3231,4 +3231,11 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Отчёт Buraq AI":"Buraq AI hisoboti",
 "Разбор Buraq AI":"Buraq AI tahlili",
 "A — план сайта":"A — sayt rejasi",
-"без BL {n}":"BLsiz {n}"};
+"без BL {n}":"BLsiz {n}",
+"+ Новый клиент":"+ Yangi mijoz",
+"Клиент: BL или бренд — начните вводить":"Mijoz: BL yoki brend — yozishni boshlang",
+"Другой клиент: BL или бренд":"Boshqa mijoz: BL yoki brend",
+"Клиент: BL или бренд":"Mijoz: BL yoki brend",
+"Считаю планы…":"Rejalarni hisoblayapman…",
+"Пересчитываю после правок…":"Tuzatishlardan keyin qayta hisoblayapman…",
+"Пустой ответ.":"Bo‘sh javob."};

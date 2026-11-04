@@ -1190,12 +1190,19 @@
             <sc-if value="{{ impEdit }}"><button class="btn btn-ghost" style="margin-top:6px" sc-camel-on-click="{{ impAddRow }}">+ Строка</button></sc-if>
 
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 8px"><h3 style="margin:0">Маркировки и клиенты</h3><sc-if value="{{ impHasSugg }}"><button class="btn btn-secondary" sc-camel-on-click="{{ impAcceptAll }}">Принять все предложения ИИ ({{ impSuggN }})</button></sc-if></div>
+            <datalist id="imp-cli"><sc-for list="{{ impCliOpts }}" as="o"><option value="{{ o.v }}"></option></sc-for></datalist>
             <div class="imp-marks">
               <sc-for list="{{ impMarks }}" as="m">
                 <div class="{{ m.cls }}">
                   <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><b style="font-size:15px">{{ m.mark }}</b><span style="font-size:12px;color:var(--color-neutral-700)">{{ m.rows }} {{ m.nums }}</span></div>
                   <sc-if value="{{ m.edit }}">
-                    <sc-raw-select class="input" value="{{ m.value }}" sc-camel-on-change="{{ m.onPick }}" aria-label="Клиент"><sc-for list="{{ m.opts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select>
+                    <div style="font-size:14px">{{ m.chosen }}</div>
+                    <div class="imp-pick">
+                      <input class="input imp-pick-in" list="imp-cli" placeholder="{{ m.pickPh }}" aria-label="Клиент: BL или бренд" autocomplete="off" spellcheck="false" sc-camel-on-change="{{ m.onPickText }}" sc-camel-on-key-down="{{ m.onPickEnter }}" sc-camel-on-blur="{{ m.onPickBlur }}">
+                      <button class="btn {{ m.noneCls }}" sc-camel-on-click="{{ m.pickNone }}">Без клиента</button>
+                      <button class="btn {{ m.newCls }}" sc-camel-on-click="{{ m.pickNew }}">+ Новый клиент</button>
+                      <sc-if value="{{ m.canClear }}"><button class="btn btn-ghost imp-pick-x" title="Снять выбор" aria-label="Снять выбор" sc-camel-on-click="{{ m.pickClear }}">✕</button></sc-if>
+                    </div>
                   </sc-if>
                   <sc-if value="{{ m.newEdit }}"><label class="imp-new-bl"><span>BL нового клиента</span><input class="input" value="{{ m.newBl }}" placeholder="BL-000" sc-camel-on-change="{{ m.onNewBl }}" aria-label="BL нового клиента"></label></sc-if>
                   <sc-if value="{{ m.view }}"><div style="font-size:14px">{{ m.chosen }}</div></sc-if>
@@ -3607,6 +3614,18 @@ class Component extends DCLogic {
     this._rep.byDate.set(date, res);
     return res;
   }
+  // предварительные планы импорта — в фоновом потоке (js/plan-worker.js); нет Worker или ошибка — на странице, как раньше
+  impPlansRun(stops, S, done) {
+    const local = () => { try { done(window.LogiEngine.buildPlans(stops, S)); } catch (e) { console.error(e); } };
+    if (this._pw === undefined) { try { this._pw = typeof Worker === 'function' ? new Worker('js/plan-worker.js') : null; } catch (e) { this._pw = null; }
+      if (this._pw) { this._pwCb = new Map(); this._pwId = 0;
+        this._pw.onmessage = e => { const m = e.data || {}, cb = this._pwCb.get(m.id); this._pwCb.delete(m.id); if (!m.ok) console.warn('Планы в фоне не посчитались, считаю на странице:', m.error); if (cb) cb(m.ok ? m.res : null); };
+        this._pw.onerror = e => { e.preventDefault && e.preventDefault(); const pend = [...this._pwCb.values()]; this._pwCb.clear(); this._pw.terminate(); this._pw = null; pend.forEach(cb => cb(null)); }; } }
+    if (!this._pw) return local();
+    const id = ++this._pwId;
+    this._pwCb.set(id, res => res ? done(res) : local());
+    try { this._pw.postMessage({ id, stops, S }); } catch (e) { this._pwCb.delete(id); local(); }
+  }
   // Вкладка «Импорт» (только руководитель): загрузка манифеста, список черновиков, экран проверки
   importView(st, S, D) {
     const L = window.LogiImport, E = window.LogiEngine, data = st.data, busy = st.impBusy || null, out = { impIsReview: false, impIsList: true };
@@ -3709,12 +3728,24 @@ class Component extends DCLogic {
     });
     out.impAddRow = () => this.impAddRow();
     // маркировки → клиенты
-    const opts = [{ v: '', l: '— выберите клиента —' }, { v: '__new', l: '+ Новый клиент (в справочник)' }, { v: '__none', l: 'Без клиента' }].concat(data.clients.slice().sort((a, b) => ruCmp(a.bl, b.bl)).map(x => ({ v: x.bl, l: x.bl + (x.brand ? ' · ' + x.brand : '') + (x.name ? ' — ' + x.name : '') })));
+    // клиент маркировки — поиском по справочнику: одна общая подсказка (datalist) на страницу. Раньше у каждой маркировки был
+    // полный список клиентов: 150 маркировок × 600 клиентов — 90 тысяч пунктов, черновик открывался и откликался секундами
+    const cliText = x => x.bl + (x.brand ? ' · ' + x.brand : '') + (x.name ? ' — ' + x.name : '');
+    out.impCliOpts = data.clients.slice().sort((a, b) => ruCmp(a.bl, b.bl)).map(x => ({ v: cliText(x) }));
+    // набранное → клиент: пункт подсказки («BL-03 · БРЕНД — Имя») или BL целиком («bl 03», «BL-3»); пока не совпало — ждём
+    const pickOf = v => { v = String(v || '').trim(); if (!v) return null; const head = v.split(/ · | — /)[0].trim(), c0 = this.impClientOf(head);
+      return c0 && (v === cliText(c0) || head === v) ? c0 : null; };
+    const pickText = (k, final) => e => { const el = e.target, c0 = pickOf(el.value);
+      if (c0 && (final || el.value.trim() === cliText(c0))) { el.value = ''; this.impDecide(k, c0.bl); }
+      else if (final && el.value.trim()) el.classList.add('imp-pick-bad'); else el.classList.remove('imp-pick-bad'); };
     const BY = { code: 'по коду', mark: 'по маркировке клиента', brand: 'по бренду', 'unknown-owner': 'без владельца', ai: 'предложение ИИ принято', user: 'выбрано вручную' };
     const CONF = { high: 'высокая', medium: 'средняя', low: 'низкая' };
     out.impMarks = groups.map(g => { const m = g.decision || {};
       return { key: g.key, mark: g.mark, edit, view: !edit, rows: g.rowIds.length > 1 ? g.rowIds.length + ' строки' : '', nums: f0(g.places) + ' мест · ' + f1(g.cbm, 3) + ' м³ · ' + f0(g.kg) + ' кг' + (g.density ? ' · ' + g.density + ' кг/м³' : ''),
-        value: m.decided ? (m.isNew ? '__new' : m.client || '__none') : '', opts, cls: m.decided && !(m.isNew && !m.client) ? 'imp-mark' : 'imp-mark imp-mark-open',
+        onPickText: pickText(g.key, false), onPickEnter: e => { if (e.key === 'Enter') { e.preventDefault(); pickText(g.key, true)(e); } }, onPickBlur: pickText(g.key, true),
+        pickNone: () => this.impDecide(g.key, '__none'), pickNew: () => this.impDecide(g.key, '__new'), pickClear: () => this.impDecide(g.key, ''), canClear: edit && !!m.decided,
+        noneCls: m.decided && !m.isNew && !m.client ? 'btn-secondary imp-on' : 'btn-ghost', newCls: m.isNew ? 'btn-secondary imp-on' : 'btn-ghost',
+        pickPh: m.decided && m.client && !m.isNew ? 'Другой клиент: BL или бренд' : 'Клиент: BL или бренд — начните вводить', cls: m.decided && !(m.isNew && !m.client) ? 'imp-mark' : 'imp-mark imp-mark-open',
         chosen: m.decided ? (m.isNew ? 'Новый клиент ' + (m.client || '— без BL') : m.client ? cname(m.client) : 'Без клиента') : 'нет решения',
         how: m.isNew && d.status === 'confirmed' ? 'Новый клиент: добавлен в справочник' : m.isNew ? (!m.client ? 'Новый клиент: впишите BL (KARA CHICKEN → BL-03) или выберите клиента' : (old => old ? m.client + ' уже есть в справочнике — отгрузки и маркировка пойдут клиенту ' + cname(old.bl) : 'Новый клиент: при подтверждении — в справочник (BL и маркировка), остальное заполните позже')(this.impClientOf(m.client)))
           : m.decided ? (BY[m.by] || '') + (m.reason && !['user', 'ai'].includes(m.by) ? ': ' + m.reason : '') : m.by === 'ambiguous' ? m.reason : 'Выберите клиента или «Без клиента»',
@@ -3726,16 +3757,25 @@ class Component extends DCLogic {
     const sugg = groups.filter(g => g.decision && !g.decision.decided && g.decision.suggest);
     out.impHasSugg = edit && sugg.length > 1; out.impSuggN = sugg.length;
     out.impAcceptAll = () => { sugg.forEach(g => this.impDecide(g.key, g.decision.suggest.client, 'suggest')); };
-    // предварительные планы A/B/X — тем же buildPlans, что во вкладке «Планы»
+    // предварительные планы A/B/X — тем же buildPlans, что во вкладке «Планы». Расчёт тяжёлый (у большого манифеста — секунды),
+    // поэтому не в каждой перерисовке: первый раз — сразу после показа черновика, после правок — через 0,7 с после последней
     const ships = L.shipmentsOf(d, ''), pk = JSON.stringify([ships, S, data.clients.length, st.ver]);
-    if (!c.plans || c.plansKey !== pk) {
-      const stops = ships.map((x, i) => { const cl = cmap[x.bl] || {}; return { id: 'p' + i, bl: x.bl, cbm: x.cbm, kg: x.kg, places: x.places, boxList: boxesOf(x), lat: cl.lat ?? null, lon: cl.lon ?? null, zone: (D.zones[x.bl] || {}).zone, client: cl }; });
-      c.plans = E.buildPlans(stops, { ...S, vehicles: this.fleetVehicles(data) }); c.plansKey = pk;
+    if (c.plansKey !== pk && c.plansWant !== pk) {
+      c.plansWant = pk; clearTimeout(this._impPlansT);
+      this._impPlansT = setTimeout(() => {
+        if (this.impCur !== c || c.plansWant !== pk || c.plansBusy) return;   // идёт расчёт — после него посчитаем последний вариант
+        const D1 = this.derived(), data1 = this.state.data, S1 = { ...data1.settings, vehicles: this.fleetVehicles(data1) };
+        const stops = ships.map((x, i) => { const cl = D1.cmap[x.bl] || {}; return { id: 'p' + i, bl: x.bl, cbm: x.cbm, kg: x.kg, places: x.places, boxList: boxesOf(x), lat: cl.lat ?? null, lon: cl.lon ?? null, zone: (D1.zones[x.bl] || {}).zone, client: cl }; });
+        c.plansBusy = true;
+        this.impPlansRun(stops, S1, res => { c.plansBusy = false; if (this.impCur !== c) return;
+          if (c.plansWant === pk) { c.plans = res; c.plansKey = pk; } else c.plansWant = null;   // пока считали, черновик поправили — заново
+          this.setState({}); });
+      }, c.plans ? 700 : 30);
     }
     const P = c.plans, kinds = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => this.kindLabel(P, k) + ' ' + s[k]).join(' · ');
-    out.impPlans = ['A', 'B', 'X'].map(k => { const s = P[k].sum; return { k, title: k === 'A' ? 'A — план сайта' : this.planTitle(k, P), trips: s.trips + ' ' + reys(s.trips), kinds: kinds(s),
-      price: P[k].noFleet ? 'нет машин' : s.unpriced && !s.price ? 'нет тарифа' : money(s.price) + (s.unpriced ? ' +' : '') }; });
-    out.impPlanNote = (P.noCoords.length ? P.noCoords.length + ' отгр. без координат клиента — в планах как точка у склада, уточните адрес. ' : '') + 'Отгрузок в партии: ' + ships.length + ' (маркировки одного клиента — одна отгрузка).';
+    out.impPlans = P ? ['A', 'B', 'X'].map(k => { const s = P[k].sum; return { k, title: k === 'A' ? 'A — план сайта' : this.planTitle(k, P), trips: s.trips + ' ' + reys(s.trips), kinds: kinds(s),
+      price: P[k].noFleet ? 'нет машин' : s.unpriced && !s.price ? 'нет тарифа' : money(s.price) + (s.unpriced ? ' +' : '') }; }) : [];
+    out.impPlanNote = !P ? 'Считаю планы…' : (c.plansKey !== pk ? 'Пересчитываю после правок… ' : '') + (P.noCoords.length ? P.noCoords.length + ' отгр. без координат клиента — в планах как точка у склада, уточните адрес. ' : '') + 'Отгрузок в партии: ' + ships.length + ' (маркировки одного клиента — одна отгрузка).';
     // документ
     out.impIsXlsx = !!c.book; out.impIsPdf = !!c.pdf; out.impPdfRef = this.impPdfRef;
     out.impPaneDoc = st.impPane === 'doc'; out.impPaneRows = st.impPane !== 'doc';

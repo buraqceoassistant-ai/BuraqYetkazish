@@ -684,3 +684,16 @@ input.set-input[type="text"] { text-align: left !important; }
 }
 @media print { .bq-fab, .bq-panel { display: none !important; } }
 
+/* импорт: клиент маркировки — поиск по справочнику, «Без клиента», «+ Новый клиент» */
+.imp-pick { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.imp-pick-in { flex: 1 1 220px; min-width: 0; }
+.imp-pick .btn { min-height: 0; padding: 6px 10px; font-size: 13px; white-space: nowrap; }
+.imp-pick .imp-on { font-weight: 500; }
+.imp-pick-bad { border-color: var(--color-danger-ink) !important; }
+/* большой манифест (сотни строк, сотни маркировок): правка одной строки не перекладывает всю страницу — документ, строки
+   и маркировки считаются по отдельности; карточки маркировок вне экрана браузер не рисует, пока до них не прокрутили */
+.imp-doc { contain: strict; }
+.imp-rows-box { contain: layout paint; }
+.imp-marks { contain: layout style; }
+.imp-mark { content-visibility: auto; contain-intrinsic-size: auto 150px; }
+

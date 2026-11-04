@@ -28,6 +28,7 @@ const SHELL = [
   'js/packing.js',
   'js/car-calc.js',
   'js/batches.js',
+  'js/plan-worker.js',
   'js/import-core.js',
   'js/import-checks.js',
   'js/import-local.js',
