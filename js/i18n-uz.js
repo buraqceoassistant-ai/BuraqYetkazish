@@ -3229,4 +3229,6 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Делаю.":"Bajaryapman.",
 "Отчёты · {s}":"Hisobotlar · {s}",
 "Отчёт Buraq AI":"Buraq AI hisoboti",
-"Разбор Buraq AI":"Buraq AI tahlili"};
+"Разбор Buraq AI":"Buraq AI tahlili",
+"A — план сайта":"A — sayt rejasi",
+"без BL {n}":"BLsiz {n}"};

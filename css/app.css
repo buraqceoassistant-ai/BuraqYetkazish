@@ -637,9 +637,12 @@ input.set-input[type="text"] { text-align: left !important; }
 .plan-ai-notes { margin: 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
 
 /* Buraq AI — помощник на весь сайт: кнопка справа внизу и чат */
+/* запас внизу страниц: последние кнопки прокручиваются выше кнопки Buraq AI */
+.app.bq-on main.page { padding-bottom: 96px !important; }
 .bq-fab { position: fixed; right: 20px; bottom: 20px; z-index: 2400; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border: 1px solid color-mix(in srgb, var(--color-on-brand) 22%, transparent);
   border-radius: 999px; background: var(--color-brand); color: var(--color-on-brand); font-family: var(--font-heading); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; box-shadow: var(--shadow-md); }
 .bq-fab:hover { filter: brightness(1.08); }
+.bq-inline { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .bq-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-red); }
 .bq-panel { position: fixed; right: 20px; bottom: 20px; z-index: 2500; width: min(460px, calc(100vw - 40px)); height: min(680px, calc(100vh - 100px)); display: flex; flex-direction: column;
   background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-divider); border-top: 2px solid var(--color-red); border-radius: 22px; box-shadow: var(--shadow-md); overflow: hidden; }
@@ -675,6 +678,7 @@ input.set-input[type="text"] { text-align: left !important; }
 .bq-foot { font-size: 11px; color: var(--color-neutral-700); padding: 0 14px 10px; text-wrap: pretty; }
 @media screen and (max-width: 760px) {
   .bq-fab { right: 12px; bottom: 12px; padding: 10px 16px; }
+  .app.bq-on main.page { padding-bottom: 80px !important; }
   .bq-panel { inset: 0; width: 100%; height: 100%; border-radius: 0; border: 0; border-top: 2px solid var(--color-red); }
   .bq-msg { max-width: 94%; }
 }

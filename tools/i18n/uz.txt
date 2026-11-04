@@ -3225,3 +3225,5 @@ Buraq AI работает для руководителя: вход «тольк
 Отчёты · {s}	Hisobotlar · {s}
 Отчёт Buraq AI	Buraq AI hisoboti
 Разбор Buraq AI	Buraq AI tahlili
+A — план сайта	A — sayt rejasi
+без BL {n}	BLsiz {n}

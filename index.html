@@ -65,7 +65,7 @@
   <div class="auth-wait">Открываю данные…</div>
 </div>
 <x-dc>
-<div class="app" style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);font-size:14px">
+<div class="app {{ appCls }}" style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);font-size:14px">
   <header class="app-header" style="position:sticky;top:0;z-index:1000;background:var(--color-brand);border-bottom:1px solid var(--color-red)">
     <div class="app-bar" style="max-width:1560px;margin:0 auto;display:flex;align-items:stretch;gap:20px;padding:0 20px;height:60px;overflow:hidden">
       <div class="app-brand" style="display:flex;align-items:center;gap:10px;position:relative;flex:none">
@@ -1219,6 +1219,7 @@
           <div class="imp-alert imp-done"><div style="flex:1;text-wrap:pretty">{{ impDone }}</div><sc-if value="{{ impIsConfirmed }}"><button class="btn btn-primary" sc-camel-on-click="{{ impGoJournal }}">Открыть журнал</button></sc-if></div>
         </sc-if>
         <div class="imp-foot">
+          <sc-if value="{{ bqInline }}"><button class="btn btn-ghost bq-inline no-print" sc-camel-on-click="{{ bqToggle }}" aria-label="Открыть Buraq AI"><i class="bq-dot"></i>Buraq AI</button></sc-if>
           <div style="font-size:12px;color:var(--color-neutral-700);flex:1;min-width:220px">{{ impEdits }}</div>
           <sc-if value="{{ impEdit }}">
             <button class="btn btn-ghost" sc-camel-on-click="{{ impReject }}">Отклонить черновик</button>
@@ -3425,7 +3426,10 @@ class Component extends DCLogic {
       top === 'journal' ? ['Сколько отгрузок ещё не доставлено?', 'Есть партии, похожие на повтор?', 'Какая партия самая большая?'] :
       top === 'reports' && st.repKind === 'newcar' && st.tab === 'reports' ? ['Что нужно, чтобы машина окупилась?', 'Наличными или в лизинг — что лучше?'] :
       top === 'reports' ? ['Объясни этот отчёт', 'Где мы теряем больше всего денег?'] : ['Что ты умеешь?', 'Сколько партий в этом месяце?'];
-    return { bqShow: show, bqOpen: show && open, bqClosed: show && !open, bqToggle: () => { this._bqScroll = true; this.setState({ bqOpen: !open }); },
+    // импорт манифеста: внизу липкая полоса с «Подтвердить» и сообщения с кнопками — плавающая кнопка их закрывала;
+    // там Buraq AI открывается кнопкой в нижней полосе импорта
+    const inline = st.tab === 'import';
+    return { appCls: show && !inline ? 'bq-on' : '', bqShow: show, bqOpen: show && open, bqClosed: show && !open && !inline, bqInline: show && !open && inline, bqToggle: () => { this._bqScroll = true; this.setState({ bqOpen: !open }); },
       bqWhere: this.bqWhere(), bqEmpty: !msgs.length, bqBusy: !!st.bqBusy, bqStep: st.bqStep || 'Buraq AI думает…',
       bqHello: 'Я Buraq AI. Спросите о партиях, планах, отчётах или дайте задание: объяснить план, переложить точки, открыть отчёт, перенести или удалить партию, поправить отгрузку. Что меняет данные — сначала покажу и попрошу «Выполнить».',
       bqList: msgs.map((m, mi) => ({ cls: 'bq-' + m.role + (m.err ? ' bq-err' : ''), text: m.text, tr: m.role === 'site' ? 'yes' : 'no',
@@ -3729,7 +3733,7 @@ class Component extends DCLogic {
       c.plans = E.buildPlans(stops, { ...S, vehicles: this.fleetVehicles(data) }); c.plansKey = pk;
     }
     const P = c.plans, kinds = s => ['labo', 'changan', 'gazel', 'kamaz'].filter(k => s[k]).map(k => this.kindLabel(P, k) + ' ' + s[k]).join(' · ');
-    out.impPlans = ['A', 'B', 'X'].map(k => { const s = P[k].sum; return { k, title: this.planTitle(k, P), trips: s.trips + ' ' + reys(s.trips), kinds: kinds(s),
+    out.impPlans = ['A', 'B', 'X'].map(k => { const s = P[k].sum; return { k, title: k === 'A' ? 'A — план сайта' : this.planTitle(k, P), trips: s.trips + ' ' + reys(s.trips), kinds: kinds(s),
       price: P[k].noFleet ? 'нет машин' : s.unpriced && !s.price ? 'нет тарифа' : money(s.price) + (s.unpriced ? ' +' : '') }; });
     out.impPlanNote = (P.noCoords.length ? P.noCoords.length + ' отгр. без координат клиента — в планах как точка у склада, уточните адрес. ' : '') + 'Отгрузок в партии: ' + ships.length + ' (маркировки одного клиента — одна отгрузка).';
     // документ
