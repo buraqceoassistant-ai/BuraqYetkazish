@@ -13,18 +13,20 @@ class Range {
   cell(i, j) { const row = this.sh.rows[this.r - 1 + i] || []; return row[this.c - 1 + j] ?? ''; }
   getValues() { return Array.from({ length: this.nr }, (_, i) => Array.from({ length: this.nc }, (_, j) => this.cell(i, j))); }
   getValue() { return this.cell(0, 0); }
-  setValues(v) { v.forEach((row, i) => row.forEach((x, j) => this.sh.set(this.r + i, this.c + j, x))); return this; }
+  // как в Google: проверка данных смотрит каждую ячейку блока, и одна плохая отклоняет всю запись
+  setValues(v) { v.forEach((row, i) => row.forEach((x, j) => this.check(this.r + i, this.c + j, x))); v.forEach((row, i) => row.forEach((x, j) => this.sh.set(this.r + i, this.c + j, x))); this.sh.writes = (this.sh.writes || 0) + 1; return this; }
+  check(r, c, x) { const no = this.sh.reject && this.sh.reject(r, c, x); if (no) throw new Error(no); const d = this.sh.dvAt(r, c);
+    if (d && !d.allowInvalid && x !== '' && x != null && !d.values.includes(String(x))) throw new Error('В ячейке ' + String.fromCharCode(64 + c) + r + ' нарушены правила проверки данных. Укажите одно из следующих значений: ' + d.values.join(', ') + '.'); }
   // проверка данных «отклонять ввод»: sh.reject(r, c, x) → текст ошибки Google или ничего
-  setValue(x) { const no = this.sh.reject && this.sh.reject(this.r, this.c, x); if (no) throw new Error(no); const d = this.sh.dvAt(this.r, this.c);
-    if (d && !d.allowInvalid && x !== '' && x != null && !d.values.includes(String(x))) throw new Error('В ячейке ' + String.fromCharCode(64 + this.c) + this.r + ' нарушены правила проверки данных. Укажите одно из следующих значений: ' + d.values.join(', ') + '.');
-    this.sh.set(this.r, this.c, x); return this; }
+  setValue(x) { this.check(this.r, this.c, x); this.sh.set(this.r, this.c, x); this.sh.writes = (this.sh.writes || 0) + 1; return this; }
   // проверка данных: правило столбца (sh.dv[c] = { values, allowInvalid }) на строках с 5-й
   getDataValidations() { return Array.from({ length: this.nr }, (_, i) => Array.from({ length: this.nc }, (_, j) => { const d = this.sh.dvAt(this.r + i, this.c + j); return d ? dvRule(d) : null; })); }
   setDataValidations(v) { v.forEach((row, i) => row.forEach((x, j) => { if (this.r + i >= 5) { if (x) this.sh.dv[this.c + j] = { values: x.d.values, allowInvalid: x.d.allowInvalid }; else delete this.sh.dv[this.c + j]; } })); this.sh.dvSets = (this.sh.dvSets || 0) + 1; return this; }
   clearContent() { for (let i = 0; i < this.nr; i++) for (let j = 0; j < this.nc; j++) this.sh.set(this.r + i, this.c + j, ''); return this; }
   setNumberFormat() { return this; }
   setFontWeight() { return this; }
-  getFormula() { return ''; }
+  getFormula() { return (this.sh.formulas || {})[this.r + ':' + this.c] || ''; }
+  getFormulas() { return Array.from({ length: this.nr }, (_, i) => Array.from({ length: this.nc }, (_, j) => (this.sh.formulas || {})[(this.r + i) + ':' + (this.c + j)] || '')); }
   copyTo() { return this; }
   getRichTextValues() { return Array.from({ length: this.nr }, () => [null]); }
   setRichTextValue(v) { this.sh.set(this.r, this.c, v.text); return this; }

@@ -3334,4 +3334,7 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Повторяющиеся доп. склады":"Takrorlanuvchi qo‘shimcha omborlar",
 "«Клиенты» → «Дополнительные склады» — выберите, какой оставить.":"«Mijozlar» → «Qo‘shimcha omborlar» — qaysi biri qolishini tanlang.",
 "Объединить одинаковые ({n})":"Bir xillarini birlashtirish ({n})",
-"Рейсы Kamaz в планах и журнале считаются без цены.":"Rejalar va jurnaldagi Kamaz reyslari narxsiz hisoblanadi."};
+"Рейсы Kamaz в планах и журнале считаются без цены.":"Rejalar va jurnaldagi Kamaz reyslari narxsiz hisoblanadi.",
+"Осталось правок: {n}.":"Qolgan tuzatishlar: {n}.",
+"новые клиенты ({n})":"yangi mijozlar ({n})",
+"правки клиентов ({n})":"mijozlar tuzatishlari ({n})"};

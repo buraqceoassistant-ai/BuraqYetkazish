@@ -2795,8 +2795,15 @@ class Component extends DCLogic {
     this.gsQueue.push(...ops); this.gsSaveQueue();
     setTimeout(() => this.gsFlush(), 0);
   }
+  // версия скрипта таблицы — запоминается на устройстве: после открытия сайта очередь сразу уходит пачками (скрипт 35)
+  gsVer(v) {
+    this.gsVersion = v;
+    try { localStorage.setItem('logi-gs-ver', JSON.stringify({ url: this.gsUrl, v })); } catch (e) { /* закрытый режим */ }
+  }
   gsStart(url, token) {
     this.gsUrl = url; this.gsToken = token || '';
+    this.gsVersion = 0;
+    try { const k = JSON.parse(localStorage.getItem('logi-gs-ver') || 'null'); if (k && k.url === url) this.gsVersion = +k.v || 0; } catch (e) { /* нет — узнаем из ответа */ }
     try { const q = JSON.parse(localStorage.getItem('logi-gs-queue') || 'null'); this.gsQueue = q && q.url === url && Array.isArray(q.ops) ? q.ops : []; } catch (e) { this.gsQueue = []; }
     clearInterval(this._gsPoll);
     this._gsPoll = setInterval(() => { if (document.visibilityState === 'visible') this.gsPull(); }, 30000);
@@ -2832,7 +2839,7 @@ class Component extends DCLogic {
     // и просим обновить код скрипта.
     const since = { laboBaseIncludesPts: 2, kamazBaseIncludesPts: 2, gazelM3: 3, gazelKg: 3, bTolM3: 4, bTolKg: 4,   // с какой версии скрипт хранит настройку
       changanM3: 5, changanKg: 5, changanBase: 5, changanPt: 5, changanBaseIncludesPts: 5, gazelCount: 5, laboCount: 5, changanCount: 5, tripsPerVehicle: 5, freeOutM3: 6, densityMin: 8, densityMax: 8, fillPct: 32, smallM3: 34 };
-    this.gsScriptOld = !(j.v >= 34); this.gsVersion = +j.v || 0; this.gsImports = (j.data && j.data.imports) || []; this.gsTg = (j.data && j.data.tg) || null;
+    this.gsScriptOld = !(j.v >= 35); this.gsVer(+j.v || 0); this.gsImports = (j.data && j.data.imports) || []; this.gsTg = (j.data && j.data.tg) || null;
     const cur0 = this.state.data, unset = data.defaults || [];
     delete data.defaults;
     // скрипт ниже 33 не хранит коробки по пакинг-листу (W): до обновления кода держим их на устройстве —
@@ -2880,6 +2887,7 @@ class Component extends DCLogic {
     this._gsBusy = true;
     // частями: большая первая выгрузка не упирается в лимиты Apps Script. more — не последняя порция, quiet — запись перед
     // «Отправить»: скрипт (версия 18) пишет водителям об изменениях один раз, после последней порции, а перед отправкой — не пишет
+    this.gsQueue = this.gsPack(this.gsQueue);
     const ops = this.gsQueue.slice(0, 40), url = this.gsUrl;
     this.setState({ gsStatus: 'saving' });
     try {
@@ -2888,13 +2896,17 @@ class Component extends DCLogic {
       if (this.gsUrl !== url) { this._gsBusy = false; return this.gsUrl && this.gsPull(true); }   // таблицу сменили, пока шёл запрос
       if (j.error) { const d = this.gsDeny(j), er = new Error(d || j.error); er.deny = !!d; er.code = j.code; throw er; }
       if ((j.results || []).some(x => x && x.error === 'unknown op')) this.gsOldScript = true;
+      if (j.v) this.gsVer(+j.v);
+      // пачку клиентов не знает старый скрипт (код таблицы вернули к версии ниже 35) — обратно по одному клиенту, в начало очереди
+      const back = ops.flatMap((o, i) => (j.results || [])[i] && j.results[i].error === 'unknown op' && (o.t === 'cli.add' || o.t === 'cli.patch')
+        ? o.v.map(x => o.t === 'cli.add' ? { t: 'cli.upsert', key: x.bl, v: x } : { t: 'cli.upsert', key: x.key, was: x.was, v: x.v }) : []);
       // правки, которые таблица не приняла (скрипт 24: проверка данных, защищённые ячейки), — из очереди убираем: повтор
       // не поможет, а после чтения таблицы на сайте будет то, что в таблице. Что не записалось — в полосе, пока не закроют
       const bad = (j.results || []).map((x, i) => x && x.code === 'cell' ? { what: this.gsOpName(ops[i]), err: String(x.error).replace(/(проверки данных\.).*$/s, '$1').slice(0, 220) } : null).filter(Boolean);
       if (bad.length) this.setState(s => ({ gsWarn: (s.gsWarn || []).concat(bad).slice(-5) }));
       // скрипт 26 переключил выпадающий список столбца на «предупреждение», чтобы правка записалась — сказать один раз
       if ((j.relaxed || []).length) this.setState(s => ({ gsRelaxed: [...new Set((s.gsRelaxed || []).concat(j.relaxed))].slice(-6) }));
-      this.gsQueue.splice(0, ops.length); this.gsSaveQueue();
+      this.gsQueue.splice(0, ops.length, ...back); this.gsSaveQueue();
       this._gsBusy = false;
       if (this.gsQueue.length) { this.gsFlush(); return; }
       this.gsApply(j);
@@ -2904,9 +2916,27 @@ class Component extends DCLogic {
       await this.gsFail(e, url, true);
     }
   }
+  // очередь перед отправкой. Новый клиент (правка без прежних значений, ключ — свой BL или пусто) — с ключом: если порция
+  // ушла второй раз (обрыв связи, страницу закрыли посреди записи), скрипт найдёт строку и не допишет клиента ещё раз.
+  // Скрипт 35 — подряд идущие новые клиенты одной правкой cli.add, правки клиентов — cli.patch (по 100): блок строк или
+  // столбец разом — сотни клиентов (загрузка базы) за секунды, а не минуты
+  gsPack(q) {
+    const isNew = o => o && o.t === 'cli.upsert' && !o.was && !o.row && o.v && (!o.key || o.key === o.v.bl);
+    const isEdit = o => o && o.t === 'cli.upsert' && o.was && o.key && o.v && o.key === o.v.bl && !o.row;
+    const out = [], fast = this.gsVersion >= 35;
+    const join = (t, x) => { const last = out[out.length - 1]; if (last && last.t === t && last.v.length < 100) last.v.push(x); else out.push({ t, v: [x] }); };
+    q.forEach(o => {
+      if (fast && isNew(o)) return join('cli.add', o.v);
+      if (fast && isEdit(o)) return join('cli.patch', { key: o.key, was: o.was, v: o.v });
+      out.push(isNew(o) && !o.key ? { ...o, key: o.v.bl } : o);
+    });
+    return out;
+  }
   // правка очереди — по-человечески: «клиент BL-12», «отгрузка BL-7 за 29.09.2026»
   gsOpName(op) {
     if (!op) return 'правка';
+    if (op.t === 'cli.add') return 'новые клиенты (' + (op.v || []).length + ')';
+    if (op.t === 'cli.patch') return 'правки клиентов (' + (op.v || []).length + ')';
     const v = op.v || {}, bl = v.bl || op.key || (op.guard && op.guard.bl) || '';
     if (/^cli\./.test(op.t)) return 'клиент ' + bl;
     if (/^ship\./.test(op.t)) return 'отгрузка ' + bl + (v.date ? ' за ' + dLong(v.date) : '');
@@ -2947,12 +2977,14 @@ class Component extends DCLogic {
     const pc = Object.fromEntries(prev.clients.map(c => [c.bl, c])), nc = Object.fromEntries(next.clients.map(c => [c.bl, c]));
     const added = next.clients.filter(c => !pc[c.bl]), removed = prev.clients.filter(c => !nc[c.bl]);
     if (added.length === 1 && removed.length === 1) ops.push({ t: 'cli.upsert', key: removed[0].bl, v: pick(added[0], CK) });
-    else { added.forEach(c => ops.push({ t: 'cli.upsert', v: pick(c, CK) })); removed.forEach(c => ops.push({ t: 'cli.delete', key: c.bl })); }
+    else { added.forEach(c => ops.push({ t: 'cli.upsert', key: c.bl, v: pick(c, CK) })); removed.forEach(c => ops.push({ t: 'cli.delete', key: c.bl })); }
     // с прежними значениями (скрипт 24 пишет только изменённые ячейки — телефоны не переписываются, когда меняется район)
     next.clients.forEach(c => { const o = pc[c.bl]; if (o && !same(o, c, CK)) ops.push({ t: 'cli.upsert', key: c.bl, was: pick(o, CK), v: pick(c, CK) }); });
     const pw = byId(prev.warehouses), nw = byId(next.warehouses);
-    (next.warehouses || []).forEach(w => { const o = pw[w.id]; if (!o) ops.push({ t: 'wh.upsert', v: pick(w, WK) }); else if (!same(o, w, WK)) ops.push({ t: 'wh.upsert', row: rowOf(w.id, 'w'), guard: { bl: o.bl }, v: pick(w, WK) }); });
-    (prev.warehouses || []).forEach(o => { if (!nw[o.id] && rowOf(o.id, 'w')) dels.push({ t: 'wh.delete', row: rowOf(o.id, 'w'), guard: { bl: o.bl } }); });
+    // склад — по строке, если в ней тот же BL и то же название (скрипт 35; строка сдвинулась — по BL, названию и координатам)
+    const wg = o => ({ bl: o.bl, name: o.name || '', lat: o.lat ?? '', lon: o.lon ?? '' });
+    (next.warehouses || []).forEach(w => { const o = pw[w.id]; if (!o) ops.push({ t: 'wh.upsert', v: pick(w, WK) }); else if (!same(o, w, WK)) ops.push({ t: 'wh.upsert', row: rowOf(w.id, 'w'), guard: wg(o), v: pick(w, WK) }); });
+    (prev.warehouses || []).forEach(o => { if (!nw[o.id] && rowOf(o.id, 'w')) dels.push({ t: 'wh.delete', row: rowOf(o.id, 'w'), guard: wg(o) }); });
     const sv = {}; Object.keys(next.settings || {}).forEach(k => { if ((prev.settings || {})[k] !== next.settings[k]) sv[k] = next.settings[k]; });
     if (Object.keys(sv).length) ops.push({ t: 'set', v: sv });
     if (next.ring && JSON.stringify(prev.ring) !== JSON.stringify(next.ring)) ops.push({ t: 'ring', v: next.ring });
@@ -6323,7 +6355,7 @@ class Component extends DCLogic {
         gsMode: true, showConnect: false, showReload: false, showDisconnect: false, fileErr: false, gsErr: gs === 'error' && this.gsQueue.length > 0,
         gsPage: gs === 'error' && st.gsWhy === 'page', gsUrlOpen: this.gsUrl, fileNoteCls: gs === 'error' ? 'strip-note strip-note-err' : 'strip-note',
         fileTitle: 'Google Таблица: ' + (st.gsName || '…'),
-        fileNote: gs === 'loading' ? 'Загружаю данные из таблицы…' : gs === 'saving' ? 'Записываю изменения в таблицу…' : gs === 'error' ? st.gsMsg : this.gsOldScript || this.gsScriptOld ? 'Обновите код скрипта в таблице: «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → Управление развертываниями → ✎ → Версия: новая. Без этого часть настроек не записывается в таблицу' + (this.gsVersion && this.gsVersion < 19 ? '. До обновления кода задайте свойства скрипта TOKEN и EDITOR_TOKEN («Настройки» → «Связь»), иначе новый код не пустит сайт' : '') : 'Синхронизировано ' + gat + (this.gsShared ? ' · одна таблица на всех устройствах' : ' · только на этом устройстве') + (this.readOnly ? ' · только просмотр' : ' · правки сразу уходят в таблицу') + ', новые строки подтягиваются каждые 30 сек',
+        fileNote: gs === 'loading' ? 'Загружаю данные из таблицы…' : gs === 'saving' ? 'Записываю изменения в таблицу…' + ((n => n > 40 ? ' Осталось правок: ' + n + '.' : '')(this.gsQueue.reduce((a, o) => a + (o.t === 'cli.add' || o.t === 'cli.patch' ? o.v.length : 1), 0))) : gs === 'error' ? st.gsMsg : this.gsOldScript || this.gsScriptOld ? 'Обновите код скрипта в таблице: «Настройки» → «Связь» → «Скопировать код» → вставить в Apps Script → Развернуть → Управление развертываниями → ✎ → Версия: новая. Без этого часть настроек не записывается в таблицу' + (this.gsVersion && this.gsVersion < 19 ? '. До обновления кода задайте свойства скрипта TOKEN и EDITOR_TOKEN («Настройки» → «Связь»), иначе новый код не пустит сайт' : '') : 'Синхронизировано ' + gat + (this.gsShared ? ' · одна таблица на всех устройствах' : ' · только на этом устройстве') + (this.readOnly ? ' · только просмотр' : ' · правки сразу уходят в таблицу') + ', новые строки подтягиваются каждые 30 сек',
         fileDot: gs === 'error' ? 'transparent' : 'var(--color-accent)', fileNoteColor: gs === 'error' ? 'var(--color-accent-900)' : 'var(--color-neutral-700)', gsLabel: 'Настройки связи' });
       // правки, которые таблица не приняла (скрипт 24), — видно, пока не нажмут «Понятно»
       const warn = st.gsWarn || [];

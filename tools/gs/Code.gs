@@ -79,9 +79,15 @@
  * Версия 33: коробки отгрузки по пакинг-листу — Yuborishlar W «Qutilar, sm» («60×40×50×12; …»), текстом с сайта.
  * Версия 34: настройка «Мелкий груз — на Changan / Shineray, до, м³» (Sozlamalar B74): в планах A и B отгрузку меньше
  *   порога везёт маленькая машина, Gazel — от порога.
+ * Версия 35: новые клиенты пачкой (правка cli.add — загрузка базы клиентов с сайта): блок строк одной записью вместо
+ *   ~40 обращений к таблице на клиента (сотни клиентов — секунды, а не минуты); BL, который уже есть в листе, — только
+ *   пустые ячейки этой строки, без дубля (порция могла уйти второй раз после обрыва связи). Правки многих клиентов
+ *   (cli.patch) — разом: лист читается один раз, пишется по столбцу, только ячейки, которые сайт правда поменял. Порция, за которой идут ещё (more), — без
+ *   выгрузки всей таблицы в ответе. Доп. склад удаляется и правится, только если в строке тот же BL и то же название;
+ *   строка сдвинулась — склад находится по BL, названию и координатам.
  */
 var TOKEN = '';
-var VERSION = 34; // сайт сверяет версию и просит обновить код, если он старый
+var VERSION = 35; // сайт сверяет версию и просит обновить код, если он старый
 
 var SH = { ship: 'Yuborishlar', cli: 'Mijozlar', wh: 'Qoshimcha omborlar', set: 'Sozlamalar', ring: 'Halqa zonasi', notes: 'O‘zgarishlar' };
 var LOC_COL = 22;   // Yuborishlar V — куда везти (версия 25)
@@ -209,7 +215,8 @@ function post_(e) {
     SpreadsheetApp.flush();
     try { tgAfterOps_(body.ops, body.more || body.quiet); } catch (err) { console.error('Бот после правок: ' + ((err && err.message) || err)); }   // водителям — если их точки изменились
   } finally { lock.releaseLock(); }
-  return json_({ ok: true, v: VERSION, results: results, relaxed: RELAXED.length ? RELAXED : undefined, data: dump_(body.tgdays) });
+  // порция, за которой идут ещё (more), — без выгрузки: сайт читает таблицу после последней (версия 35)
+  return json_({ ok: true, v: VERSION, results: results, relaxed: RELAXED.length ? RELAXED : undefined, data: body.more ? undefined : dump_(body.tgdays) });
 }
 
 // Ссылки на карту (версия 19): скрипт открывает только Google Карты, goo.gl, Яндекс Карты и 2ГИС — и исходную ссылку,
@@ -472,6 +479,106 @@ function findShip_(sh, row, guard) {
   return 0;
 }
 
+// строка доп. склада: та, что назвал сайт, если в ней тот же BL (и то же название — сайт 35); иначе — по BL, названию и
+// координатам (строки сдвинулись: в листе удалили или вставили строку). Не нашлась — 0 (правка — новой строкой, удаление — ничего)
+function whRow_(sh, row, guard) {
+  var bl = String(guard.bl == null ? '' : guard.bl).trim(), nm = guard.name === undefined ? null : String(guard.name == null ? '' : guard.name).trim();
+  var at = function (r) { return sh.getRange(r, 1, 1, 5).getValues()[0]; };
+  var same = function (x) { return String(x[0]).trim() === bl && (nm === null || String(x[2]).trim() === nm); };
+  if (row >= 5 && same(at(row))) return row;
+  if (nm === null) return 0;
+  var last = lastRow_(sh, 1, 5);
+  if (last < 5) return 0;
+  var v = sh.getRange(5, 1, last - 4, 5).getValues(), near = function (a, b) { return b === undefined || b === '' || b === null || Math.abs(Number(a) - Number(b)) < 1e-6; };
+  for (var i = 0; i < v.length; i++) if (same(v[i]) && near(v[i][3], guard.lat) && near(v[i][4], guard.lon)) return 5 + i;
+  return 0;
+}
+
+// новые клиенты пачкой (версия 35): данные — блоком строк (столбцы A:I, K:L, O, X, Y, Z), формулы — из строки 5 разом.
+// BL, который уже есть в листе (повтор порции или клиента добавили в таблице), — дописываются только пустые ячейки
+// этой строки: заполненное в таблице не перезаписывается. Проверка данных не приняла значение — блок стирается
+// и клиенты пишутся по одному, как cli.upsert: у кого ошибка, тот вернётся сайту (code cell), остальные запишутся
+function cliAdd_(sh, list) {
+  var last = lastRow_(sh, 1, 5), have = {}, fresh = [], upd = 0, S = function (x) { return x == null ? '' : x; };
+  if (last >= 5) sh.getRange(5, 1, last - 4, 1).getValues().forEach(function (r, i) { var k = String(r[0]).trim(); if (k) have[k] = 5 + i; });
+  list.forEach(function (v) {
+    var k = String((v && v.bl) || '').trim();
+    if (!k || have[k] === -1) return;
+    if (have[k]) { var add = cliEmpty_(sh, have[k], v); if (add) { apply_({ t: 'cli.upsert', key: k, v: add }); upd++; } return; }
+    have[k] = -1; fresh.push(v);
+  });
+  if (!fresh.length) return { ok: true, added: 0, updated: upd };
+  var first = last + 1, n = fresh.length;
+  if (first + n - 1 > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), first + n - 1 - sh.getMaxRows());
+  var marks = fresh.some(function (v) { return v.marks; }), locs = fresh.some(function (v) { return v.locs; });
+  if (marks) { if (sh.getMaxColumns() < 25) sh.insertColumnsAfter(sh.getMaxColumns(), 25 - sh.getMaxColumns()); var hc = sh.getRange(4, 25); if (String(hc.getValue()).trim() === '') hc.setValue('Markirovkalar'); }
+  if (locs) ownCol_(sh, LOCS_COL, LOCS_HEAD, 'Z', 'список точек клиента', '');
+  // [первый столбец, значения строки]; телефоны, маркировки и точки — текстом (как в cli.upsert)
+  var seg = [[1, function (v) { return [v.bl, S(v.brand), S(v.name), S(v.tel1), S(v.tel2), S(v.receiver), S(v.receiverTel), S(v.district), S(v.address)]; }],
+    [11, function (v) { return [num_(v.lat), num_(v.lon)]; }], [15, function (v) { return [S(v.note)]; }], [24, function (v) { return [S(v.manualZone)]; }]];
+  if (marks) seg.push([25, function (v) { return [S(v.marks)]; }]);
+  if (locs) seg.push([26, function (v) { return [S(v.locs)]; }]);
+  try {
+    [[4, 2], [7, 1]].concat(marks ? [[25, 1]] : []).concat(locs ? [[26, 1]] : []).forEach(function (b) { sh.getRange(first, b[0], n, b[1]).setNumberFormat('@'); });
+    seg.forEach(function (g) { var rows = fresh.map(g[1]); sh.getRange(first, g[0], n, rows[0].length).setValues(rows); });
+  } catch (err) {
+    seg.forEach(function (g) { sh.getRange(first, g[0], n, g[1](fresh[0]).length).clearContent(); });
+    var bad = null;
+    fresh.forEach(function (v) { try { apply_({ t: 'cli.upsert', key: String(v.bl).trim(), v: v }); } catch (e) { if (!bad) bad = String((e && e.message) || e).slice(0, 400); } });
+    return bad ? { error: bad, code: 'cell', added: n, updated: upd } : { ok: true, added: n, updated: upd, slow: true };
+  }
+  fresh.forEach(function (v, i) { if (v.link) sh.getRange(first + i, 10).setRichTextValue(SpreadsheetApp.newRichTextValue().setText('Xaritada ochish').setLinkUrl(v.link).build()); });
+  if (first > 5) [[13, 2], [16, 8]].forEach(function (b) { sh.getRange(5, b[0], 1, b[1]).copyTo(sh.getRange(first, b[0], n, b[1]), SpreadsheetApp.CopyPasteType.PASTE_FORMULA, false); });
+  return { ok: true, added: n, updated: upd, row: first };
+}
+
+// поля клиента, у которых в строке таблицы пусто, а у сайта есть значение; ничего — null
+var CLI_COL = { brand: 2, name: 3, tel1: 4, tel2: 5, receiver: 6, receiverTel: 7, district: 8, address: 9, link: 10, lat: 11, lon: 12, note: 15, manualZone: 24, marks: 25, locs: 26 };
+function cliEmpty_(sh, row, v) {
+  var cur = sh.getRange(row, 1, 1, Math.min(26, sh.getMaxColumns())).getValues()[0], out = { bl: v.bl }, any = false;
+  Object.keys(CLI_COL).forEach(function (k) {
+    var c = CLI_COL[k], has = c <= cur.length && cur[c - 1] !== '' && cur[c - 1] !== null;
+    if (!has && v[k] !== undefined && v[k] !== null && v[k] !== '') { out[k] = v[k]; any = true; }
+  });
+  return any ? out : null;
+}
+
+// правки многих клиентов разом (версия 35): [{ key, was, v }] как у cli.upsert с прежними значениями. Лист читается один
+// раз; каждый столбец, где что-то поменялось, пишется одной записью от первой до последней правленой строки (остальные
+// ячейки — как были; есть формула в этом отрезке столбца — только правленые ячейки, формулы не трогаются). Проверка данных не приняла столбец — по ячейке, правило «отклонять» — на «предупреждение» (как в
+// setRow_); ячейка, которую таблица так и не приняла, — ошибкой сайту (code cell). Ссылка (J), маркировки и точки без
+// своего столбца, BL, которого нет в листе, — обычной правкой cli.upsert
+function cliPatch_(sh, list) {
+  var last = lastRow_(sh, 1, 5);
+  if (last < 5) { list.forEach(function (o) { apply_({ t: 'cli.upsert', key: o.key, was: o.was, v: o.v }); }); return { ok: true, n: list.length }; }
+  var width = Math.min(26, sh.getMaxColumns()), vals = sh.getRange(5, 1, last - 4, width).getValues(), at = {}, cols = {}, slow = [], n = 0, bad = null;
+  vals.forEach(function (r, i) { var k = String(r[0]).trim(); if (k && at[k] === undefined) at[k] = i; });
+  list.forEach(function (o) {
+    var i = at[String(o.key == null ? '' : o.key).trim()], v = o.v || {}, was = o.was || {};
+    var ch = Object.keys(CLI_COL).filter(function (k) { return v[k] !== undefined && String(was[k] == null ? '' : was[k]) !== String(v[k] == null ? '' : v[k]); });
+    if (i === undefined || !o.was || ch.some(function (k) { return k === 'link' || CLI_COL[k] > width; })) { slow.push(o); return; }
+    ch.forEach(function (k) { var c = CLI_COL[k]; vals[i][c - 1] = k === 'lat' || k === 'lon' ? num_(v[k]) : v[k] == null ? '' : v[k]; (cols[c] = cols[c] || []).push(i); });
+    if (ch.length) n++;
+  });
+  Object.keys(cols).map(Number).forEach(function (c) {
+    var rows = cols[c], lo = Math.min.apply(null, rows), hi = Math.max.apply(null, rows), text = [4, 5, 7, 25, 26].indexOf(c) >= 0;
+    try {
+      var span = sh.getRange(5 + lo, c, hi - lo + 1, 1);
+      if (span.getFormulas().some(function (r) { return r[0]; })) throw new Error('formulas');
+      if (text) span.setNumberFormat('@');
+      span.setValues(vals.slice(lo, hi + 1).map(function (r) { return [r[c - 1]]; }));
+    } catch (err) {
+      rows.forEach(function (i) {
+        var r = sh.getRange(5 + i, c), x = vals[i][c - 1];
+        if (text) r.setNumberFormat('@');
+        try { r.setValue(x); } catch (e) { try { if (!relaxDV_(sh, c)) throw e; r.setValue(x); } catch (e2) { if (!bad) bad = sh.getName() + ', строка ' + (5 + i) + ': ' + ((e2 && e2.message) || e2); } }
+      });
+    }
+  });
+  slow.forEach(function (o) { try { apply_({ t: 'cli.upsert', key: o.key, was: o.was, v: o.v }); n++; } catch (e) { if (!bad) bad = String((e && e.message) || e); } });
+  return bad ? { error: String(bad).slice(0, 400), code: 'cell', n: n } : { ok: true, n: n };
+}
+
 function findByA_(sh, key) {
   var last = lastRow_(sh, 1, 5);
   if (last < 5) return 0;
@@ -499,6 +606,8 @@ function apply_(op) {
     ensureF_(sh, row, 6, [2, 4, 5, 6, 7, 8, 9, 17, 18, 19, 20, 21]);
     return { row: row };
   }
+  if (op.t === 'cli.add') return cliAdd_(ss.getSheetByName(SH.cli), op.v || []);
+  if (op.t === 'cli.patch') return cliPatch_(ss.getSheetByName(SH.cli), op.v || []);
   if (op.t === 'cli.upsert' || op.t === 'cli.delete') {
     sh = ss.getSheetByName(SH.cli);
     row = op.key ? findByA_(sh, op.key) : 0;
@@ -525,7 +634,7 @@ function apply_(op) {
   }
   if (op.t === 'wh.upsert' || op.t === 'wh.delete') {
     sh = ss.getSheetByName(SH.wh);
-    row = op.row && op.guard && String(sh.getRange(op.row, 1).getValue()).trim() === op.guard.bl ? op.row : 0;
+    row = op.row && op.guard ? whRow_(sh, op.row, op.guard) : 0;
     if (op.t === 'wh.delete') { if (row) shiftUp_(sh, row, [[1, 5]], 1, 5); return { row: row }; }
     if (!row) row = lastRow_(sh, 1, 5) + 1;
     setRow_(sh, row, { 1: v.bl, 2: v.brand, 3: v.name, 4: num_(v.lat), 5: num_(v.lon) });

@@ -3330,3 +3330,8 @@ Google Таблица обновится так же.	Google Jadval ham shunday 
 «Клиенты» → «Дополнительные склады» — выберите, какой оставить.	«Mijozlar» → «Qo‘shimcha omborlar» — qaysi biri qolishini tanlang.
 Объединить одинаковые ({n})	Bir xillarini birlashtirish ({n})
 Рейсы Kamaz в планах и журнале считаются без цены.	Rejalar va jurnaldagi Kamaz reyslari narxsiz hisoblanadi.
+
+# ── запись в таблицу: пачки клиентов (скрипт 35) ──
+Осталось правок: {n}.	Qolgan tuzatishlar: {n}.
+новые клиенты ({n})	yangi mijozlar ({n})
+правки клиентов ({n})	mijozlar tuzatishlari ({n})
