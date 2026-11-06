@@ -1394,6 +1394,28 @@
 
     </main>
   </sc-if>
+  <!-- «Планы»: большая партия считается в фоне (js/plan-worker.js) — пока выбор партии и «Считаю планы…» -->
+  <sc-if value="{{ isPlanWait }}" hint-placeholder-val="{{ false }}">
+    <main class="page plan-wait-page" style="max-width:1560px;margin:0 auto;padding:28px;display:flex;flex-direction:column;gap:24px">
+      <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+        <div>
+          <div class="eyebrow" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">Reja A / B / X</div>
+          <h1 style="margin:2px 0 0;font-size:38px">Планы маршрутов</h1>
+        </div>
+        <div class="page-tools" style="margin-left:auto;display:flex;gap:10px;align-items:center">
+          <sc-raw-select class="input" style="width:200px" value="{{ planDate }}" sc-camel-on-change="{{ onPlanDate }}">
+            <sc-for list="{{ dateOpts }}" as="o"><option value="{{ o.v }}">Партия {{ o.l }}</option></sc-for>
+          </sc-raw-select>
+          <sc-raw-select class="input plan-date2" style="width:210px" value="{{ planDate2 }}" sc-camel-on-change="{{ onPlanDate2 }}">
+            <option value="">+ вторая партия</option>
+            <sc-for list="{{ date2Opts }}" as="o"><option value="{{ o.v }}">+ партия {{ o.l }}</option></sc-for>
+          </sc-raw-select>
+        </div>
+      </div>
+      <div class="plan-wait"><span class="plan-wait-dot"></span><div><div class="plan-wait-title">{{ planWaitText }}</div><div class="bt-sub">Большая партия считается несколько секунд — сайт тем временем работает, можно перейти на другую вкладку.</div></div></div>
+    </main>
+  </sc-if>
+
   <sc-if value="{{ isPlans }}" hint-placeholder-val="{{ false }}">
     <main class="page" style="max-width:1560px;margin:0 auto;padding:28px;display:flex;flex-direction:column;gap:24px">
       <div class="page-head" style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
@@ -2089,7 +2111,7 @@
           <sc-for list="{{ packRows }}" as="r">
             <div class="pack-row" style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:6px 12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-divider)">
               <div style="min-width:0"><div style="font-weight:500;overflow-wrap:anywhere">{{ r.file }}</div><div style="font-size:12px;color:{{ r.color }};text-wrap:pretty">{{ r.info }}</div>
-                <div class="pack-src" style="font-size:12px;color:var(--color-neutral-500)">{{ r.src }}</div>
+                <div class="pack-src" style="font-size:12px;color:var(--color-neutral-700)">{{ r.src }}</div>
                 <sc-if value="{{ r.canAi }}"><button class="btn btn-ghost pack-ai-btn" style="padding:4px 10px;margin-top:4px" sc-camel-on-click="{{ r.onAi }}">🤖 Прочитать ИИ</button></sc-if></div>
               <sc-if value="{{ r.ok }}"><sc-raw-select class="input pack-bl" value="{{ r.sel }}" sc-camel-on-change="{{ r.onSel }}" aria-label="BL"><option value="">— выберите BL</option><sc-for list="{{ packBlOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></sc-raw-select></sc-if>
               <sc-if value="{{ r.ok }}"><div style="font-size:12px;color:var(--color-neutral-700);text-wrap:pretty">{{ r.journal }}</div></sc-if>
@@ -2307,7 +2329,8 @@
 const LS_KEY = 'logi-site-v2';
 // дата партии: ГГГГ-ММ-ДД с годом 2000–2099 (иначе таблица запишет её как 1900 год)
 const okDate = d => /^(20\d\d)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(String(d || '')) && !isNaN(Date.parse(d));
-const ST = { 'Rejada': 'В плане', 'Yolda': 'В пути', 'Yetkazildi': 'Доставлено', 'Qolib ketgan': 'Осталось', 'Mijoz ozi oldi': 'Клиент забрал сам', 'Bekor qilindi': 'Отменено' };
+// «в пути» в таблицах пишут и «Yolda», и по-узбекски «Yo‘lda» (с апострофом) — оба значения одно
+const ST = { 'Rejada': 'В плане', 'Yolda': 'В пути', 'Yo‘lda': 'В пути', "Yo'lda": 'В пути', 'Yo’lda': 'В пути', 'Yetkazildi': 'Доставлено', 'Qolib ketgan': 'Осталось', 'Mijoz ozi oldi': 'Клиент забрал сам', 'Bekor qilindi': 'Отменено' };
 const TR = { 'Belgilanmagan': 'Не назначена', 'Mijoz ozi oladi': 'Клиент заберёт' };
 const PLAN_INFO = {
   A: { title: 'A — Buraq AI', desc: S => 'Самый дешёвый для компании без перегруза: меньше рейсов и машин, маршруты по направлениям. Labo, Changan, Gazel и Kamaz. Gazel строго до ' + f1(S.gazelM3, 1) + ' м³ / ' + f0(S.gazelKg) + ' кг, Kamaz — только если груз больше.' },
@@ -2327,6 +2350,10 @@ const PART_RE = /(?:^| · )часть \d+\/\d+$/;
 const partBase = note => String(note || '').replace(PART_RE, '');
 const partNo = note => { const m = String(note || '').match(/часть (\d+)\/\d+$/); return m ? +m[1] : 1; };
 // рейсы плана на картах («Карта», «Планы»): свой оттенок синего и штрих, номер рейса — как в списке
+// текст на цветной метке (номера точек на синих оттенках рейсов): тёмно-синий или белый — что контрастнее фона
+const inkOn = (bg, v) => { const m = String(bg || '').trim().match(/^#([0-9a-f]{6})$/i); if (!m) return v('--buraq-white');
+  const n = parseInt(m[1], 16), f = x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }, L = 0.2126 * f(n >> 16) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+  return L > 0.234 ? v('--buraq-navy') : v('--buraq-white'); };
 const PLAN_SHADES = ['--plan-1', '--plan-2', '--plan-3', '--plan-4', '--plan-5', '--plan-6'];   // оттенки синего рейсов (design-system.css)
 const PLAN_DASHES = [null, '8 5', null, '2 5', '10 4 2 4', null];
 // Машины автопарка для журнала (Sozlamalar C24:C39). Госномера придут позже — тогда имена поменяются.
@@ -3180,7 +3207,14 @@ class Component extends DCLogic {
   // в партии есть строки, которые ещё везём, без выбранной точки — спросить «Какая локация на эту партию?»
   needLoc(date) { return !!date && date !== 'all' && this.canLoc && !!this.state.ready && this.state.data.shipments.some(s => s.date === date && !LOC_DONE.includes(s.status) && s.truck !== PICK && !s.loc); }
   // спрашивать само — при работе с Google Таблицей или Excel-файлом (встроенные данные — только кнопкой «Локации партии»)
-  maybeAskLoc(date) { if ((this.gsUrl || this.handle) && !this.state.dialog && this.needLoc(date)) this.openLocAsk(date); }
+  // само спрашивает один раз на партию за сеанс: «Позже» или ✕ — до перезагрузки не спросит (кнопка «📍 Локации партии» — всегда)
+  maybeAskLoc(date) {
+    if (!(this.gsUrl || this.handle) || this.state.dialog || !this.needLoc(date)) return;
+    if (!this._laAsked) this._laAsked = new Set();
+    if (this._laAsked.has(date)) return;
+    this._laAsked.add(date);
+    this.openLocAsk(date);
+  }
   // окно партии: все клиенты партии (кого ещё везём; все доставлены — все клиенты), у каждого — выбор точки
   openLocAsk(date, focus) {
     const all = this.state.data.shipments.filter(s => s.date === date), open = all.filter(s => !LOC_DONE.includes(s.status));
@@ -3249,7 +3283,8 @@ class Component extends DCLogic {
 
   // планы считаются один раз на партию, пока не изменились данные и настройки (отчёты за период берут все партии)
   // партия или две через «+» («2026-09-30+2026-10-02»): план на две партии — груз обеих вперемешку, как одна партия
-  plansFor(date) {
+  // вход расчёта планов партии: точки (части одной отгрузки — одна точка), настройки с машинами и ключ кэша
+  planInput(date) {
     const { data } = this.state, D = this.derived(), E = window.LogiEngine, ds = String(date || '').split('+');
     const vehicles = this.fleetVehicles(data);
     // Части одной отгрузки, записанные из плана («Принять план»: «часть 1/2», «часть 2/2»), в плане — снова одна отгрузка:
@@ -3270,13 +3305,53 @@ class Component extends DCLogic {
     // кэш по партии: ключ — её точки (с клиентами), настройки и машины. Правка другой партии или обновление из таблицы,
     // где эта партия не менялась, её планы не пересчитывают (оптимизатор тяжёлый: «Расходы» строят планы всех партий периода)
     const key = JSON.stringify(data.settings) + '|' + JSON.stringify(vehicles) + '|' + JSON.stringify(stops);
-    if (!this._plans) this._plans = new Map();
-    const hit = this._plans.get(date);
-    if (hit && hit.key === key) return hit.res;
-    const res = E.buildPlans(stops, { ...data.settings, vehicles });   // машины поимённо: своя вместимость, «в ремонте» — не в планах
-    res.all = stops;
-    this._plans.set(date, { key, res });
-    return res;
+    // машины поимённо: своя вместимость, «в ремонте» — не в планах; план C (только Kamaz) сайт не показывает — не считается
+    return { stops, key, S: { ...data.settings, vehicles, noPlanC: true } };
+  }
+  planHit(date, inp) { if (!this._plans) this._plans = new Map(); const hit = this._plans.get(date); return hit && hit.key === inp.key ? hit.res : null; }
+  planSave(date, inp, res) { res.all = inp.stops; this._plans.set(date, { key: inp.key, res }); return res; }
+  // планы партии сразу (действия: «Принять план», правка, Buraq AI, Excel) — из кэша или расчётом на странице
+  plansFor(date) {
+    const inp = this.planInput(date);
+    return this.planHit(date, inp) || this.planSave(date, inp, window.LogiEngine.buildPlans(inp.stops, inp.S));
+  }
+  // планы партии для вкладок: из кэша; нет — считаются в фоновом потоке (js/plan-worker.js), а пока null — вид пишет
+  // «Считаю планы…» (большая партия считается секунды: прежде страница на это время замирала). Готово — перерисовка
+  plansAsync(date) {
+    const inp = this.planInput(date), hit = this.planHit(date, inp);
+    if (hit) return hit;
+    if (!this.planWorker()) return this.planSave(date, inp, window.LogiEngine.buildPlans(inp.stops, inp.S));
+    const job = date + '|' + inp.key;
+    if (!this._planJobs) this._planJobs = new Set();
+    if (!this._planJobs.has(job)) {
+      this._planJobs.add(job);
+      this.planWork(inp.stops, inp.S, pre => {
+        this._planJobs.delete(job);
+        if (!this.planHit(date, inp)) { const E = window.LogiEngine; let res = null;
+          try { res = pre ? E.buildPlans(inp.stops, inp.S, pre) : null; } catch (e) { console.warn('Планы из фона не собрались, считаю на странице:', e); }
+          this.planSave(date, inp, res || E.buildPlans(inp.stops, inp.S)); }
+        this.setState(s => ({ planTick: (s.planTick || 0) + 1 }));
+      });
+    }
+    return null;
+  }
+  // сколько партий ещё считается в фоне (для «Считаю планы: …»)
+  planPending() { return this._planJobs ? this._planJobs.size : 0; }
+  // фоновый поток планов (один на сайт, задачи — по очереди); нет Worker — null (тогда считается на странице)
+  planWorker() {
+    if (this._pw === undefined) { try { this._pw = typeof Worker === 'function' ? new Worker('js/plan-worker.js') : null; } catch (e) { this._pw = null; }
+      if (this._pw) { this._pwCb = new Map(); this._pwId = 0;
+        this._pw.onmessage = e => { const m = e.data || {}, cb = this._pwCb.get(m.id); this._pwCb.delete(m.id); if (!m.ok) console.warn('Планы в фоне не посчитались, считаю на странице:', m.error); if (cb) cb(m.ok ? m.res : null); };
+        this._pw.onerror = e => { e.preventDefault && e.preventDefault(); const pend = [...this._pwCb.values()]; this._pwCb.clear(); this._pw.terminate(); this._pw = null; pend.forEach(cb => cb(null)); }; } }
+    return this._pw;
+  }
+  // задача фоновому потоку: cb(планы без функций) или cb(null) — ошибка (тогда вызывающий считает на странице)
+  planWork(stops, S, cb) {
+    const w = this.planWorker();
+    if (!w) return cb(null);
+    const id = ++this._pwId;
+    this._pwCb.set(id, cb);
+    try { w.postMessage({ id, stops, S }); } catch (e) { this._pwCb.delete(id); cb(null); }
   }
 
   // ---------- ручная правка плана ----------
@@ -3653,7 +3728,8 @@ class Component extends DCLogic {
   // Рейсы партии для отчётов. Источник — журнал (машина и номер рейса у отгрузок); если в журнале у партии
   // нет ни одного рейса — план A. Время по журналу: первый рейс машины выезжает в начале дня,
   // следующий — после возвращения предыдущего; точки — в порядке объезда, как в планах.
-  reportBatch(date) {
+  // sync — план партии сразу, на странице (Excel, отчёт Buraq AI); иначе из фона: пока считается — { wait: true } (не в кэше)
+  reportBatch(date, sync) {
     const D = this.derived(), E = window.LogiEngine, data = this.state.data, S = data.settings, depot = [S.depotLat, S.depotLon];
     const key = D.ver + '|' + JSON.stringify(S);
     if (!this._rep || this._rep.key !== key || this._rep.pe !== this.state.planEdits) this._rep = { key, pe: this.state.planEdits, byDate: new Map() };
@@ -3685,7 +3761,8 @@ class Component extends DCLogic {
       left = ships.filter(s => !D.tripOf[s.id]).map(s => ({ ...stopOf(s), why: E.NO_PRICE.includes(s.status) ? ST[s.status] || s.status : !E.vehicleKind(s.truck) ? 'без машины' : 'без номера рейса' }));
     } else {
       src = 'plan';
-      const P = this.plansFor(date), inPlan = new Set();
+      const P = sync ? this.plansFor(date) : this.plansAsync(date), inPlan = new Set();
+      if (!P) return { date, src: 'wait', wait: true, trips: [], left: [], ships, sum: { trips: 0, unpriced: 0, price: 0, cost: this.costOf([]), km: 0, cbm: 0, kg: 0, places: 0 } };
       trips = this.planOf(P, date, 'A').trips.map(t => { const v = t.vehicle || {}; t.stops.forEach(x => inPlan.add(x.id));
         return { name: t.name, truck: null, route: t.round || 1, kind: t.kind, car: t.car ? t.kind + '-' + t.car : null, stops: t.stops, price: t.price, cost: E.costSplit(t.stops, t.price, S),
           cbm: t.cbm, kg: t.kg, places: t.places, capM3: v.nomM3 ?? v.m3, capKg: v.nomKg ?? v.kg, start: t.start ?? S.dayStart * 1440, arrivals: t.arrivals, real: t.real, ret: ret(t), noVehicle: !!t.noVehicle, over: !!t.over }; });
@@ -3700,14 +3777,7 @@ class Component extends DCLogic {
   // предварительные планы импорта — в фоновом потоке (js/plan-worker.js); нет Worker или ошибка — на странице, как раньше
   impPlansRun(stops, S, done) {
     const local = () => { try { done(window.LogiEngine.buildPlans(stops, S)); } catch (e) { console.error(e); } };
-    if (this._pw === undefined) { try { this._pw = typeof Worker === 'function' ? new Worker('js/plan-worker.js') : null; } catch (e) { this._pw = null; }
-      if (this._pw) { this._pwCb = new Map(); this._pwId = 0;
-        this._pw.onmessage = e => { const m = e.data || {}, cb = this._pwCb.get(m.id); this._pwCb.delete(m.id); if (!m.ok) console.warn('Планы в фоне не посчитались, считаю на странице:', m.error); if (cb) cb(m.ok ? m.res : null); };
-        this._pw.onerror = e => { e.preventDefault && e.preventDefault(); const pend = [...this._pwCb.values()]; this._pwCb.clear(); this._pw.terminate(); this._pw = null; pend.forEach(cb => cb(null)); }; } }
-    if (!this._pw) return local();
-    const id = ++this._pwId;
-    this._pwCb.set(id, res => res ? done(res) : local());
-    try { this._pw.postMessage({ id, stops, S }); } catch (e) { this._pwCb.delete(id); local(); }
+    this.planWork(stops, S, res => res ? done(res) : local());
   }
   // Вкладка «Импорт» (только руководитель): загрузка манифеста, список черновиков, экран проверки
   importView(st, S, D) {
@@ -3847,7 +3917,7 @@ class Component extends DCLogic {
       c.plansWant = pk; clearTimeout(this._impPlansT);
       this._impPlansT = setTimeout(() => {
         if (this.impCur !== c || c.plansWant !== pk || c.plansBusy) return;   // идёт расчёт — после него посчитаем последний вариант
-        const D1 = this.derived(), data1 = this.state.data, S1 = { ...data1.settings, vehicles: this.fleetVehicles(data1) };
+        const D1 = this.derived(), data1 = this.state.data, S1 = { ...data1.settings, vehicles: this.fleetVehicles(data1), noPlanC: true };   // план C не показывается — не считается
         const stops = ships.map((x, i) => { const cl = D1.cmap[x.bl] || {}; return { id: 'p' + i, bl: x.bl, cbm: x.cbm, kg: x.kg, places: x.places, boxList: boxesOf(x), lat: cl.lat ?? null, lon: cl.lon ?? null, zone: (D1.zones[x.bl] || {}).zone, client: cl }; });
         c.plansBusy = true;
         this.impPlansRun(stops, S1, res => { c.plansBusy = false; if (this.impCur !== c) return;
@@ -4058,7 +4128,7 @@ class Component extends DCLogic {
     if (!hits(dl.date)) { const top = dates.map(d => [d, hits(d)]).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1))[0]; if (top && top[1] > 0) { best = top[0]; autoDate = true; } }
     if (best === dl.date) return;
     const nb = this.packBls(data, best);
-    this.setState(s0 => ({ dialog: { ...s0.dialog, date: best, autoDate, rows: s0.dialog.rows.map(r => ({ ...r, sel: r.ok ? this.packMatch(r, nb) : '' })) } }));
+    this.setState(s0 => s0.dialog && s0.dialog.type === 'packs' ? { dialog: { ...s0.dialog, date: best, autoDate, rows: s0.dialog.rows.map(r => ({ ...r, sel: r.ok ? this.packMatch(r, nb) : '' })) } } : null);
   }
   // фото пакинг-листа → JPEG не больше 1568 px по длинной стороне (больше ИИ всё равно уменьшает)
   async packImage(file) {
@@ -4074,7 +4144,7 @@ class Component extends DCLogic {
     const dl = this.state.dialog; if (!dl || dl.type !== 'packs' || !dl.rows[i] || this.readOnly) return;
     const upd = patch => this.setState(s0 => s0.dialog && s0.dialog.type === 'packs' ? { dialog: { ...s0.dialog, rows: s0.dialog.rows.map((x, k) => k === i ? { ...x, ...patch } : x) } } : null);
     const setup = this.packAiSetup();
-    if (setup) { if (!quiet) this.setState(s0 => ({ dialog: { ...s0.dialog, error: setup } })); return; }
+    if (setup) { if (!quiet) this.setState(s0 => s0.dialog && s0.dialog.type === 'packs' ? { dialog: { ...s0.dialog, error: setup } } : null); return; }
     const row = dl.rows[i], P = window.LogiPacking;
     upd({ ai: 'busy', error: '' });
     try {
@@ -4803,7 +4873,7 @@ class Component extends DCLogic {
       t.stops.forEach((s, j) => {
         if (s.noLoc) return;
         all.push([s.lat, s.lon]); if (M.hi === i) sel.push([s.lat, s.lon]);
-        L.marker([s.lat, s.lon], { opacity: lit ? 1 : 0.35, zIndexOffset: M.hi === i ? 600 : 0, title: s.bl, icon: L.divIcon({ className: '', html: '<div style="font:500 11px Inter,sans-serif;color:' + v('--color-bg') + ';background:' + col + ';min-width:22px;height:18px;line-height:18px;text-align:center;padding:0 3px;border-radius:3px">' + (i + 1) + '.' + (j + 1) + '</div>', iconSize: [28, 18], iconAnchor: [14, 22] }) })
+        L.marker([s.lat, s.lon], { opacity: lit ? 1 : 0.35, zIndexOffset: M.hi === i ? 600 : 0, title: s.bl, icon: L.divIcon({ className: '', html: '<div style="font:500 11px Inter,sans-serif;color:' + inkOn(col, v) + ';background:' + col + ';min-width:22px;height:18px;line-height:18px;text-align:center;padding:0 3px;border-radius:3px">' + (i + 1) + '.' + (j + 1) + '</div>', iconSize: [28, 18], iconAnchor: [14, 22] }) })
           .bindPopup(() => this.planPopup(M, t, i, s)).addTo(lay);
       });
     });
@@ -4879,7 +4949,7 @@ class Component extends DCLogic {
     // водители — по отметкам в боте (прежде «Водители» → «Отчёты»): кто сколько доставил, машины, рабочие дни
     if (kind === 'drivers') {
       const dv = this.driversView(st, S, D);
-      return Object.assign(out, dv, { repTitle: 'Отчёт по водителям', repSub: dv.dvRepSum || 'По отметкам водителей в Telegram-боте', repPrintTitle: 'Отчёт по водителям · ' + (dv.dvRepSum || '') });
+      return Object.assign(out, dv, { repTitle: 'Отчёт по водителям', repSub: dv.dvRepSum || 'По отметкам водителей в Telegram-боте', repPrintTitle: ['Отчёт по водителям', dv.dvRepSum].filter(Boolean).join(' · ') });
     }
     // ИИ-отчёт — проблемы и предложения по кнопке «Составить отчёт»
     if (kind === 'ai') {
@@ -5129,12 +5199,12 @@ class Component extends DCLogic {
             short: short.length ? f0(short.length) : 'нет', shortColor: short.length ? 'var(--color-accent-900)' : 'inherit', fillM3: pct(fM3), fillKg: pct(fKg), under: withCap.length ? f0(under) : '—', barM3: ((fM3 || 0) * 100).toFixed(1) + '%',
             raw: [VEH[k], park[k] || '', ts.length, days.length, peak ? peak.n : '', peak ? dLong(peak.date) : '', peak && peak.cars ? peak.cars : '', park[k] ? cap : '', short.length, fM3 != null ? Math.round(fM3 * 100) : '', fKg != null ? Math.round(fKg * 100) : '', withCap.length ? under : ''] };
         }).filter(Boolean);
-        const cell = (P, k) => P[k].noFleet ? 'нет машин' : !P[k].sum.trips ? '—' : sumP(P[k].sum.price, P[k].sum.unpriced);
+        const cell = (P, k) => P.wait ? 'считаю…' : P[k].noFleet ? 'нет машин' : !P[k].sum.trips ? '—' : sumP(P[k].sum.price, P[k].sum.unpriced);
         const full = (P, k) => !P[k].noFleet && P[k].sum.trips > 0 && !P[k].sum.unpriced;
         let cmp = { n: 0, a: 0, b: 0, skip: 0 }, jc = { n: 0, j: 0, a: 0 }, cx = { n: 0, a: 0, x: 0 };
         out.repEcon = R.map(r => {
           // самый дешёвый — среди планов с ценой у всех рейсов; если у плана без цены части рейсов уже известная сумма меньше — ответа нет
-          const P = this.plansFor(r.date), ks = ['A', 'B', 'X'].filter(k => full(P, k)), min = ks.length ? ks.reduce((a, k) => P[k].sum.price < P[a].sum.price ? k : a) : null;
+          const P = this.plansAsync(r.date) || { A: { noFleet: true, sum: {}, trips: [] }, B: { noFleet: true, sum: {}, trips: [] }, X: { noFleet: true, sum: {}, trips: [] }, wait: true }, ks = ['A', 'B', 'X'].filter(k => full(P, k)), min = ks.length ? ks.reduce((a, k) => P[k].sum.price < P[a].sum.price ? k : a) : null;
           const best = min && !['A', 'B', 'X'].some(k => !P[k].noFleet && P[k].sum.unpriced && P[k].sum.price > 0 && P[k].sum.price < P[min].sum.price) ? min : null;
           if (full(P, 'A') && full(P, 'B')) { cmp.n++; cmp.a += P.A.sum.price; cmp.b += P.B.sum.price; } else if (P.A.sum.trips || P.B.sum.trips) cmp.skip++;
           if (r.src === 'journal' && !r.sum.unpriced && full(P, 'A')) { jc.n++; jc.j += r.sum.price; jc.a += P.A.sum.price; }
@@ -5166,6 +5236,7 @@ class Component extends DCLogic {
       }
     }
     if (kind === 'batch') this._repX = { kind, out };
+    { const n = this.planPending(); if (n && out.repNotDrivers !== false) out.repNote = 'Считаю планы партий для отчёта: осталось ' + n + '. Цифры уточнятся сами.' + (out.repNote ? ' ' + out.repNote : ''); }
     out.repHasNote = !!out.repNote;
     return out;
   }
@@ -5219,7 +5290,7 @@ class Component extends DCLogic {
     const kp = [[o.repPrintTitle || o.repTitle], ['Сформирован ' + o.repMade]].concat(o.repNote ? [[o.repNote]] : []).concat([[], ['Показатель', 'Значение', 'Пояснение']]).concat(o.repKpis.map(k => [k.label, k.value, k.sub]));
     let name;
     if (x.kind === 'batch') {
-      const r = this.reportBatch(o.repDateFull || o.repDate), rows = [['Рейс', 'Машина', '№', 'BL', 'Бренд', 'Клиент', 'Адрес', 'Район', 'Получатель', 'Телефон', 'CBM', 'KG', 'Мест', 'Прибытие', 'Зона', 'С клиента', 'С клиента, сум', 'Доля, сум', 'Цена рейса', 'Км рейса']];
+      const r = this.reportBatch(o.repDateFull || o.repDate, true), rows = [['Рейс', 'Машина', '№', 'BL', 'Бренд', 'Клиент', 'Адрес', 'Район', 'Получатель', 'Телефон', 'CBM', 'KG', 'Мест', 'Прибытие', 'Зона', 'С клиента', 'С клиента, сум', 'Доля, сум', 'Цена рейса', 'Км рейса']];
       r.trips.forEach(t => t.stops.forEach((s, j) => { const c = s.client || {}, why = t.cost && t.cost.why[j];
         rows.push([t.name, t.price ? t.price.label : VEH[t.kind], j + 1, s.bl + (s.parts ? ' · ' + s.part + '/' + s.parts : ''), c.brand || '', c.name || '', c.address || '', c.district || '', c.receiver || '', c.receiverTel || c.tel1 || '', num(s.cbm), num(s.kg), s.places || '',
           t.arrivals && t.arrivals[j] != null ? hhmm(t.arrivals[j]) : '', s.zone === 'out' ? 'Снаружи' : s.zone === 'in' ? 'Внутри' : '', why === 'small' ? '< порога' : why === 'out' ? 'за кольцом' : '', why && t.cost ? Math.round(t.cost.charge[j] || 0) : '',
@@ -5377,7 +5448,7 @@ class Component extends DCLogic {
     const avgT = a => { const v = a.filter(x => x != null); return v.length ? hhmm(v.reduce((s, x) => s + x, 0) / v.length) : null; };
     const KINDS = ['labo', 'changan', 'gazel', 'kamaz'], batch = rg.per === 'batch', inR = d => d >= rg.from && d <= rg.to;
     const codes = {}, names = {}, drv = (id, name) => { const k = String(id || name || '?'); if (!codes[k]) { codes[k] = 'DRV' + (Object.keys(codes).length + 1); names[codes[k]] = String(name || ''); } return codes[k]; };
-    const R = rg.dates.map(d => this.reportBatch(d)), ships = R.flatMap(r => r.ships), trips = R.flatMap(r => r.trips), active = ships.filter(s => !E.NO_PLAN.includes(s.status));
+    const R = rg.dates.map(d => this.reportBatch(d, true)), ships = R.flatMap(r => r.ships), trips = R.flatMap(r => r.trips), active = ships.filter(s => !E.NO_PLAN.includes(s.status));
     const f = { period: { type: batch ? 'одна партия' : rg.per + ' дней', from: rg.from, to: rg.to, today, batches: R.length } };
 
     // отгрузки и партии
@@ -5465,7 +5536,7 @@ class Component extends DCLogic {
       clientsIncompleteCards: { count: pcl.filter(c => compl(c) < 0.67).length, missing: Object.fromEntries(Object.entries(miss).map(([k, fn]) => [k, pcl.filter(fn).length])) },
       shipmentsBlNotInDirectory: bls(ships.filter(s => !D.cmap[s.bl])), shipmentsWithoutCbm: bls(active.filter(s => !+s.cbm)), shipmentsWithoutKg: bls(active.filter(s => !+s.kg)),
       shipmentsWithoutPlaces: bls(active.filter(s => !+s.places)), shipmentsWithoutTruck: bls(ships.filter(s => !E.vehicleKind(s.truck) && !E.NO_PRICE.includes(s.status))),
-      pastShipmentsStatusNotClosed: bls(ships.filter(s => s.date < today && ['Rejada', 'Yolda'].includes(s.status))),
+      pastShipmentsStatusNotClosed: bls(ships.filter(s => s.date < today && ['Rejada', 'Yolda', 'Yo‘lda', "Yo'lda", 'Yo’lda'].includes(s.status))),
       wholeBase: { clients: data.clients.length, clientsWithoutCoords: data.clients.filter(c => c.lat == null).length, duplicateBl: Object.values(tally(data.clients, c => c.bl)).filter(n => n > 1).length,
         rowsWithoutDate: (data.skipped || []).length, shipmentsWithUnusualDate: data.shipments.filter(s => odd.has(s.date)).length, datesStoredAsText: (data.textDates || []).length,
         kamazTariffMissing: S.kamazBase == null || S.kamazPt == null, depotCoordsApproximate: S.depotLat === 41.380417 && S.depotLon === 69.235222 } };
@@ -5563,7 +5634,9 @@ class Component extends DCLogic {
   vizModel() {
     const st = this.state;
     if (!st.ready || !st.planDate || !window.LogiViz) return null;
-    const P = this.plansFor(this.planPair), key = ['A', 'B', 'X'].includes(st.planKey) ? st.planKey : 'A', plan = this.planOf(P, this.planPair, key);
+    const P = this.plansAsync(this.planPair);   // большая партия — в фоне; пока null («Считаю планы…»)
+    if (!P) return null;
+    const key = ['A', 'B', 'X'].includes(st.planKey) ? st.planKey : 'A', plan = this.planOf(P, this.planPair, key);
     if (this._vizM && this._vizM.P === P && this._vizM.key === key && this._vizM.plan === plan) return this._vizM;
     const lays = plan.trips.map(t => window.LogiViz.layout(t));
     this._vizM = { P, key, plan, lays, id: (this._vizM ? this._vizM.id : 0) + 1 };
@@ -5623,7 +5696,7 @@ class Component extends DCLogic {
       setTimeout(() => this.map && this.map.invalidateSize(), 50);
     }
     window.__logiMap = this.map;
-    const key = this.state.ver + '|' + this.state.mapDate + '|' + this.state.mapPlan + '|' + JSON.stringify(S) + '|' + (this.state.ringEdit ? 'E' + this.state.ringEditVer : '');
+    const key = this.state.ver + '|' + this.state.mapDate + '|' + this.state.mapPlan + '|' + JSON.stringify(S) + '|' + (this.state.ringEdit ? 'E' + this.state.ringEditVer : '') + '|' + (this.state.planTick || 0);
     if (key === this.mapKey) return;
     this.mapKey = key;
     const D = this.derived(), E = window.LogiEngine, lay = this.layer;
@@ -5661,11 +5734,12 @@ class Component extends DCLogic {
     if (this.state.mapDate === 'all') {
       this.state.data.clients.forEach(c => { if (c.lat != null) { dot(c); pts.push([c.lat, c.lon]); } });
     } else {
-      const P = this.plansFor(this.state.mapDate), shades = PLAN_SHADES, dashes = PLAN_DASHES;
+      const P = this.plansAsync(this.state.mapDate), shades = PLAN_SHADES, dashes = PLAN_DASHES;   // план считается в фоне — пока точки без рейсов
+      if (!P) { this.mapKey = null; return; }
       if (this.state.mapPlan !== 'none') {
         this.planOf(P, this.state.mapDate, this.state.mapPlan).trips.forEach((t, i) => {
           L.polyline([depot].concat(t.stops.filter(s => !s.noLoc).map(s => [s.lat, s.lon])), { color: v(shades[i % 6]), weight: 3, opacity: 0.9, dashArray: dashes[i % 6] }).bindTooltip(escHtml(t.name)).addTo(lay);
-          t.stops.forEach((s, j) => !s.noLoc && L.marker([s.lat, s.lon], { icon: L.divIcon({ className: '', html: '<div style="font:500 11px Inter,sans-serif;color:' + v('--color-bg') + ';background:' + v(shades[i % 6]) + ';min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 3px">' + (i + 1) + '.' + (j + 1) + '</div>', iconSize: [24, 18], iconAnchor: [12, 22] }) }).addTo(lay));
+          t.stops.forEach((s, j) => !s.noLoc && L.marker([s.lat, s.lon], { icon: L.divIcon({ className: '', html: '<div style="font:500 11px Inter,sans-serif;color:' + inkOn(v(shades[i % 6]), v) + ';background:' + v(shades[i % 6]) + ';min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 3px">' + (i + 1) + '.' + (j + 1) + '</div>', iconSize: [24, 18], iconAnchor: [12, 22] }) }).addTo(lay));
         });
       }
       const seen = {};
@@ -6337,7 +6411,7 @@ class Component extends DCLogic {
     const curSub = top === 'reports' ? (st.tab === 'dash' ? 'dash' : st.repKind || 'batch') : st.tab;
     const subtabs = (SUB[top] || []).filter(([k]) => !(k === 'link' && this.readOnly)).map(([k, l]) => ({ l, cls: k === curSub ? 'subtab on' : 'subtab',
       go: () => top === 'reports' ? this.setState(k === 'dash' ? { tab: 'dash' } : { tab: 'reports', repKind: k }) : this.goSettings(k) }));
-    const base = { tabs, subtabs, hasSubtabs: subtabs.length > 0, loading: !st.ready, isJournal: false, isClients: false, isMap: false, isDash: false, isPlans: false, isDrivers: false, isViz: false, isTariffs: false, isReports: false, isImport: false, isShipDialog: false, isBatchDialog: false, isCliImpDialog: false, isClientDialog: false, isLocAskDialog: false, isWhDialog: false, isVehDialog: false, isDrvDialog: false, isApDialog: false, isPackDialog: false, isPhotoDialog: false, isGsDialog: false, isCheck: false, isFleetSet: false, depotName: '', savedNote: '', exportXlsx: this.exportXlsx, mapRef: this.mapRef, planMapRef: this.planMapRef, vizRef: this.vizRef,
+    const base = { tabs, subtabs, hasSubtabs: subtabs.length > 0, loading: !st.ready, isJournal: false, isClients: false, isMap: false, isDash: false, isPlans: false, isPlanWait: false, isDrivers: false, isViz: false, isTariffs: false, isReports: false, isImport: false, isShipDialog: false, isBatchDialog: false, isCliImpDialog: false, isClientDialog: false, isLocAskDialog: false, isWhDialog: false, isVehDialog: false, isDrvDialog: false, isApDialog: false, isPackDialog: false, isPhotoDialog: false, isGsDialog: false, isCheck: false, isFleetSet: false, depotName: '', savedNote: '', exportXlsx: this.exportXlsx, mapRef: this.mapRef, planMapRef: this.planMapRef, vizRef: this.vizRef,
       fileInputRef: this.fileInputRef, onFilePicked: this.onFilePicked, connectFile: this.connectFile, disconnectFile: this.disconnectFile, saveNow: () => this.saveToFile(), reloadFromFile: () => this.readFromHandle(),
       account: () => window.LogiAuth && window.LogiAuth.openAccount(), readOnly: this.readOnly, ...this.bqView(st) };
     const fs = st.fileStatus, fat = st.fileAt ? hhmm(st.fileAt.getHours() * 60 + st.fileAt.getMinutes()) : '';
@@ -6586,10 +6660,12 @@ class Component extends DCLogic {
         out.mapNoCoords = data.clients.filter(c => c.lat == null).map(c => ({ bl: c.bl, name: c.brand || c.name }));
         out.mapHasRoute = false;
       } else {
-        const P = this.plansFor(st.mapDate);
+        // план партии — из фона; пока он считается, на карте точки без рейсов и «Считаю план…»
+        const P = this.plansAsync(st.mapDate) || { all: [], noCoords: [], A: { trips: [] }, B: { trips: [] }, X: { trips: [] }, wait: true };
         const wc = P.all.filter(s => s.lat != null);
         out.mapStats = [{ label: 'Отгрузок', value: P.all.length }, { label: 'На карте', value: wc.length }, { label: 'Снаружи', value: wc.filter(s => s.zone === 'out').length }, { label: 'Рейсов в плане', value: st.mapPlan === 'none' ? '—' : this.planOf(P, st.mapDate, st.mapPlan).trips.length }];
         out.mapNoCoords = P.noCoords.map(s => ({ bl: s.bl, name: s.client.brand || s.client.name || '' }));
+        if (P.wait) out.mapStats = [{ label: 'План партии', value: 'считаю…' }];
         out.mapHasRoute = wc.length > 0;
         out.mapRouteHref = E.yRoute(depot, wc.slice().sort((a, b) => E.bearing(depot, [a.lat, a.lon]) - E.bearing(depot, [b.lat, b.lon])).map(s => [s.lat, s.lon]));
       }
@@ -6627,8 +6703,14 @@ class Component extends DCLogic {
     if (st.tab === 'drivers' || st.tab === 'fleetset') Object.assign(out, this.driversView(st, S, D));
     if (st.tab === 'import' && !this.readOnly) Object.assign(out, this.importView(st, S, D));
 
-    if (st.tab === 'plans' && st.planDate) {
-      const pd = this.planPair, pair = pd.includes('+'), P = this.plansFor(pd);   // одна партия или две («+ вторая партия»)
+    // большая партия: планы считаются в фоне — пока страница «Считаю планы…» (выбор партии работает)
+    if (st.tab === 'plans' && st.planDate && !this.plansAsync(this.planPair)) {
+      const pd = this.planPair, pair = pd.includes('+'), n = data.shipments.filter(s => pd.split('+').includes(s.date) && !E.NO_PLAN.includes(s.status)).length;
+      Object.assign(out, { isPlans: false, isPlanWait: true, planWaitText: 'Считаю планы ' + (pair ? 'двух партий ' : 'партии ') + dLongs(pd) + ' — ' + n + ' ' + plural(n, 'отгрузка', 'отгрузки', 'отгрузок') + '…',
+        planDate: st.planDate, onPlanDate: e => { const v = e.target.value; this.setState(s0 => ({ planDate: v, planDate2: s0.planDate2 === v ? '' : s0.planDate2, planHi: null })); },
+        planDate2: pair ? st.planDate2 : '', date2Opts: dateOpts.filter(o => o.v !== st.planDate), onPlanDate2: e => this.setState({ planDate2: e.target.value, planHi: null }) });
+    } else if (st.tab === 'plans' && st.planDate) {
+      const pd = this.planPair, pair = pd.includes('+'), P = this.plansFor(pd);   // одна партия или две («+ вторая партия»); уже в кэше
       const PL = k => this.planOf(P, pd, k);   // план с ручной правкой, если её делали
       // «самый дешёвый» — среди планов, где у всех рейсов есть цена; план C (только Kamaz) убран
       const shown = ['A', 'B', 'X'], planKey = shown.includes(st.planKey) ? st.planKey : 'A';   // план X (пробный)
@@ -6802,6 +6884,7 @@ class Component extends DCLogic {
         planDate2: vPair ? st.planDate2 : '', date2Opts: dateOpts.filter(o => o.v !== st.planDate), onVizDate2: e => this.setState({ planDate2: e.target.value, vizTrip: 'all', vizStep: 0, vizSel: null }),
         vizTripOpts: [], vizIsAll: false, vizIsOne: false, vizSummary: '', vizNote: '', vizTitle: '',
         vizHint: 'Вращать — пальцем или мышью · масштаб — щипком или колесом · нажмите на груз — покажет точку' });
+      if (!M && st.planDate && this.planPending()) out.vizSummary = 'Считаю планы партии ' + dLongs(this.planPair) + '…';
       out.vizPlanOpts = ['A', 'B', 'X'].map(k => { const on = M ? M.key === k : st.planKey === k;
         return { l: 'План ' + k, go: () => this.setState({ planKey: k, vizTrip: 'all', vizStep: 0, vizSel: null }), bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-on-accent)' : 'var(--color-text)' }; });
       out.vizViews = [['3d', '3D'], ['side', 'Сбоку'], ['top', 'Сверху'], ['back', 'Сзади']].map(([k, l]) => ({ l, go: () => this.setState(s => ({ vizView: k, vizViewN: (s.vizViewN || 0) + 1 })),
@@ -6886,9 +6969,12 @@ class Component extends DCLogic {
       out.resetData = () => { if (confirm('Вернуть все данные к исходному Excel? Ваши правки будут удалены.')) { if (this.handle && ['linked', 'saved', 'error'].includes(st.fileStatus)) this.readFromHandle(); else { const d = JSON.parse(JSON.stringify(this.fresh)); this.commit(d); this.setReady(d); } } };
     }
 
-    const dl = st.dialog;
+    // окно без типа (запоздалый ответ таблицы или ИИ дописал поля в уже закрытое окно) — не показывать и убрать
+    // (раньше такое окно открывалось карточкой «Клиент undefined»)
+    const dl = st.dialog && st.dialog.type ? st.dialog : null;
+    if (st.dialog && !dl) setTimeout(() => this.setState(s => s.dialog && !s.dialog.type ? { dialog: null } : null), 0);
     if (dl) {
-      const dr = dl.draft;
+      const dr = dl.draft || {};
       out.draft = dr;
       out.dialogError = dl.error || '';
       out.canDelete = dl.mode === 'edit';
@@ -7104,7 +7190,7 @@ class Component extends DCLogic {
             out.tgDriversNote = 'с доступом ' + n('ruxsat') + (n('kutilmoqda') ? ', ждут подтверждения ' + n('kutilmoqda') : '') + (n('o‘chirilgan') + n('rad') ? ', отключены ' + (n('o‘chirilgan') + n('rad')) : ''); }
         }
         out.gsWhere = !this.gsUrl ? '' : this.gsShared ? 'Сейчас подключена одна таблица для всех устройств.' : 'Сейчас таблица подключена только на этом устройстве.';
-        const say = error => this.setState(s => ({ dialog: s.dialog && { ...s.dialog, error } }));
+        const isGs = s => s.dialog && s.dialog.type === 'gs', say = error => this.setState(s => isGs(s) ? { dialog: { ...s.dialog, error } } : null);
         // ссылка на таблицу — в общие настройки сайта (нужен GitHub-токен, как для смены пароля)
         const share = async patch => {
           if (!window.LogiAuth) return 'нет модуля входа';
@@ -7117,13 +7203,13 @@ class Component extends DCLogic {
           if (mode === 'push') { this.gsQueue = ops.slice(); this.gsSaveQueue(); }
           else this.gsApply(j, true);
           this.gsStart(url, token);
-          this.setState(s => ({ dialog: s.dialog && { ...s.dialog, ask: null, error: mode === 'push' ? 'Записываю данные сайта в таблицу… Сохраняю ссылку для всех устройств…' : 'Сохраняю ссылку для всех устройств…' } }));
+          this.setState(s => isGs(s) && ({ dialog: { ...s.dialog, ask: null, error: mode === 'push' ? 'Записываю данные сайта в таблицу… Сохраняю ссылку для всех устройств…' : 'Сохраняю ссылку для всех устройств…' } }));
           const err = await share({ gsUrl: url, gsToken: token });
           this.gsShared = !err;
           // только на этом устройстве: общая таблица из настроек сайта не должна вернуться при следующем запуске
           const cfg = (window.LogiAuth && window.LogiAuth.config()) || {};
           try { if (this.gsShared) localStorage.setItem('logi-gs-shared', '1'); else if (cfg.gsUrl && cfg.gsUrl !== url) localStorage.setItem('logi-gs-off', cfg.gsUrl); } catch (e) {}
-          if (!err) return this.setState({ dialog: null });
+          if (!err) return this.setState(s => isGs(s) ? { dialog: null } : null);
           say('Таблица подключена только на этом устройстве: ' + err + '. Чтобы подключить её на всех устройствах, укажите GitHub-токен и нажмите «Подключить» ещё раз.');
         };
         out.gsDisconnect = async () => {
@@ -7153,7 +7239,7 @@ class Component extends DCLogic {
             if (!sheet.clients.length && !sheet.shipments.length) return finish(url, token, 'push', j, ops);   // пустая таблица — заполняем данными сайта
             if (!rec.length) return finish(url, token, 'pull', j);
             const n = t => rec.filter(o => o.t.startsWith(t)).length;
-            this.setState(s => ({ dialog: { ...s.dialog, error: '', ask: { url, token, j, ops,
+            this.setState(s => isGs(s) && ({ dialog: { ...s.dialog, error: '', ask: { url, token, j, ops,
               info: 'В таблице: ' + sheet.shipments.length + ' отгрузок и ' + sheet.clients.length + ' клиентов. На сайте: ' + local.shipments.length + ' отгрузок и ' + local.clients.length + ' клиентов. Отличаются: отгрузок — ' + n('ship') + ', клиентов — ' + n('cli') + ', складов — ' + n('wh') + '.' } } }));
           } catch (e) { say('Не получилось: ' + (e.message || e) + '. Проверьте ссылку и что при развертывании выбран доступ «Все».'); }
         };
@@ -7258,7 +7344,7 @@ class Component extends DCLogic {
           this.commit({ ...data, warehouses: dl.mode === 'new' ? [...ws, { ...rec, id: 'w' + Date.now() }] : ws.map(w => w.id === dl.id ? { ...rec, id: dl.id } : w) }); this.setState({ dialog: null });
         };
         out.deleteItem = () => { if (confirm('Удалить склад?')) { this.commit({ ...data, warehouses: (data.warehouses || []).filter(w => w.id !== dl.id) }); this.setState({ dialog: null }); } };
-      } else {
+      } else if (dl.type === 'client') {
         out.isClientDialog = true;
         out.dialogTitle = dl.mode === 'new' ? 'Новый клиент' : 'Клиент ' + dr.bl;
         { const T = this.gsTg, subs = ((T && T.subs) || []).filter(x => String(x.bl).toUpperCase() === String(dl.id || '').toUpperCase()), LBL = { faol: 'подписан', kutilmoqda: 'ждёт подтверждения в группе', rad: 'отклонён', 'o‘chirilgan': 'отписался' };

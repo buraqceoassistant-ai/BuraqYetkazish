@@ -72,3 +72,24 @@ test('план изменился после правки: новые точки
   const ids = M.trips.flatMap(t => t.stops.map(s => s.id)).sort();
   assert.deepEqual(ids, more.map(s => s.id).sort(), 'каждая точка — в одном рейсе');
 });
+
+// планы из фонового потока (js/plan-worker.js): без функций, клонированием — на странице к ним только добавляется правка
+test('планы из фонового потока: те же рейсы и итоги, ручная правка — как у планов, посчитанных на странице', () => {
+  const plain = (v, seen = new Map()) => { if (typeof v === 'function') return undefined; if (!v || typeof v !== 'object') return v; if (seen.has(v)) return seen.get(v);
+    const out = Array.isArray(v) ? [] : {}; seen.set(v, out); for (const k of Object.keys(v)) { const x = plain(v[k], seen); if (x !== undefined || Array.isArray(v)) out[k] = x; } return out; };
+  const full = E.buildPlans(stops(), S), r = full;
+  const pre = structuredClone(plain({ A: r.A, B: r.B, C: r.C, X: r.X, noCoords: r.noCoords }));
+  const hyd = E.buildPlans(stops(), S, pre);
+  ['A', 'B', 'X'].forEach(k => {
+    assert.deepEqual(hyd[k].trips.map(t => [t.name, t.stops.map(s => s.id).join(), t.price.total]), full[k].trips.map(t => [t.name, t.stops.map(s => s.id).join(), t.price.total]), 'план ' + k);
+    assert.deepEqual(hyd[k].sum, full[k].sum);
+  });
+  assert.equal(typeof hyd.manual, 'function'); assert.ok(hyd.cars && hyd.per);
+  const g = groupsOf(full.A), from = where(full.A, 'N2'), to = where(full.A, 'S1');
+  g[from].keys = g[from].keys.filter(k => k !== 'N2#1'); g[to].keys.push('N2#1');
+  const a = full.manual('A', g), b = hyd.manual('A', g);
+  assert.deepEqual(b.trips.map(t => [t.name, t.stops.map(s => s.id).join(), t.price.total, t.overload]), a.trips.map(t => [t.name, t.stops.map(s => s.id).join(), t.price.total, t.overload]));
+  assert.equal(b.sum.price, a.sum.price);
+  // план C сайт не показывает — можно не считать
+  assert.equal(E.buildPlans(stops(), { ...S, noPlanC: true }).C.trips.length, 0);
+});

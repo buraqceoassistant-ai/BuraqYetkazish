@@ -3337,4 +3337,17 @@ window.I18N_UZ = {"BURAQ logistics — отгрузки и клиенты":"BURA
 "Рейсы Kamaz в планах и журнале считаются без цены.":"Rejalar va jurnaldagi Kamaz reyslari narxsiz hisoblanadi.",
 "Осталось правок: {n}.":"Qolgan tuzatishlar: {n}.",
 "новые клиенты ({n})":"yangi mijozlar ({n})",
-"правки клиентов ({n})":"mijozlar tuzatishlari ({n})"};
+"правки клиентов ({n})":"mijozlar tuzatishlari ({n})",
+"Клиент {w}":"Mijoz {w}",
+"Считаю планы партии {d} — {n} отгрузка…":"{d} partiyasi rejalarini hisoblayapman — {n} jo‘natma…",
+"Считаю планы партии {d} — {n} отгрузки…":"{d} partiyasi rejalarini hisoblayapman — {n} jo‘natma…",
+"Считаю планы партии {d} — {n} отгрузок…":"{d} partiyasi rejalarini hisoblayapman — {n} jo‘natma…",
+"Считаю планы двух партий {d} — {n} отгрузка…":"Ikki partiya {d} rejalarini hisoblayapman — {n} jo‘natma…",
+"Считаю планы двух партий {d} — {n} отгрузки…":"Ikki partiya {d} rejalarini hisoblayapman — {n} jo‘natma…",
+"Считаю планы двух партий {d} — {n} отгрузок…":"Ikki partiya {d} rejalarini hisoblayapman — {n} jo‘natma…",
+"Большая партия считается несколько секунд — сайт тем временем работает, можно перейти на другую вкладку.":"Katta partiya bir necha soniya hisoblanadi — sayt bu vaqtda ishlayveradi, boshqa bo‘limga o‘tish mumkin.",
+"Считаю планы партии {d}…":"{d} partiyasi rejalarini hisoblayapman…",
+"План партии":"Partiya rejasi",
+"считаю…":"hisoblayapman…",
+"Считаю планы партий для отчёта: осталось {n}.":"Hisobot uchun partiyalar rejalarini hisoblayapman: {n} ta qoldi.",
+"Цифры уточнятся сами.":"Raqamlar o‘zi aniqlashadi."};

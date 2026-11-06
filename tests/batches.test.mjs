@@ -59,3 +59,8 @@ test('корзина: новые сверху, 30 дней, не больше 20
   const twice = B.restore(back.data, { ships: r.removed }, now + 1);   // уже вернули — второй раз не добавляется
   assert.deepEqual([twice.added, twice.skipped], [0, 4]);
 });
+
+test('«в пути» — и «Yolda», и «Yo‘lda» (как пишут в таблице по-узбекски)', () => {
+  const d = { clients: [], shipments: [sh('a', '2026-11-01', 'BL-1', 1, 1, { status: 'Yolda' }), sh('b', '2026-11-01', 'BL-2', 1, 1, { status: 'Yo‘lda' }), sh('c', '2026-11-01', 'BL-3', 1, 1, { status: "Yo'lda" })] };
+  assert.equal(B.summary(d)[0].road, 3);
+});

@@ -1,5 +1,5 @@
-/* Предварительные планы импорта — в фоне: buildPlans (js/logi-engine.js) для большого манифеста считается секунды,
-   в отдельном потоке страница черновика не замирает. Ответ — планы без функций (для превью нужны итоги и машины);
+/* Планы партии — в фоне: buildPlans (js/logi-engine.js) для большой партии (100+ точек) считается секунды, в отдельном
+   потоке страница не замирает (вкладки «Планы», «Карта», «Визуализация», отчёты и предварительные планы импорта). Ответ — планы без функций (для превью нужны итоги и машины);
    ссылки по кругу (рейсы ↔ машины) переносит само клонирование браузера (structured clone).
    Запускает index.html (importView → impPlansRun); без Worker или при ошибке план считается на странице, как раньше. */
 self.window = self;
@@ -18,6 +18,6 @@ self.onmessage = e => {
   const { id, stops, S } = e.data || {};
   try {
     const r = self.LogiEngine.buildPlans(stops, S);
-    self.postMessage({ id, ok: true, res: plain({ A: r.A, B: r.B, X: r.X, cars: r.cars, per: r.per, noCoords: r.noCoords }) });
+    self.postMessage({ id, ok: true, res: plain({ A: r.A, B: r.B, C: r.C, X: r.X, cars: r.cars, per: r.per, noCoords: r.noCoords }) });
   } catch (err) { self.postMessage({ id, ok: false, error: String((err && err.message) || err) }); }
 };

@@ -5,7 +5,8 @@
    Подключается в index.html (журнал → «🗂 Партии»), в node — тесты (tests/batches.test.mjs). */
 (function (root) {
   'use strict';
-  const DONE = ['Yetkazildi', 'Mijoz ozi oldi'], ROAD = 'Yolda', CANCEL = 'Bekor qilindi', NO_TRUCK = ['', 'Belgilanmagan', 'Mijoz ozi oladi'];
+  // «в пути» — и «Yolda», и «Yo‘lda» (так пишут в таблице по-узбекски, с апострофом)
+  const DONE = ['Yetkazildi', 'Mijoz ozi oldi'], ROAD = ['Yolda', 'Yo‘lda', "Yo'lda", 'Yo’lda'], CANCEL = 'Bekor qilindi', NO_TRUCK = ['', 'Belgilanmagan', 'Mijoz ozi oladi'];
   const TRASH_DAYS = 30, TRASH_MAX = 20, DUP_SHARE = 0.8, DUP_MIN = 3;
   const r3 = x => Math.round((+x || 0) * 1000) / 1000;
   const okDate = d => /^20\d\d-\d\d-\d\d$/.test(String(d || '')) && !isNaN(Date.parse(d + 'T00:00:00Z'));
@@ -19,7 +20,7 @@
     const by = new Map();
     ships.forEach(s => { if (!okDate(s.date)) return; if (!by.has(s.date)) by.set(s.date, []); by.get(s.date).push(s); });
     const list = [...by.entries()].map(([date, rows]) => {
-      const st = k => rows.filter(s => s.status === k).length, trucks = new Set(), bls = new Set();
+      const st = k => rows.filter(s => Array.isArray(k) ? k.includes(s.status) : s.status === k).length, trucks = new Set(), bls = new Set();
       rows.forEach(s => { if (!NO_TRUCK.includes(String(s.truck || '').trim())) trucks.add(String(s.truck).trim()); bls.add(String(s.bl || '').trim().toUpperCase()); });
       return { date, n: rows.length, clients: bls.size, cbm: r3(rows.reduce((a, s) => a + (+s.cbm || 0), 0)), kg: Math.round(rows.reduce((a, s) => a + (+s.kg || 0), 0)),
         places: rows.reduce((a, s) => a + (+s.places || 0), 0), done: rows.filter(s => DONE.includes(s.status)).length, road: st(ROAD), cancel: st(CANCEL),

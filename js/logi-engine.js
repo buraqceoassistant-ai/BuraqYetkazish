@@ -384,14 +384,22 @@
     seq.forEach((s, i) => { const g = (seq[(i + 1) % seq.length].angle - s.angle + 360) % 360; if (g > gap) { gap = g; cut = (i + 1) % seq.length; } });
     return seq.slice(cut).concat(seq.slice(0, cut));
   }
-  // A trip depends only on its set of points: each set is evaluated once (key — sorted item numbers)
+  // A trip depends only on its set of points: each set is evaluated once. Ключ набора — две суммы случайных 32-битных
+  // меток точек (от порядка не зависят, сортировать не нужно) и число точек; рейс считается по точкам в порядке их
+  // номеров — как раньше, когда ключом были отсортированные номера (на планах это не сказывается). Метки — из своего
+  // генератора с постоянным началом: планы одинаковые при каждом расчёте
   function evaluator(items, fleet, maxStops, S, depot) {
     const id = new Map(items.map((s, i) => [s, i])), memo = new Map();
-    const key = stops => stops.map(s => id.get(s)).sort((a, b) => a - b).join(',');
+    let seed = 0x9e3779b9;
+    const rnd = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return seed >>> 0; };
+    const h1 = new Uint32Array(items.length), h2 = new Uint32Array(items.length);
+    for (let i = 0; i < items.length; i++) { h1[i] = rnd(); h2[i] = rnd(); }
+    const key = stops => { let a = 0, b = 0; for (let i = 0; i < stops.length; i++) { const k = id.get(stops[i]); a = (a + h1[k]) >>> 0; b = (b ^ h2[k]) >>> 0; } return a + ':' + b + ':' + stops.length; };
     const ev = stops => {
       const k = key(stops);
-      if (!memo.has(k)) memo.set(k, evalTrip(k.split(',').map(i => items[+i]), fleet, maxStops, S, depot));
-      return memo.get(k);
+      let t = memo.get(k);
+      if (t === undefined) { t = evalTrip(stops.slice().sort((x, y) => id.get(x) - id.get(y)), fleet, maxStops, S, depot); memo.set(k, t); }
+      return t;
     };
     return { ev, key, id: s => id.get(s) };
   }
@@ -546,8 +554,8 @@
             if (i === its.length) return true;
             if (++nodes > 20000) return false;
             const s = its[i], d = b => b.m ? Math.hypot(b.lat / b.m - s.lat, (b.lon / b.m - s.lon) * 0.75) : Infinity;
-            const emptyTried = new Set();
-            for (const b of bins.slice().sort((x, y) => d(x) - d(y))) {
+            const emptyTried = new Set(), order = bins.map((b, k) => ({ b, k, d: d(b) })).sort((x, y) => x.d - y.d || x.k - y.k);
+            for (const { b } of order) {
               if (!b.m) { const ek = b.cm3 + '|' + b.ckg; if (emptyTried.has(ek)) continue; emptyTried.add(ek); }   // пустые корзины одной вместимости — одна попытка
               if (b.c + (s.cbm || 0) > b.cm3 + EPS || b.k + (s.kg || 0) > b.ckg + EPS || (PL && b.p + (s.places || 0) > PL + EPS) || (!b.bl.has(s.bl) && b.bl.size >= maxStops)) continue;
               put(b, s, 1);
@@ -766,7 +774,9 @@
 
   // ключ точки плана: отгрузка и её часть (большая отгрузка делится на части)
   const stopKey = s => s.id + '#' + (s.part || 1);
-  function buildPlans(stopsAll, S) {
+  // pre — планы, посчитанные в фоновом потоке (js/plan-worker.js, без функций): тогда здесь только настройка машин и
+  // ручная правка (out.manual) — без поиска планов. S.noPlanC — план C (только Kamaz) не считать: сайт его не показывает
+  function buildPlans(stopsAll, S, pre) {
     const depot = [S.depotLat, S.depotLon];
     const located = stopsAll.filter(s => s.lat != null), noC = stopsAll.filter(s => s.lat == null);
     located.forEach(s => { s.angle = bearing(depot, [s.lat, s.lon]); s.depotKm = km(depot, [s.lat, s.lon]); });
@@ -910,14 +920,15 @@
     // расходам компании и по полной цене (у поиска свои локальные минимумы — так план не хуже прежнего) и раскладка по
     // районам (как в плане X, но с правилами плана A); берётся лучший по расходам компании
     const SA = { ...SD, ours: OURS }, aMax = S.aMaxStops || 99;
-    const A = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), [(items, fleet) => cheapest(items, fleet, aMax, SA, depot), (items, fleet) => cheapest(items, fleet, aMax, SD, depot),
+    const A = pre ? pre.A : plan(lab(['labo', 'changan', 'gazel', 'kamaz']), [(items, fleet) => cheapest(items, fleet, aMax, SA, depot), (items, fleet) => cheapest(items, fleet, aMax, SD, depot),
       (items, fleet) => districtTrips(items, fleet, aMax, SA, depot, [])],
       { onlyIfNeeded: ['kamaz'], smallTo: SMALL, wave: true, fit: { maxStops: aMax, join: true, S: SA } });
-    const B = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.bcMaxStops || 99, SD, depot),   // тот же поиск, свои правила; Changan/Shineray — тоже
+    const B = pre ? pre.B : plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => cheapest(items, fleet, S.bcMaxStops || 99, SD, depot),   // тот же поиск, свои правила; Changan/Shineray — тоже
       { onlyIfNeeded: ['kamaz'], smallTo: SMALL, tol: { gazel: { m3: S.bTolM3, kg: S.bTolKg } }, fit: { maxStops: S.bcMaxStops || 99, join: true, S: SD } });   // Gazel с допуском
-    const C = plan(['kamaz'], (items, fleet) => kamazRuns(items, fleet, CARS.kamaz ? { ...S, cTrucks: CARS.kamaz.length } : S, depot));
-    const xNotes = [], X = plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => districtTrips(items, fleet, S.aMaxStops || 99, S, depot, xNotes), { onlyIfNeeded: ['kamaz'], wave: true, fit: { maxStops: S.aMaxStops || 99, join: false, tryDivide: true } });   // план X (пробный): загрузка как в A
-    X.districts = xNotes;
+    const NO_C = { trips: [], splits: [], noFleet: true, skipped: true };
+    const C = pre ? pre.C || NO_C : S.noPlanC ? NO_C : plan(['kamaz'], (items, fleet) => kamazRuns(items, fleet, CARS.kamaz ? { ...S, cTrucks: CARS.kamaz.length } : S, depot));
+    const xNotes = [], X = pre ? pre.X : plan(lab(['labo', 'changan', 'gazel', 'kamaz']), (items, fleet) => districtTrips(items, fleet, S.aMaxStops || 99, S, depot, xNotes), { onlyIfNeeded: ['kamaz'], wave: true, fit: { maxStops: S.aMaxStops || 99, join: false, tryDivide: true } });   // план X (пробный): загрузка как в A
+    if (!pre) X.districts = xNotes;
     const sum = trips => {
       const priced = trips.filter(t => t.price.total != null), n = k => trips.filter(t => t.kind === k).length;
       return {
@@ -933,8 +944,8 @@
         smallOn: trips.reduce((a, t) => a + (t.smallOn || 0), 0)   // мелких отгрузок на Gazel (правило мелкого груза)
       };
     };
-    const out = { noCoords: noC };
-    [['A', A], ['B', B], ['C', C], ['X', X]].forEach(([k, p]) => { out[k] = { ...p, sum: sum(p.trips) }; });
+    const out = { noCoords: pre ? pre.noCoords || [] : noC };
+    [['A', A], ['B', B], ['C', C], ['X', X]].forEach(([k, p]) => { out[k] = pre && p.sum ? p : { ...p, sum: sum(p.trips) }; });
     // Ручная правка плана (вкладка «Планы»): руководитель сам разложил точки по рейсам. groups — [{ kind, car, round, keys }],
     // ключ точки — stopKey (id отгрузки и часть). Машина и круг — как в группе; рейс без машины или со сменой вида
     // получает свободную машину вида (или следующий круг самой свободной). Порядок объезда, цена и время — заново.
